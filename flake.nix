@@ -23,6 +23,7 @@
   outputs = inputs@{ self, nixpkgs, home-manager, ... }:
     let
       system = "x86_64-linux";
+      username = "nixos";
       pkgs = import nixpkgs {
         inherit system;
         config.allowUnfree = true;
@@ -31,10 +32,7 @@
       mkHost = name:
         nixpkgs.lib.nixosSystem {
           inherit system;
-          specialArgs = {
-            inherit inputs;
-            username = "nixos";
-          };
+          specialArgs = { inherit inputs username; };
           modules = [ ./hosts/${name}.nix ];
         };
     in {
