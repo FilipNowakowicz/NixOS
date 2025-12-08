@@ -1,10 +1,11 @@
-{ config, pkgs, ... }:
+{ inputs, pkgs, username, ... }:
 {
   imports = [
     ../modules/base.nix
     ../modules/security.nix
     ../modules/qemu.nix
     ../hardware/labvm-hw.nix
+    inputs.home-manager.nixosModules.home-manager
   ];
 
   networking = {
@@ -23,17 +24,6 @@
   environment.systemPackages = with pkgs; [ wireshark tmux qemu ];
 
   services.libvirtd.enable = true;
-{ inputs, ... }:
-let
-  username = "nixos";
-in {
-  imports = [
-    ../modules/base.nix
-    ../hardware/labvm-hw.nix
-    inputs.home-manager.nixosModules.home-manager
-  ];
-
-  networking.hostName = "labvm";
 
   home-manager = {
     useGlobalPkgs = true;

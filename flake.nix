@@ -31,7 +31,10 @@
       mkHost = name:
         nixpkgs.lib.nixosSystem {
           inherit system;
-          specialArgs = { inherit inputs; };
+          specialArgs = {
+            inherit inputs;
+            username = "nixos";
+          };
           modules = [ ./hosts/${name}.nix ];
         };
     in {
