@@ -1,7 +1,5 @@
-{ config, pkgs, ... }:
-let
-  username = "nixos";
-in {
+{ config, pkgs, username, ... }:
+{
   nix = {
     gc = {
       automatic = true;

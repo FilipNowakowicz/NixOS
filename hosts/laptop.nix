@@ -1,6 +1,5 @@
-{ inputs, pkgs, ... }:
+{ inputs, pkgs, username, ... }:
 let
-  username = "nixos";
   hmModules = [ ../home/default.nix ../home/desktop.nix ];
 in {
   imports = [

@@ -1,7 +1,5 @@
-{ inputs, pkgs, ... }:
-let
-  username = "nixos";
-in {
+{ inputs, pkgs, username, ... }:
+{
   imports = [
     ../modules/base.nix
     ../modules/security.nix
