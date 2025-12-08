@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, username, ... }:
 {
   virtualisation.libvirtd = {
     enable = true;
@@ -11,7 +11,7 @@
   programs.virt-manager.enable = true;
   virtualisation.spiceUSBRedirection.enable = true;
 
-  users.users.nixos.extraGroups = [ "libvirtd" ];
+  users.users.${username}.extraGroups = lib.mkAfter [ "libvirtd" ];
 
   environment.systemPackages = with pkgs; [
     libvirt
