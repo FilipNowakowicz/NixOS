@@ -1,4 +1,4 @@
-{ config, pkgs, username ? "nixos", ... }:
+{ config, pkgs, username, ... }:
 {
   nix = {
     gc = {

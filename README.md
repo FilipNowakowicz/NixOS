@@ -10,7 +10,7 @@ This flake defines NixOS and Home Manager setups for several machines, keeping s
 - `home/` – Home Manager modules for user packages and desktop configuration.
 
 ## Usage
-1. Set your preferred `username` once in `flake.nix` (under `specialArgs`), then adjust hostnames and any host-specific details in `hosts/*.nix` and `modules/base.nix`.
+1. Adjust `username`, hostnames, and user details inside the host files and `modules/base.nix` if needed.
 2. For a host, run (from this repo):
    ```bash
    sudo nixos-rebuild switch --flake .#<host>
@@ -20,4 +20,3 @@ This flake defines NixOS and Home Manager setups for several machines, keeping s
 ## Notes
 - Binary caches for `nixpkgs` and `nix-community` are configured in `flake.nix`.
 - Unfree packages are allowed by default; set `config.allowUnfree = false;` in `flake.nix` if undesired.
-- The virtualization role (`modules/qemu.nix`) appends `libvirtd` to the primary user without clobbering groups defined in `modules/base.nix`.
