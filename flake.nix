@@ -32,14 +32,7 @@
         nixpkgs.lib.nixosSystem {
           inherit system;
           specialArgs = { inherit inputs; };
-          modules = [
-            ./hosts/${name}.nix
-            home-manager.nixosModules.home-manager
-            {
-              home-manager.useGlobalPkgs = true;
-              home-manager.useUserPackages = true;
-            }
-          ];
+          modules = [ ./hosts/${name}.nix ];
         };
     in {
       formatter.${system} = pkgs.nixfmt-rfc-style;
