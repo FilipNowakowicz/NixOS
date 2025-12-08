@@ -1,11 +1,15 @@
-{ config, pkgs, ... }:
-{
+{ inputs, pkgs, ... }:
+let
+  username = "nixos";
+  hmModules = [ ../home/default.nix ../home/desktop.nix ];
+in {
   imports = [
     ../modules/base.nix
     ../modules/desktop.nix
     ../modules/security.nix
     ../modules/qemu.nix
     ../hardware/main-vm-hw.nix
+    inputs.home-manager.nixosModules.home-manager
   ];
 
   networking = {
@@ -20,20 +24,6 @@
   time.timeZone = "UTC";
 
   environment.systemPackages = with pkgs; [ firefox git htop virt-manager ];
-
-  services.libvirtd.enable = true;
-{ inputs, ... }:
-let
-  username = "nixos";
-  hmModules = [ ../home/default.nix ../home/desktop.nix ];
-in {
-  imports = [
-    ../modules/base.nix
-    ../hardware/main-vm-hw.nix
-    inputs.home-manager.nixosModules.home-manager
-  ];
-
-  networking.hostName = "main-vm";
 
   home-manager = {
     useGlobalPkgs = true;
