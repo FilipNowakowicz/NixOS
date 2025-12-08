@@ -1,5 +1,7 @@
-{ config, pkgs, ... }:
-{
+{ config, pkgs, lib, username ? "nixos", ... }:
+let
+  hasPrimaryUser = builtins.hasAttr username config.users.users;
+in {
   virtualisation.libvirtd = {
     enable = true;
     qemu = {
@@ -11,7 +13,9 @@
   programs.virt-manager.enable = true;
   virtualisation.spiceUSBRedirection.enable = true;
 
-  users.users.nixos.extraGroups = [ "libvirtd" ];
+  users.users = lib.mkIf hasPrimaryUser {
+    ${username}.extraGroups = lib.mkAfter [ "libvirtd" ];
+  };
 
   environment.systemPackages = with pkgs; [
     libvirt

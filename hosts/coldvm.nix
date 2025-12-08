@@ -1,10 +1,11 @@
-{ config, pkgs, ... }:
+{ inputs, pkgs, username, ... }:
 {
   imports = [
     ../modules/base.nix
     ../modules/security.nix
     ../modules/crypto.nix
     ../hardware/coldvm-hw.nix
+    inputs.home-manager.nixosModules.home-manager
   ];
 
   networking = {
@@ -23,17 +24,6 @@
   environment.systemPackages = with pkgs; [ gnupg age openssl ];
 
   services.openssh.enable = false;
-{ inputs, ... }:
-let
-  username = "nixos";
-in {
-  imports = [
-    ../modules/base.nix
-    ../hardware/coldvm-hw.nix
-    inputs.home-manager.nixosModules.home-manager
-  ];
-
-  networking.hostName = "coldvm";
 
   home-manager = {
     useGlobalPkgs = true;

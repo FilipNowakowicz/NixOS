@@ -1,9 +1,10 @@
-{ config, pkgs, ... }:
+{ inputs, pkgs, username, ... }:
 {
   imports = [
     ../modules/base.nix
     ../modules/security.nix
     ../hardware/watchonly-hw.nix
+    inputs.home-manager.nixosModules.home-manager
   ];
 
   networking = {
@@ -22,17 +23,6 @@
   environment.systemPackages = with pkgs; [ curl wget lm_sensors ];
 
   services.fstrim.enable = true;
-{ inputs, ... }:
-let
-  username = "nixos";
-in {
-  imports = [
-    ../modules/base.nix
-    ../hardware/watchonly-hw.nix
-    inputs.home-manager.nixosModules.home-manager
-  ];
-
-  networking.hostName = "watchonly";
 
   home-manager = {
     useGlobalPkgs = true;
