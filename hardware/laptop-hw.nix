@@ -19,4 +19,7 @@
   };
 
   swapDevices = [{ device = "/dev/disk/by-label/laptop-swap"; }];
+
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = true;
 }

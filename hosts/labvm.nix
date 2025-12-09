@@ -1,33 +1,22 @@
-{ inputs, pkgs, username, ... }:
+{ config, pkgs, lib, inputs, ... }:
 {
   imports = [
     ../modules/base.nix
-    ../modules/security.nix
     ../modules/qemu.nix
+    ../modules/security.nix
     ../hardware/labvm-hw.nix
     inputs.home-manager.nixosModules.home-manager
   ];
 
-  networking = {
-    hostName = "labvm";
-    useDHCP = false;
-    interfaces.enp1s0.useDHCP = true;
-  };
-
-  boot.loader.grub = {
-    enable = true;
-    device = "/dev/vda";
-  };
-
-  time.timeZone = "UTC";
-
-  environment.systemPackages = with pkgs; [ wireshark tmux qemu ];
-
-  services.libvirtd.enable = true;
+  networking.hostName = "labvm";
+  networking.useDHCP = false;
+  networking.interfaces.enp1s0.useDHCP = true;
 
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
-    users.${username}.imports = [ ../home/default.nix ];
+    users.user = {
+      imports = [ ../home/default.nix ];
+    };
   };
 }

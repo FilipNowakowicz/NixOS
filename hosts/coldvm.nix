@@ -1,33 +1,23 @@
-{ inputs, pkgs, username, ... }:
+{ config, pkgs, lib, inputs, ... }:
 {
   imports = [
     ../modules/base.nix
-    ../modules/security.nix
     ../modules/crypto.nix
+    ../modules/qemu.nix
+    ../modules/security.nix
     ../hardware/coldvm-hw.nix
     inputs.home-manager.nixosModules.home-manager
   ];
 
-  networking = {
-    hostName = "coldvm";
-    useDHCP = false;
-    interfaces.enp1s0.useDHCP = true;
-  };
-
-  boot.loader.grub = {
-    enable = true;
-    device = "/dev/vda";
-  };
-
-  time.timeZone = "UTC";
-
-  environment.systemPackages = with pkgs; [ gnupg age openssl ];
-
-  services.openssh.enable = false;
+  networking.hostName = "coldvm";
+  networking.useDHCP = false;
+  networking.interfaces.enp1s0.useDHCP = true;
 
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
-    users.${username}.imports = [ ../home/default.nix ];
+    users.user = {
+      imports = [ ../home/default.nix ];
+    };
   };
 }

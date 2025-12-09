@@ -1,7 +1,5 @@
-{ inputs, pkgs, username, ... }:
-let
-  hmModules = [ ../home/default.nix ../home/desktop.nix ];
-in {
+{ config, pkgs, lib, inputs, ... }:
+{
   imports = [
     ../modules/base.nix
     ../modules/desktop.nix
@@ -13,24 +11,19 @@ in {
   networking = {
     hostName = "laptop";
     networkmanager.enable = true;
-    interfaces.wlan0.useDHCP = true;
-    interfaces.enp2s0.useDHCP = true;
   };
 
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
-
-  time.timeZone = "America/New_York";
-
-  environment.systemPackages = with pkgs; [ sway swaylock networkmanagerapplet thunderbird ];
-
-  programs.swaylock.enable = true;
-  services.logind.lidSwitch = "suspend";
   services.blueman.enable = true;
+  services.logind.lidSwitch = "suspend";
 
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
-    users.${username}.imports = hmModules;
+    users.user = {
+      imports = [
+        ../home/default.nix
+        ../home/desktop.nix
+      ];
+    };
   };
 }

@@ -1,4 +1,4 @@
-{ config, pkgs, username, ... }:
+{ config, pkgs, ... }:
 {
   nix = {
     gc = {
@@ -30,26 +30,15 @@
     };
   };
 
-  fonts = {
-    enableDefaultPackages = true;
-    fontconfig.enable = true;
-    packages = with pkgs; [
-      noto-fonts
-      noto-fonts-emoji
-      font-awesome
-      nerdfonts
-    ];
-  };
-
   users = {
     defaultUserShell = pkgs.zsh;
 
     users = {
       root.shell = pkgs.zsh;
 
-      ${username} = {
+      user = {
         isNormalUser = true;
-        description = "NixOS User";
+        description = "Primary user";
         extraGroups = [ "wheel" "networkmanager" "audio" "video" ];
         shell = pkgs.zsh;
       };
@@ -60,6 +49,8 @@
     zsh.enable = true;
     fish.enable = true;
   };
+
+  services.openssh.enable = true;
 
   environment = {
     shells = [ pkgs.zsh pkgs.fish pkgs.bashInteractive ];

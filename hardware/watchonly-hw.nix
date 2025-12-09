@@ -19,4 +19,9 @@
   };
 
   swapDevices = [{ device = "/dev/disk/by-label/watch-swap"; }];
+
+  boot.loader.grub = {
+    enable = true;
+    device = "/dev/vda";
+  };
 }

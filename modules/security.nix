@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ lib, ... }:
 {
   networking.firewall = {
     enable = true;
@@ -8,7 +8,7 @@
   };
 
   services.openssh = {
-    enable = true;
+    enable = lib.mkDefault true;
     settings = {
       PermitRootLogin = "no";
       PasswordAuthentication = false;
@@ -27,5 +27,17 @@
       enable = true;
       wheelNeedsPassword = false;
     };
+
+    rtkit.enable = true;
+    lockKernelModules = lib.mkDefault true;
+  };
+
+  boot.kernel.sysctl = {
+    "kernel.unprivileged_bpf_disabled" = 1;
+    "net.ipv4.icmp_echo_ignore_broadcasts" = 1;
+    "net.ipv4.conf.all.accept_redirects" = 0;
+    "net.ipv4.conf.default.accept_redirects" = 0;
+    "net.ipv4.conf.all.send_redirects" = 0;
+    "net.ipv4.conf.default.send_redirects" = 0;
   };
 }
