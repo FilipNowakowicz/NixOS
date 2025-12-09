@@ -19,4 +19,7 @@
   };
 
   swapDevices = [{ device = "/dev/disk/by-label/main-swap"; }];
+
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = false;
 }

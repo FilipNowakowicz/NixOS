@@ -1,32 +1,25 @@
-{ inputs, pkgs, username, ... }:
+{ config, pkgs, lib, inputs, ... }:
 {
   imports = [
     ../modules/base.nix
+    ../modules/crypto.nix
+    ../modules/qemu.nix
     ../modules/security.nix
     ../hardware/watchonly-hw.nix
     inputs.home-manager.nixosModules.home-manager
   ];
 
-  networking = {
-    hostName = "watchonly";
-    useDHCP = false;
-    interfaces.enp1s0.useDHCP = true;
-  };
-
-  boot.loader.grub = {
-    enable = true;
-    device = "/dev/vda";
-  };
-
-  time.timeZone = "UTC";
-
-  environment.systemPackages = with pkgs; [ curl wget lm_sensors ];
+  networking.hostName = "watchonly";
+  networking.useDHCP = false;
+  networking.interfaces.enp1s0.useDHCP = true;
 
   services.fstrim.enable = true;
 
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
-    users.${username}.imports = [ ../home/default.nix ];
+    users.user = {
+      imports = [ ../home/default.nix ];
+    };
   };
 }
