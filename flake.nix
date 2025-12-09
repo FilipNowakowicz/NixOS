@@ -1,10 +1,11 @@
 {
-  description = "NixOS and Home Manager configurations";
+  description = "NixOS and Home Manager configurations for user";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+
     home-manager = {
-      url = "github:nix-community/home-manager/release-24.05";
+      url = "github:nix-community/home-manager/release-24.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -23,31 +24,42 @@
   outputs = inputs@{ self, nixpkgs, home-manager, ... }:
     let
       system = "x86_64-linux";
-      username = "nixos";
-      pkgs = import nixpkgs {
+
+      mkPkgs = import nixpkgs {
         inherit system;
         config.allowUnfree = true;
       };
 
-      mkHost = name:
+      mkNixos = host:
         nixpkgs.lib.nixosSystem {
           inherit system;
-          specialArgs = { inherit inputs username; };
-          modules = [ ./hosts/${name}.nix ];
+          specialArgs = { inherit inputs; };
+          modules = [ ./hosts/${host}.nix ];
         };
     in {
-      formatter.${system} = pkgs.nixfmt-rfc-style;
+      formatter.${system} = mkPkgs.nixfmt-rfc-style;
 
-      devShells.${system}.default = pkgs.mkShell {
-        packages = with pkgs; [ nixd nil deploy-rs ];
+      devShells.${system}.default = mkPkgs.mkShell {
+        packages = with mkPkgs; [ nixd nil deploy-rs ];
       };
 
       nixosConfigurations = {
-        main-vm = mkHost "main-vm";
-        labvm = mkHost "labvm";
-        watchonly = mkHost "watchonly";
-        coldvm = mkHost "coldvm";
-        laptop = mkHost "laptop";
+        laptop = mkNixos "laptop";
+        "main-vm" = mkNixos "main-vm";
+        coldvm = mkNixos "coldvm";
+        watchonly = mkNixos "watchonly";
+        labvm = mkNixos "labvm";
+      };
+
+      homeConfigurations = {
+        "user-arch" = home-manager.lib.homeManagerConfiguration {
+          inherit system;
+          pkgs = mkPkgs;
+          modules = [
+            ./home/default.nix
+            ./home/desktop.nix
+          ];
+        };
       };
     };
 }

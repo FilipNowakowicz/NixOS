@@ -1,4 +1,4 @@
-{ pkgs, lib, username, ... }:
+{ pkgs, lib, ... }:
 {
   virtualisation.libvirtd = {
     enable = true;
@@ -11,8 +11,7 @@
   programs.virt-manager.enable = true;
   virtualisation.spiceUSBRedirection.enable = true;
 
-  # Append libvirtd group after any base user groups (see modules/base.nix).
-  users.users.${username}.extraGroups = lib.mkAfter [ "libvirtd" ];
+  users.users.user.extraGroups = lib.mkAfter [ "libvirtd" ];
 
   environment.systemPackages = with pkgs; [
     libvirt

@@ -1,5 +1,10 @@
-{ config, pkgs, ... }:
+{ lib, pkgs, ... }:
 {
+  networking.firewall.allowPing = false;
+  services.openssh.enable = lib.mkForce false;
+
+  services.pcscd.enable = true;
+
   programs.gnupg.agent = {
     enable = true;
     enableSSHSupport = true;
@@ -10,10 +15,13 @@
     control = "sufficient";
   };
 
-  services.pcscd.enable = true;
+  services.avahi.enable = lib.mkForce false;
+  networking.networkmanager.wifi.macAddress = "random";
 
   environment.systemPackages = with pkgs; [
     gnupg
+    age
+    openssl
     opensc
     pcsc-tools
     pinentry-curses

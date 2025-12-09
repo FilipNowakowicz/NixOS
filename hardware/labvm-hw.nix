@@ -19,4 +19,9 @@
   };
 
   swapDevices = [{ device = "/dev/disk/by-label/lab-swap"; }];
+
+  boot.loader.grub = {
+    enable = true;
+    device = "/dev/vda";
+  };
 }

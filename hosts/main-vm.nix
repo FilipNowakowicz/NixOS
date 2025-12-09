@@ -1,32 +1,26 @@
-{ inputs, pkgs, username, ... }:
-let
-  hmModules = [ ../home/default.nix ../home/desktop.nix ];
-in {
+{ config, pkgs, lib, inputs, ... }:
+{
   imports = [
     ../modules/base.nix
     ../modules/desktop.nix
-    ../modules/security.nix
     ../modules/qemu.nix
+    ../modules/security.nix
     ../hardware/main-vm-hw.nix
     inputs.home-manager.nixosModules.home-manager
   ];
 
-  networking = {
-    hostName = "main-vm";
-    useDHCP = false;
-    interfaces.enp1s0.useDHCP = true;
-  };
-
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = false;
-
-  time.timeZone = "UTC";
-
-  environment.systemPackages = with pkgs; [ firefox git htop virt-manager ];
+  networking.hostName = "main-vm";
+  networking.useDHCP = false;
+  networking.interfaces.enp1s0.useDHCP = true;
 
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
-    users.${username}.imports = hmModules;
+    users.user = {
+      imports = [
+        ../home/default.nix
+        ../home/desktop.nix
+      ];
+    };
   };
 }
