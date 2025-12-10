@@ -44,11 +44,7 @@
       };
 
       nixosConfigurations = {
-        laptop = mkNixos "laptop";
-        "main-vm" = mkNixos "main-vm";
-        coldvm = mkNixos "coldvm";
-        watchonly = mkNixos "watchonly";
-        labvm = mkNixos "labvm";
+        main = mkNixos "main";
       };
 
       homeConfigurations = {
