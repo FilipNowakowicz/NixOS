@@ -1,6 +1,7 @@
 # NixOS & Home Manager flake
 
-Single flake driving all NixOS hosts and the `user` Home Manager configuration. Hardware, host personalities, and reusable role modules live in separate folders to keep intent clear and composable.
+Single flake driving all NixOS hosts and the `user` Home Manager configuration. Hardware, host personalities, and reusable role
+modules live in separate folders to keep intent clear and composable.
 
 ## Layout
 - `flake.nix` – pins nixpkgs/home-manager and exposes NixOS + Home Manager outputs.
@@ -8,6 +9,7 @@ Single flake driving all NixOS hosts and the `user` Home Manager configuration. 
 - `hosts/` – thin host modules that compose hardware, role modules, and home-manager for `user`.
 - `modules/` – reusable NixOS roles: `base`, `desktop`, `crypto`, `qemu`, `security`.
 - `home/` – Home Manager modules for `user` (CLI defaults + optional desktop layer).
+- `future/` – parked NixOS modules for virtual machines you may revisit later.
 
 ## Usage
 ```bash
@@ -19,13 +21,10 @@ home-manager switch --flake .#user-arch
 ```
 
 ### Host names
-- `laptop`
-- `main-vm`
-- `coldvm`
-- `watchonly`
-- `labvm`
+- `main`
 
-Each host imports its matching file from `hardware/`, the appropriate role modules from `modules/`, and enables home-manager for `user` with `home/default.nix` plus `home/desktop.nix` on GUI machines.
+The active host imports its matching file from `hardware/`, the appropriate role modules from `modules/`, and enables home-manager
+for `user` with `home/default.nix` plus `home/desktop.nix` on GUI machines.
 
 ## Notes
 - `system` is set to `x86_64-linux` for all builds.

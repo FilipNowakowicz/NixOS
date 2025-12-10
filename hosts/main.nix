@@ -4,12 +4,12 @@
     ../modules/base.nix
     ../modules/desktop.nix
     ../modules/security.nix
-    ../hardware/laptop-hw.nix
+    ../hardware/main-hw.nix
     inputs.home-manager.nixosModules.home-manager
   ];
 
   networking = {
-    hostName = "laptop";
+    hostName = "main";
     networkmanager.enable = true;
   };
 
