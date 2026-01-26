@@ -1,35 +1,20 @@
 { lib, ... }:
 {
-  networking.firewall = {
-    enable = true;
-    allowedTCPPorts = [ ];
-    allowedUDPPorts = [ ];
-    checkReversePath = "loose";
-  };
+  networking.firewall.enable = true;
 
   services.openssh = {
-    enable = lib.mkDefault true;
+    enable = lib.mkDefault false;  # enable per-host if needed
     settings = {
       PermitRootLogin = "no";
       PasswordAuthentication = false;
       KbdInteractiveAuthentication = false;
-      X11Forwarding = true;
+      X11Forwarding = false;
     };
   };
 
-  security = {
-    acme = {
-      acceptTerms = true;
-      defaults.email = "admin@example.com";
-    };
-
-    sudo = {
-      enable = true;
-      wheelNeedsPassword = false;
-    };
-
-    rtkit.enable = true;
-    lockKernelModules = lib.mkDefault true;
+  security.sudo = {
+    enable = true;
+    wheelNeedsPassword = true;
   };
 
   boot.kernel.sysctl = {

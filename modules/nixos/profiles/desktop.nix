@@ -1,46 +1,40 @@
-{ config, pkgs, ... }:
+{ pkgs, ... }:
 {
-  services = {
-    xserver = {
-      enable = true;
+  services.xserver = {
+    enable = true;
+
+    xkb = {
       layout = "us";
-      xkbVariant = "";
-      xkbOptions = "caps:escape";
-
-      desktopManager.xterm.enable = false;
-      displayManager.gdm = {
-        enable = true;
-        wayland = true;
-      };
-
-      windowManager.awesome.enable = true;
+      variant = "dvorak";
+      options = "caps:escape";
     };
 
-    xwayland.enable = true;
+    displayManager.startx.enable = true;
+    windowManager.awesome.enable = true;
 
-    pipewire = {
-      enable = true;
-      alsa.enable = true;
-      alsa.support32Bit = true;
-      pulse.enable = true;
-      wireplumber.enable = true;
-    };
+    desktopManager.xterm.enable = false;
+  };
+
+  services.pipewire = {
+    enable = true;
+    alsa.enable = true;
+    alsa.support32Bit = true;
+    pulse.enable = true;
+    wireplumber.enable = true;
   };
 
   hardware.pulseaudio.enable = false;
 
-  programs = {
-    dconf.enable = true;
-  };
-
   xdg.portal = {
     enable = true;
     extraPortals = with pkgs; [ xdg-desktop-portal-gtk ];
+    config.common.default = "*";
   };
 
+  programs.dconf.enable = true;
+
   environment.systemPackages = with pkgs; [
-    awesome
-    gnome.gnome-themes-extra
+    pkgs.gnome-themes-extra
     xdg-desktop-portal-gtk
   ];
 
