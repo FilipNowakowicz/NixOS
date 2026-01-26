@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ pkgs, ... }:
 {
   imports = [
     ./hardware-configuration.nix
@@ -14,12 +14,16 @@
     networkmanager.enable = true;
   };
 
-  services.logind.lidSwitch = "suspend";
+  services.logind = {
+    lidSwitch = "suspend";
+    # Optional: keep running on AC power
+    # lidSwitchExternalPower = "ignore";
+  };
 
   users.users.user = {
     isNormalUser = true;
     description = "Primary user";
-    extraGroups = [ "wheel" "networkmanager" "audio" "video" ];
+    extraGroups = [ "wheel" "networkmanager" "video" ];
     shell = pkgs.zsh;
   };
 

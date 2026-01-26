@@ -22,6 +22,8 @@
     pulse.enable = true;
     wireplumber.enable = true;
   };
+  
+  services.flatpak.enable = true;
 
   hardware.pulseaudio.enable = false;
 
@@ -34,7 +36,7 @@
   programs.dconf.enable = true;
 
   environment.systemPackages = with pkgs; [
-    pkgs.gnome-themes-extra
+    gnome-themes-extra
     xdg-desktop-portal-gtk
   ];
 
@@ -43,8 +45,8 @@
     fontDir.enable = true;
     fontconfig.enable = true;
     packages = with pkgs; [
-      dejavu_fonts
-      liberation_ttf
+      dejavu_fonts liberation_ttf
+      noto-fonts noto-fonts-emoji
     ];
   };
 }

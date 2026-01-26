@@ -1,18 +1,16 @@
 { config, pkgs, ... }:
 {
   home.stateVersion = "24.11";
-
   programs.home-manager.enable = true;
 
+  # Core CLI tools (keep this small; expand later)
   home.packages = with pkgs; [
     bat
     btop
     eza
     fd
     fzf
-    git
     jq
-    neovim
     ripgrep
     tmux
     unzip
@@ -26,10 +24,9 @@
     PAGER = "less -R";
   };
 
+  # Git enabled, but NO identity here (set in home/users/user/home.nix)
   programs.git = {
     enable = true;
-    userName = "Nix User";
-    userEmail = "user@example.com";
     extraConfig = {
       init.defaultBranch = "main";
       pull.ff = "only";
@@ -37,6 +34,7 @@
     };
   };
 
+  # Neovim enabled (keep config tiny; move real config to home/files/ later)
   programs.neovim = {
     enable = true;
     defaultEditor = true;
@@ -45,11 +43,7 @@
     extraLuaConfig = ''
       vim.o.number = true
       vim.o.relativenumber = true
-      vim.o.expandtab = true
-      vim.o.shiftwidth = 2
-      vim.o.tabstop = 2
       vim.o.termguicolors = true
-      vim.cmd.colorscheme("default")
     '';
   };
 
@@ -60,34 +54,25 @@
     historyLimit = 15000;
     extraConfig = ''
       set -g mouse on
-      set -g status-bg colour237
-      set -g status-fg colour250
       setw -g automatic-rename on
       setw -g aggressive-resize on
     '';
   };
 
+  # Prompt (optional, but fine)
   programs.starship = {
     enable = true;
-    enableBashIntegration = true;
+    enableZshIntegration = true;
     settings = {
       add_newline = false;
-      character = {
-        success_symbol = "[➜](bold green) ";
-        error_symbol = "[➜](bold red) ";
-      };
-      git_branch.symbol = " ";
-      git_status.disabled = false;
-      directory = {
-        truncate_to_repo = false;
-        truncation_length = 3;
-      };
     };
   };
 
-  programs.bash = {
+  # Zsh as the interactive shell config
+  programs.zsh = {
     enable = true;
     enableCompletion = true;
+
     shellAliases = {
       ll = "eza -lh";
       la = "eza -lha";
@@ -95,53 +80,19 @@
       v = "nvim";
       cat = "bat --style=plain";
     };
-    bashrcExtra = ''
-      eval "$(zoxide init bash)"
-      eval "$(starship init bash)"
+
+    initExtra = ''
+      eval "$(zoxide init zsh)"
     '';
   };
 
   programs.fzf = {
     enable = true;
-    enableBashIntegration = true;
+    enableZshIntegration = true;
   };
 
   programs.zoxide = {
     enable = true;
-    enableBashIntegration = true;
+    enableZshIntegration = true;
   };
-
-  xdg.configFile."shell/prompt.md".text = ''
-    # Prompt design
-
-    Prompt mirrored from the Arch install: minimal arrow showing status, concise path
-    shortening, and git branch decoration.
-  '';
-
-  xdg.configFile."git/config.extras".text = ''
-    [alias]
-    co = checkout
-    br = branch
-    st = status -sb
-    ci = commit
-    df = diff
-  '';
-
-  xdg.configFile."nvim/lua/statusline.lua".text = ''
-    local statusline = {}
-
-    function statusline.active()
-      return table.concat({
-        '%#Identifier#  ',
-        '%#Normal#%f',
-        '%#Comment# %m',
-        '%= ',
-        '%#String#%l:%c ',
-        '%#Number#[%p%%]'
-      })
-    end
-
-    vim.o.statusline = "%!v:lua.statusline.active()"
-    return statusline
-  '';
 }
