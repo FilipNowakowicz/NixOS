@@ -5,11 +5,10 @@ modules live in separate folders to keep intent clear and composable.
 
 ## Layout
 - `flake.nix` – pins nixpkgs/home-manager and exposes NixOS + Home Manager outputs.
-- `hardware/` – per-machine hardware profiles (bootloader, disks, CPU/initrd settings only).
-- `hosts/` – thin host modules that compose hardware, role modules, and home-manager for `user`.
-- `modules/` – reusable NixOS roles: `base`, `desktop`, `crypto`, `qemu`, `security`.
-- `home/` – Home Manager modules for `user` (CLI defaults + optional desktop layer).
-- `future/` – parked NixOS modules for virtual machines you may revisit later.
+- `hosts/` – per-machine host modules that include hardware configuration and role composition.
+- `modules/nixos/profiles/` – reusable NixOS roles: `base`, `desktop`, `security`.
+- `home/profiles/` – Home Manager profiles (CLI defaults + optional desktop layer).
+- `home/users/` – per-user Home Manager entrypoints.
 
 ## Usage
 ```bash
@@ -23,8 +22,8 @@ home-manager switch --flake .#user-arch
 ### Host names
 - `main`
 
-The active host imports its matching file from `hardware/`, the appropriate role modules from `modules/`, and enables home-manager
-for `user` with `home/default.nix` plus `home/desktop.nix` on GUI machines.
+The active host imports its hardware configuration from `hosts/<name>/hardware-configuration.nix`, the appropriate role modules from
+`modules/nixos/profiles/`, and enables home-manager for `user` via `home/users/user/home.nix`.
 
 ## Notes
 - `system` is set to `x86_64-linux` for all builds.

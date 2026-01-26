@@ -1,10 +1,10 @@
 { config, pkgs, lib, inputs, ... }:
 {
   imports = [
-    ../modules/base.nix
-    ../modules/desktop.nix
-    ../modules/security.nix
-    ../hardware/main-hw.nix
+    ../../modules/nixos/profiles/base.nix
+    ../../modules/nixos/profiles/desktop.nix
+    ../../modules/nixos/profiles/security.nix
+    ./hardware-configuration.nix
     inputs.home-manager.nixosModules.home-manager
   ];
 
@@ -21,8 +21,7 @@
     useUserPackages = true;
     users.user = {
       imports = [
-        ../home/default.nix
-        ../home/desktop.nix
+        ../../home/users/user/home.nix
       ];
     };
   };
