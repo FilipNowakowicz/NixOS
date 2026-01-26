@@ -1,5 +1,5 @@
 {
-  description = "NixOS and Home Manager configurations for user";
+  description = "NixOS and Home Manager configuration";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
@@ -10,51 +10,46 @@
     };
   };
 
-  nixConfig = {
-    substituters = [
-      "https://cache.nixos.org/"
-      "https://nix-community.cachix.org"
-    ];
-    trusted-public-keys = [
-      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8ZsS6UqK+KP5gdiQNRrt65TUI="
-    ];
-  };
-
   outputs = inputs@{ self, nixpkgs, home-manager, ... }:
     let
       system = "x86_64-linux";
 
-      mkPkgs = import nixpkgs {
+      pkgs = import nixpkgs {
         inherit system;
         config.allowUnfree = true;
       };
 
-      mkNixos = host:
-        nixpkgs.lib.nixosSystem {
-          inherit system;
-          specialArgs = { inherit inputs; };
-          modules = [ ./hosts/${host}/default.nix ];
-        };
-    in {
-      formatter.${system} = mkPkgs.nixfmt-rfc-style;
+      mkNixos = host: nixpkgs.lib.nixosSystem {
+        inherit system;
 
-      devShells.${system}.default = mkPkgs.mkShell {
-        packages = with mkPkgs; [ nixd nil deploy-rs ];
+        specialArgs = { inherit inputs; };
+
+        modules = [
+          ./hosts/${host}/default.nix
+          home-manager.nixosModules.home-manager
+        ];
+      };
+    in
+    {
+      formatter.${system} = pkgs.nixfmt-rfc-style;
+
+      devShells.${system}.default = pkgs.mkShell {
+        packages = with pkgs; [ nixd statix deadnix ];
       };
 
       nixosConfigurations = {
         main = mkNixos "main";
       };
 
-      homeConfigurations = {
-        "user-arch" = home-manager.lib.homeManagerConfiguration {
-          inherit system;
-          pkgs = mkPkgs;
-          modules = [
-            ./home/users/user/home.nix
-          ];
-        };
+      nixosModules = {
+        profiles-base = import ./modules/nixos/profiles/base.nix;
+        profiles-desktop = import ./modules/nixos/profiles/desktop.nix;
+        profiles-security = import ./modules/nixos/profiles/security.nix;
+      };
+
+      homeModules = {
+        profiles-base = import ./home/profiles/base.nix;
+        profiles-desktop = import ./home/profiles/desktop.nix;
       };
     };
 }
