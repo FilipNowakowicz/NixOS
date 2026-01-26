@@ -34,7 +34,7 @@
         nixpkgs.lib.nixosSystem {
           inherit system;
           specialArgs = { inherit inputs; };
-          modules = [ ./hosts/${host}.nix ];
+          modules = [ ./hosts/${host}/default.nix ];
         };
     in {
       formatter.${system} = mkPkgs.nixfmt-rfc-style;
@@ -52,8 +52,7 @@
           inherit system;
           pkgs = mkPkgs;
           modules = [
-            ./home/default.nix
-            ./home/desktop.nix
+            ./home/users/user/home.nix
           ];
         };
       };
