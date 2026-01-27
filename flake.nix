@@ -41,6 +41,17 @@
         main = mkNixos "main";
       };
 
+      # ADD THIS BLOCK
+      homeConfigurations = {
+        user = home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          extraSpecialArgs = { inherit inputs; };
+          modules = [
+            ./home/users/user/home.nix
+          ];
+        };
+      };
+
       nixosModules = {
         profiles-base = import ./modules/nixos/profiles/base.nix;
         profiles-desktop = import ./modules/nixos/profiles/desktop.nix;

@@ -16,6 +16,7 @@
 
     # startx workflow (no display manager)
     displayManager.startx.enable = true;
+    displayManager.defaultSession = "none+awesome";
 
     # Window manager
     windowManager.awesome.enable = true;
@@ -43,12 +44,11 @@
   };
 
   services.flatpak.enable = true;
-
   programs.dconf.enable = true;
 
+  # Minimal X11 bits + theme assets
   environment.systemPackages = with pkgs; [
     gnome-themes-extra
-    xdg-desktop-portal-gtk
     xorg.xinit
   ];
 

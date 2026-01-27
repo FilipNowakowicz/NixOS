@@ -14,14 +14,19 @@
   };
 
   time.timeZone = "Europe/London";
-
   i18n.defaultLocale = "en_GB.UTF-8";
 
   programs.zsh.enable = true;
   users.defaultUserShell = pkgs.zsh;
 
+  # Keep system packages small (OS-level essentials)
   environment.systemPackages = with pkgs; [
-    curl git gnupg htop neovim ripgrep rsync tree unzip wget which zip
-    jq file pciutils usbutils
+    curl
+    wget
+    git
+    gnupg
+    rsync
+    pciutils
+    usbutils
   ];
 }

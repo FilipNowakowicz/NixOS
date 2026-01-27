@@ -1,16 +1,41 @@
 { pkgs, ... }:
 {
-  # Desktop-related user packages
+  # Desktop-related user packages (X11/Awesome-only)
   home.packages = with pkgs; [
-    firefox
-    alacritty
+    # terminal / launcher
+    kitty
     rofi
     feh
+
+    # compositor / notifications
     picom
     dunst
+
+    # clipboard / audio
     xclip
     xsel
     pavucontrol
+
+    # browsers / apps
+    firefox
+    chromium
+    keepassxc
+    mpv
+    zathura
+    zathura-pdf-mupdf
+    flameshot
+    thunar
+
+    # editor
+    vscode
+
+    # visuals / toys (optional)
+    cava
+    fastfetch
+    pipes-rs
+    tty-clock
+    cbonsai
+    cmatrix
   ];
 
   # GTK theming support (needed by many desktop apps)

@@ -1,22 +1,44 @@
+
 { config, pkgs, ... }:
 {
   home.stateVersion = "24.11";
   programs.home-manager.enable = true;
 
-  # Core CLI tools (keep this small; expand later)
+  # CLI / dev / daily
   home.packages = with pkgs; [
+    # core CLI
     bat
     btop
     eza
     fd
     fzf
-    jq
     ripgrep
-    tmux
+    jq
+    tree
     unzip
-    wget
     zip
+    wget
+    curl
+    which
+    less
+
+    # shell / workflow
     zoxide
+    tmux
+
+    # editor / dev
+    neovim
+    git
+    lazygit
+    tree-sitter
+    nodejs
+
+    # utilities
+    yazi
+    hledger
+    taskwarrior
+    timewarrior
+    yt-dlp
   ];
 
   home.sessionVariables = {
