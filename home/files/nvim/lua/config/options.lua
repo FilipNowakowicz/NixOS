@@ -1,8 +1,5 @@
--- Core options + Neovide tweaks
-
 vim.g.mapleader = " "
 
--- GUI (Neovide) tweaks – do nothing in terminal
 if vim.g.neovide then
   vim.o.guifont = "JetBrainsMono Nerd Font:h11"
   vim.g.neovide_scroll_animation_length = 0.0
@@ -15,5 +12,3 @@ vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.clipboard = "unnamedplus"
 vim.opt.termguicolors = true
-
-return {}

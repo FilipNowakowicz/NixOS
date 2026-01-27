@@ -1,83 +1,61 @@
--- UI-related plugin setups
+pcall(vim.cmd.colorscheme, "vague")
 
------------------------------------------------------------
--- Nvim-Tree
------------------------------------------------------------
-require("nvim-tree").setup()
+pcall(function()
+  require("nvim-tree").setup()
+end)
 
------------------------------------------------------------
--- Treesitter
------------------------------------------------------------
-require("nvim-treesitter.configs").setup({
-  ensure_installed = { "c", "python", "lua", "latex", "bibtex" },
-  highlight = { enable = true },
-  indent = { enable = true },
-  incremental_selection = {
-    enable = true,
-    keymaps = {
-      init_selection = "gnn",
-      node_incremental = "grn",
-      scope_incremental = "grc",
-      node_decremental = "grm",
-    },
-  },
-  textobjects = {
-    select = {
+pcall(function()
+  require("nvim-treesitter.configs").setup({
+    ensure_installed = { "c", "python", "lua", "latex", "bibtex" },
+    highlight = { enable = true },
+    indent = { enable = true },
+    incremental_selection = {
       enable = true,
-      lookahead = true,
       keymaps = {
-        ["af"] = "@function.outer",
-        ["if"] = "@function.inner",
-        ["ac"] = "@class.outer",
-        ["ic"] = "@class.inner",
+        init_selection = "gnn",
+        node_incremental = "grn",
+        scope_incremental = "grc",
+        node_decremental = "grm",
       },
     },
-  },
-})
-
------------------------------------------------------------
--- Telescope
------------------------------------------------------------
-require("telescope").setup()
-
------------------------------------------------------------
--- Gitsigns
------------------------------------------------------------
-require("gitsigns").setup()
-
------------------------------------------------------------
--- Statusline
------------------------------------------------------------
-require("lualine").setup()
-
------------------------------------------------------------
--- Telescope
------------------------------------------------------------
-require("telescope").setup({
-  defaults = {
-    sorting_strategy = "ascending",
-    layout_config = { prompt_position = "top" },
-  },
-})
-
-pcall(require("telescope").load_extension, "fzf")
-
------------------------------------------------------------
--- Leap
------------------------------------------------------------
-local ok, _ = pcall(require, "leap")
-if ok then
-  -- Main jump motion
-  vim.keymap.set({ "n", "x", "o" }, "s", "<Plug>(leap)", {
-    desc = "Leap",
+    textobjects = {
+      select = {
+        enable = true,
+        lookahead = true,
+        keymaps = {
+          ["af"] = "@function.outer",
+          ["if"] = "@function.inner",
+          ["ac"] = "@class.outer",
+          ["ic"] = "@class.inner",
+        },
+      },
+    },
   })
+end)
 
-  -- Remote / cross-window action
+pcall(function()
+  require("telescope").setup({
+    defaults = {
+      sorting_strategy = "ascending",
+      layout_config = { prompt_position = "top" },
+    },
+  })
+  pcall(require("telescope").load_extension, "fzf")
+end)
+
+pcall(function()
+  require("gitsigns").setup()
+end)
+
+pcall(function()
+  require("lualine").setup()
+end)
+
+pcall(function()
+  require("leap").add_default_mappings()
   vim.keymap.set({ "n", "o" }, "gs", function()
-    require("leap.remote").action()
-  end, {
-    desc = "Leap remote",
-  })
-end
-
-return {}
+    pcall(function()
+      require("leap.remote").action()
+    end)
+  end, { desc = "Leap remote" })
+end)

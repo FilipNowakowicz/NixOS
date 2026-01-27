@@ -11,8 +11,8 @@ end
 local ok_mlsp, mason_lspconfig = pcall(require, "mason-lspconfig")
 if ok_mlsp then
   mason_lspconfig.setup({
-    ensure_installed = { "clangd", "basedpyright", "ltex" },
-    automatic_installation = true,
+    ensure_installed = {},
+    automatic_installation = false,
   })
 end
 
@@ -58,11 +58,12 @@ vim.lsp.config("basedpyright", {
 
 vim.lsp.enable({ "clangd", "basedpyright" })
 
--- LTeX (do NOT autostart; we toggle it)
+-- LTeX
 local java_opts = "-Djdk.xml.totalEntitySizeLimit=0 --enable-native-access=ALL-UNNAMED"
 
 vim.lsp.config("ltex", {
   autostart = false,
+  cmd = { "ltex-ls-plus" },
   cmd_env = {
     JAVA_TOOL_OPTIONS = ((vim.env.JAVA_TOOL_OPTIONS or "") .. " " .. java_opts),
   },

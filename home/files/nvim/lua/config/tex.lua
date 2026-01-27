@@ -1,5 +1,3 @@
--- VimTeX config + TeX-specific QoL
-
 vim.g.vimtex_view_method = "zathura"
 vim.g.vimtex_compiler_method = "latexmk"
 vim.g.tex_flavor = "latex"
@@ -16,7 +14,6 @@ vim.g.vimtex_compiler_latexmk = {
   },
 }
 
--- TeX-only QoL: spell (en-GB), soft wrap, conceal toggle, quick VimTeX cmds
 local tex_group = vim.api.nvim_create_augroup("tex_qol", { clear = true })
 vim.api.nvim_create_autocmd("FileType", {
   group = tex_group,
@@ -40,21 +37,16 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
--- nvim-autopairs: avoid annoying single '$' pairing in TeX
 pcall(function()
   local npairs = require("nvim-autopairs")
   local Rule = require("nvim-autopairs.rule")
   npairs.add_rules({
-    Rule("$", "$", { "tex", "plaintex" })
-      :with_pair(function(opts)
-        local line = opts.line
-        local before = line:sub(1, opts.col - 1)
-        local after = line:sub(opts.col, opts.col)
-        local double_dollar = before:match("%$%$") or after == "$"
-        return double_dollar or false
-      end),
+    Rule("$", "$", { "tex", "plaintex" }):with_pair(function(opts)
+      local line = opts.line
+      local before = line:sub(1, opts.col - 1)
+      local after = line:sub(opts.col, opts.col)
+      local double_dollar = before:match("%$%$") or after == "$"
+      return double_dollar or false
+    end),
   })
 end)
-
-return {}
-

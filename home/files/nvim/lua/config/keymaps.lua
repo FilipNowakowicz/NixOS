@@ -1,29 +1,56 @@
--- Global, non-LSP keymaps
-
 local map = vim.keymap.set
 
 -- Nvim-Tree
-map("n", "<leader>e", ":NvimTreeToggle<CR>", { noremap = true, silent = true })
+map("n", "<leader>e", function()
+  vim.cmd.NvimTreeToggle()
+end, { silent = true, desc = "File explorer" })
 
 -- Telescope
-map("n", "<leader>ff", "<cmd>Telescope find_files<cr>", { noremap = true })
-map("n", "<leader>fg", "<cmd>Telescope live_grep<cr>",  { noremap = true })
-map("n", "<leader>fb", "<cmd>Telescope buffers<cr>",     { noremap = true })
-map("n", "<leader>fh", "<cmd>Telescope help_tags<cr>",   { noremap = true })
+map("n", "<leader>ff", function()
+  require("telescope.builtin").find_files()
+end, { desc = "Find files" })
+
+map("n", "<leader>fg", function()
+  require("telescope.builtin").live_grep()
+end, { desc = "Live grep" })
+
+map("n", "<leader>fb", function()
+  require("telescope.builtin").buffers()
+end, { desc = "Buffers" })
+
+map("n", "<leader>fh", function()
+  require("telescope.builtin").help_tags()
+end, { desc = "Help tags" })
 
 -- Gitsigns
-map("n", "]c", ":Gitsigns next_hunk<CR>",    { noremap = true })
-map("n", "[c", ":Gitsigns prev_hunk<CR>",    { noremap = true })
-map("n", "<leader>hs", ":Gitsigns stage_hunk<CR>",   { noremap = true })
-map("n", "<leader>hr", ":Gitsigns reset_hunk<CR>",   { noremap = true })
-map("n", "<leader>hp", ":Gitsigns preview_hunk<CR>", { noremap = true })
-map("n", "<leader>hb", ":Gitsigns blame_line<CR>",   { noremap = true })
+map("n", "]c", function()
+  require("gitsigns").next_hunk()
+end, { desc = "Next hunk" })
 
--- Run current file with Python
-map("n", "<leader>r", ":!python %<CR>", { noremap = true, silent = true })
+map("n", "[c", function()
+  require("gitsigns").prev_hunk()
+end, { desc = "Previous hunk" })
 
--- Glow (Markdown Preview)
-map("n", "<leader>m", "<cmd>Glow<CR>", { noremap = true, silent = true, desc = "Markdown Preview" })
+map("n", "<leader>hs", function()
+  require("gitsigns").stage_hunk()
+end, { desc = "Stage hunk" })
 
-return {}
+map("n", "<leader>hr", function()
+  require("gitsigns").reset_hunk()
+end, { desc = "Reset hunk" })
 
+map("n", "<leader>hp", function()
+  require("gitsigns").preview_hunk()
+end, { desc = "Preview hunk" })
+
+map("n", "<leader>hb", function()
+  require("gitsigns").blame_line()
+end, { desc = "Blame line" })
+
+-- Run current file with Python (convenience)
+map("n", "<leader>r", function()
+  vim.cmd("!python %")
+end, { silent = true, desc = "Run current file (python)" })
+
+-- Markdown preview
+map("n", "<leader>m", "<cmd>Glow<CR>", { silent = true, desc = "Markdown preview" })

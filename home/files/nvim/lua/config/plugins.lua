@@ -1,43 +1,35 @@
--- lazy.nvim bootstrap + plugin spec
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 
-vim.opt.rtp:prepend("~/.config/nvim/lazy/lazy.nvim")
+if not vim.loop.fs_stat(lazypath) then
+  vim.fn.system({
+    "git",
+    "clone",
+    "--filter=blob:none",
+    "https://github.com/folke/lazy.nvim.git",
+    "--branch=stable",
+    lazypath,
+  })
+end
+
+vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
-  ---------------------------------------------------------------
-  -- Colorschemes
-  ---------------------------------------------------------
-  {
-    "rebelot/kanagawa.nvim",
-    lazy = false,
-    priority = 1000,
-  },
-  {
-    "vague-theme/vague.nvim",
-    lazy = false,
-    priority = 1000,
-    config = function()
-      -- pick your default here:
-      vim.cmd.colorscheme("vague")
-      -- or:
-      -- vim.cmd.colorscheme("kanagawa")
-    end,
-  },
+  { "rebelot/kanagawa.nvim", lazy = false, priority = 1000 },
+  { "vague-theme/vague.nvim", lazy = false, priority = 1000 },
 
-  ---------------------------------------------------
-  -- LSP & Completion
-  ---------------------------------------------------------
-  "neovim/nvim-lspconfig",
-  "williamboman/mason.nvim",
-  "williamboman/mason-lspconfig.nvim",
+  { "nvim-tree/nvim-web-devicons", lazy = true },
 
-  "hrsh7th/nvim-cmp",
-  "hrsh7th/cmp-nvim-lsp",
-  "hrsh7th/cmp-buffer",
-  "hrsh7th/cmp-path",
-  "saadparwaiz1/cmp_luasnip",
-  "L3MON4D3/LuaSnip",
+  { "neovim/nvim-lspconfig" },
+  { "williamboman/mason.nvim" },
+  { "williamboman/mason-lspconfig.nvim" },
 
-  -- Copilot (inline ghost text; NO cmp bridge)
+  { "hrsh7th/nvim-cmp" },
+  { "hrsh7th/cmp-nvim-lsp" },
+  { "hrsh7th/cmp-buffer" },
+  { "hrsh7th/cmp-path" },
+  { "saadparwaiz1/cmp_luasnip" },
+  { "L3MON4D3/LuaSnip" },
+
   {
     "zbirenbaum/copilot.lua",
     event = "InsertEnter",
@@ -46,97 +38,60 @@ require("lazy").setup({
         enabled = true,
         auto_trigger = true,
         keymap = {
-          accept      = "<C-l>",
+          accept = "<C-l>",
           accept_line = "<C-j>",
-          next        = "<M-]>",
-          prev        = "<M-[>",
-          dismiss     = "<C-]>",
+          next = "<M-]>",
+          prev = "<M-[>",
+          dismiss = "<C-]>",
         },
       },
       panel = { enabled = false },
-      filetypes = {
-        markdown = true,
-      },
+      filetypes = { markdown = true },
     },
   },
 
-  -- Python linting on save
-  {
-    "mfussenegger/nvim-lint",
-    config = function()
-      local lint = require("lint")
-      lint.linters_by_ft = {
-        python = { "flake8" },
-      }
+  { "mfussenegger/nvim-lint" },
 
-      vim.api.nvim_create_autocmd({ "BufWritePost" }, {
-        callback = function()
-          lint.try_lint()
-        end,
-      })
-    end,
-  },
+  { "mfussenegger/nvim-dap" },
+  { "nvim-neotest/nvim-nio" },
+  { "rcarriga/nvim-dap-ui" },
+  { "jay-babu/mason-nvim-dap.nvim" },
 
-  ---------------------------------------------------------
-  -- Debugging & Tests
-  ---------------------------------------------------------
-  "mfussenegger/nvim-dap",
-  "rcarriga/nvim-dap-ui",
-  "jay-babu/mason-nvim-dap.nvim",
-  "nvim-neotest/neotest",
-  "nvim-neotest/neotest-python",
+  { "nvim-neotest/neotest" },
+  { "nvim-neotest/neotest-python" },
 
-  ---------------------------------------------------------
-  -- UI & Navigation
-  ---------------------------------------------------------
-  "nvim-lualine/lualine.nvim",
-  "nvim-tree/nvim-tree.lua",
-  
-  "nvim-treesitter/nvim-treesitter",
-  "nvim-treesitter/nvim-treesitter-textobjects",
-  
+  { "nvim-lualine/lualine.nvim" },
+  { "nvim-tree/nvim-tree.lua" },
+
+  { "nvim-treesitter/nvim-treesitter", build = ":TSUpdate" },
+  { "nvim-treesitter/nvim-treesitter-textobjects" },
+
   {
     "nvim-telescope/telescope.nvim",
     dependencies = {
       "nvim-lua/plenary.nvim",
-      {
-        "nvim-telescope/telescope-fzf-native.nvim",
-        build = "make", -- REQUIRED
-      },
+      { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
     },
   },
 
-  "ggandor/leap.nvim",
+  { url = "https://codeberg.org/andyg/leap.nvim" },
 
-  ---------------------------------------------------------
-  -- Git
-  ---------------------------------------------------------
-  "lewis6991/gitsigns.nvim",
-  "tpope/vim-fugitive",
+  { "lewis6991/gitsigns.nvim" },
+  { "tpope/vim-fugitive" },
 
-  ---------------------------------------------------------
-  -- Quality of life
-  ---------------------------------------------------------
-  { "numToStr/Comment.nvim", config = true },
-  { "windwp/nvim-autopairs", config = true },
-  { "kylechui/nvim-surround", config = true },
-  { "folke/trouble.nvim", config = true },
-  { "folke/which-key.nvim", config = true },
-  { "lukas-reineke/indent-blankline.nvim", main = "ibl", config = true },
+  { "numToStr/Comment.nvim" },
+  { "windwp/nvim-autopairs" },
+  { "kylechui/nvim-surround" },
+  { "folke/trouble.nvim" },
+  { "folke/which-key.nvim" },
+  { "lukas-reineke/indent-blankline.nvim", main = "ibl" },
 
-  ---------------------------------------------------------
-  -- Markdown preview
-  ---------------------------------------------------------
-  { "ellisonleao/glow.nvim", config = true, cmd = "Glow" },
+  { "ellisonleao/glow.nvim", cmd = "Glow" },
 
-  ---------------------------------------------------------
-  -- LaTeX stack
-  ---------------------------------------------------------
   { "lervag/vimtex", ft = { "tex", "plaintex" } },
   { "hrsh7th/cmp-omni" },
   { "kdheepak/cmp-latex-symbols" },
 }, {
+  checker = { enabled = false },
+  change_detection = { notify = false },
 })
-
-return {}
-
