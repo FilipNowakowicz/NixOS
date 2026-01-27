@@ -9,6 +9,6 @@
     ../../profiles/desktop.nix
   ];
 
-  home.file.".zshenv".source = ../files/zsh/zshenv;
-  home.file.".zshrc".source  = ../files/zsh/zshrc;
+  home.file.".zshenv".source = ../../files/zsh/zshenv;
+  home.file.".zshrc".source  = ../../files/zsh/zshrc;
 }
