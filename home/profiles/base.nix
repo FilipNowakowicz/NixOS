@@ -61,17 +61,6 @@
   };
 
   # Neovim enabled (keep config tiny; move real config to home/files/ later)
-  programs.neovim = {
-    enable = true;
-    defaultEditor = true;
-    viAlias = true;
-    vimAlias = true;
-    extraLuaConfig = ''
-      vim.o.number = true
-      vim.o.relativenumber = true
-      vim.o.termguicolors = true
-    '';
-  };
 
   programs.tmux = {
     enable = true;
