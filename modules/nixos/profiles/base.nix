@@ -20,14 +20,13 @@
   programs.zsh.enable = true;
   users.defaultUserShell = pkgs.zsh;
 
-  # Keep system packages small (OS-level essentials)
+  # OS Essential Packages
   environment.systemPackages = with pkgs; [
     curl
-    wget
-    git
     gnupg
-    rsync
     pciutils
+    rsync
     usbutils
+    wget
   ];
 }

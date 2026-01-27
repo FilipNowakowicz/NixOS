@@ -16,7 +16,6 @@
 
     # startx workflow (no display manager)
     displayManager.startx.enable = true;
-    displayManager.defaultSession = "none+awesome";
 
     # Window manager
     windowManager.awesome.enable = true;
@@ -24,6 +23,8 @@
     # Don’t spawn xterm automatically
     desktopManager.xterm.enable = false;
   };
+
+  services.displayManager.defaultSession = "none+awesome";
 
   # Audio (modern stack)
   services.pipewire = {

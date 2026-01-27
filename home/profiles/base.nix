@@ -1,46 +1,50 @@
-
 { config, pkgs, ... }:
 {
   home.stateVersion = "24.11";
   programs.home-manager.enable = true;
 
-  # CLI / dev / daily
+  # CLI packages
   home.packages = with pkgs; [
-    # core CLI
+    # ── Core CLI ─────────────────────────────────────────────
     bat
     btop
+    curl
     eza
     fd
     fzf
-    ripgrep
     jq
+    less
+    ripgrep
     tree
     unzip
-    zip
     wget
-    curl
     which
-    less
-
-    # shell / workflow
-    zoxide
+    zip
+  
+    # ── Shell / Workflow ─────────────────────────────────────
     tmux
-
-    # editor / dev
+    zoxide
+  
+    # ── Editor / Dev ─────────────────────────────────────────
     neovim
     git
     lazygit
-    tree-sitter
     nodejs
-
-    # utilities
+    python3
+    python3Packages.flake8
+    clang-tools
+    gnumake
+  
+    # ── Neovim helpers ───────────────────────────────────────
+    glow        # :Glow markdown preview
+  
+    # ── Utilities ────────────────────────────────────────────
     yazi
     hledger
-    taskwarrior
+    taskwarrior3
     timewarrior
     yt-dlp
   ];
-
   home.sessionVariables = {
     EDITOR = "nvim";
     PAGER = "less -R";

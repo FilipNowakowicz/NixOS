@@ -1,33 +1,35 @@
 { pkgs, ... }:
 {
-  # Desktop-related user packages (X11/Awesome-only)
+  # Desktop / GUI Packages
   home.packages = with pkgs; [
-    # terminal / launcher
+    # ── Terminal / Launcher ──────────────────────────────────
     kitty
     rofi
-    feh
-
-    # compositor / notifications
-    picom
+  
+    # ── Desktop UX ───────────────────────────────────────────
     dunst
-
-    # clipboard / audio
-    xclip
-    xsel
+    picom
+    feh
+    flameshot
     pavucontrol
-
-    # browsers / apps
+  
+    # ── Browsers / Apps ──────────────────────────────────────
     firefox
     chromium
     keepassxc
     mpv
-    zathura
-    flameshot
-
-    # editor
     vscode
-
-    # visuals / toys (optional)
+  
+    # ── TeX / PDF ────────────────────────────────────────────
+    zathura
+    texlive.combined.scheme-medium
+    texlab
+  
+    # ── Clipboard ────────────────────────────────────────────
+    xclip
+    xsel
+  
+    # ── Visuals / Toys (optional) ────────────────────────────
     cava
     fastfetch
     pipes-rs
