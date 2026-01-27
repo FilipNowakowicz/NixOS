@@ -1,0 +1,113 @@
+# ~/.zshrc — stable base
+
+# ── Prompt ─────────────────────────────────────────────────────────────────────
+PROMPT='%2~ %# '
+
+# ── Editors / Pager ────────────────────────────────────────────────────────────
+export EDITOR=nvim VISUAL=nvim MANPAGER='nvim +Man!'
+
+# ── Options ────────────────────────────────────────────────────────────────────
+setopt autocd correct histignoredups sharehistory extendedglob noclobber
+setopt interactivecomments nobeep
+setopt NO_CHECK_JOBS
+
+# ── History ────────────────────────────────────────────────────────────────────
+HISTFILE="$HOME/.zsh_history"; HISTSIZE=10000; SAVEHIST=10000
+setopt inc_append_history hist_ignore_all_dups hist_reduce_blanks
+
+# ── Keybindings (vi mode + edit in $EDITOR + arrows) ───────────────────────────
+bindkey -v
+autoload -Uz edit-command-line; zle -N edit-command-line
+bindkey -M vicmd 'v' edit-command-line
+autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+zle -N up-line-or-beginning-search
+zle -N down-line-or-beginning-search
+bindkey '^[[A' up-line-or-beginning-search
+bindkey '^[[B' down-line-or-beginning-search
+
+# ── Completion ─────────────────────────────────────────────────────────────────
+export ZSH_ENABLE_AUTOSUGGESTIONS=1
+autoload -Uz compinit
+[[ -d /usr/share/zsh/site-functions ]] && fpath+=(/usr/share/zsh/site-functions)
+compinit -i
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
+zstyle ':completion:*' menu select
+zstyle ':completion:*' use-cache on
+zstyle ':completion:*' cache-path "${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
+zstyle ':completion:*' rehash true
+
+# ── Aliases ────────────────────────────────────────────────────────────────────
+alias ll='ls -lh --color=auto' la='ls -A' l='ls -CF'
+alias ..='cd ..' ...='cd ../..' ....='cd ../../..'
+alias cp='cp -i' mv='mv -i'
+
+alias g='git' \
+      ga='git add' \
+      #gs='git status -sb' \
+      gd='git diff' \
+      gco='git checkout' \
+      gb='git branch' \
+      gc='git commit -m' \
+      gca='git commit -am' \
+      gp='git push' \
+      gl='git pull' \
+      glog='git log --oneline --graph --decorate'
+
+alias battery='acpi -b'
+alias buds='bluetoothctl connect DC:69:E2:CF:9A:BD'
+alias headset='bluetoothctl connect 40:58:99:3D:C8:D3'
+alias whatsapp="wasistlos &"
+
+
+# --- VNC control aliases ---
+alias vnc-on='systemctl --user start x0vncserver.service && echo "VNC started"'
+alias vnc-off='systemctl --user stop x0vncserver.service && echo "VNC stopped"'
+alias vnc-status='systemctl --user status x0vncserver.service --no-pager'
+
+alias tailscale-on='sudo systemctl start tailscaled && sudo tailscale up && echo "Tailscale connected"'
+alias tailscale-off='sudo systemctl stop tailscaled && echo "🔒 Tailscale stopped"'
+alias tailscale-status='tailscale status'
+
+alias ollama3='ollama run llama3.1:8b'
+alias ollamamath='ollama run wizard-math:7b'
+
+alias backup='sudo -E /usr/local/bin/backup-borg.sh'
+
+
+# ── Helpers ────────────────────────────────────────────────────────────────────
+eval "$(zoxide init zsh)"
+mkcd(){ mkdir -p -- "$1" && cd -- "$1"; }
+detach(){ setsid -f "$@" >/dev/null 2>&1 < /dev/null; }
+extract(){ [[ -f "$1" ]]||{ echo "extract: file not found: $1" >&2; return 1; }
+  case "$1" in
+    *.tar.bz2) tar xjf "$1" ;;
+    *.tar.gz)  tar xzf "$1" ;;
+    *.tar.xz)  tar xJf "$1" ;;
+    *.tar.zst) tar --zstd -xf "$1" ;;
+    *.zip)     unzip "$1" ;;
+    *.7z)      7z x "$1" ;;
+    *)         echo "extract: unsupported format: $1" >&2; return 2 ;;
+  esac
+}
+
+# ── Directory stack ────────────────────────────────────────────────────────────
+setopt autopushd pushdignoredups
+alias d='dirs -v'
+
+# ── Jobs / Terminal ────────────────────────────────────────────────────────────
+setopt nohup nocheckjobs
+
+# ── Plugins ────────────────────────────────────────────────────────────────────
+
+# autosuggestions
+if [[ -n ${ZSH_ENABLE_AUTOSUGGESTIONS:-} ]]; then
+  if [[ -r /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
+    source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+    (( $+widgets[autosuggest-accept] )) && bindkey '^ ' autosuggest-accept
+  fi
+fi
+
+# syntax highlighting (must be last)
+if [[ -r /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
+  source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+fi
