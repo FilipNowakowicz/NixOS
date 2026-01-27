@@ -22,9 +22,7 @@
     keepassxc
     mpv
     zathura
-    zathura-pdf-mupdf
     flameshot
-    thunar
 
     # editor
     vscode
