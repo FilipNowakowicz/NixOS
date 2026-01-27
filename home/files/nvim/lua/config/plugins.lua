@@ -66,13 +66,13 @@ require("lazy").setup({
   { "nvim-treesitter/nvim-treesitter", build = ":TSUpdate" },
   { "nvim-treesitter/nvim-treesitter-textobjects" },
 
-  {
-    "nvim-telescope/telescope.nvim",
-    dependencies = {
-      "nvim-lua/plenary.nvim",
-      { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
-    },
-  },
+  -- {
+  --   "nvim-telescope/telescope.nvim",
+  --   dependencies = {
+  --     "nvim-lua/plenary.nvim",
+  --     { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
+  --   },
+  -- },
 
   { url = "https://codeberg.org/andyg/leap.nvim" },
 
@@ -92,6 +92,9 @@ require("lazy").setup({
   { "hrsh7th/cmp-omni" },
   { "kdheepak/cmp-latex-symbols" },
 }, {
+  -- For NixOS compatibility
+  lockfile = vim.fn.stdpath("data") .. "/lazy/lazy-lock.json",
+
   checker = { enabled = false },
   change_detection = { notify = false },
 })
