@@ -9,6 +9,11 @@
     ../../profiles/desktop.nix
   ];
 
+  # Zsh configuration
   home.file.".zshenv".source = ../../files/zsh/zshenv;
   home.file.".zshrc".source  = ../../files/zsh/zshrc;
+
+  # Neovim configuration
+  xdg.enable = true;
+  xdg.configFile."nvim".source = ../../files/nvim;
 }
