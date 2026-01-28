@@ -19,7 +19,10 @@
   home.file.".zshenv".source = ../../files/zsh/zshenv;
   home.file.".zshrc".source  = ../../files/zsh/zshrc;
 
-  # Neovim configuration
+  # XDG configuration
   xdg.enable = true;
   xdg.configFile."nvim".source = ../../files/nvim;
+  xdg.configFile."kitty".source  = ../../files/kitty;
+  xdg.configFile."tmux".source   = ../../files/tmux;
+  xdg.configFile."awesome".source = ../../files/awesome;
 }
