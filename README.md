@@ -35,24 +35,9 @@ The repository separates hardware, host identity, system profiles, and user conf
 │   │   ├── awesome
 │   │   │   ├── autorun.sh
 │   │   │   ├── hash
-│   │   │   │   ├── errors.lua
-│   │   │   │   ├── keybindings.lua
-│   │   │   │   ├── layouts.lua
-│   │   │   │   ├── rules.lua
-│   │   │   │   ├── signals.lua
-│   │   │   │   ├── startup.lua
-│   │   │   │   ├── utils.lua
-│   │   │   │   ├── wallpaper.lua
-│   │   │   │   └── wibar
 │   │   │   ├── helpers
-│   │   │   │   └── focus_wrap.lua
 │   │   │   ├── rc.lua
-│   │   │   ├── README.md
 │   │   │   └── theme
-│   │   │       ├── 0wall.jpg
-│   │   │       ├── layout_icons
-│   │   │       ├── rofi
-│   │   │       └── theme.lua
 │   │   ├── kitty
 │   │   │   ├── current-theme.conf
 │   │   │   └── kitty.conf
@@ -60,10 +45,7 @@ The repository separates hardware, host identity, system profiles, and user conf
 │   │   │   ├── init.lua
 │   │   │   ├── lazy-lock.json
 │   │   │   ├── lua
-│   │   │   │   └── config
 │   │   │   └── spell
-│   │   │       ├── en.utf-8.add
-│   │   │       └── en.utf-8.add.spl
 │   │   ├── tmux
 │   │   │   └── tmux.conf
 │   │   └── zsh
@@ -76,6 +58,7 @@ The repository separates hardware, host identity, system profiles, and user conf
 │       └── user
 │           └── home.nix
 └── README.md
+
 ```
 
 
