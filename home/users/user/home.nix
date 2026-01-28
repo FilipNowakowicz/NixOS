@@ -9,6 +9,12 @@
     ../../profiles/desktop.nix
   ];
 
+  programs.git = {
+    enable = true;
+    userName = "Filip Nowakowicz";
+    userEmail = "filip.nowakowicz@gmail.com";
+  };
+
   # Zsh configuration
   home.file.".zshenv".source = ../../files/zsh/zshenv;
   home.file.".zshrc".source  = ../../files/zsh/zshrc;

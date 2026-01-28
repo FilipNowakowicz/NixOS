@@ -26,7 +26,7 @@
     zoxide
   
     # ── Editor / Dev ─────────────────────────────────────────
-    neovim
+    neovim-unwrapped
     git
     lazygit
     nodejs
@@ -34,6 +34,9 @@
     python3Packages.flake8
     clang-tools
     gnumake
+    gcc
+    gnumake
+    tree-sitter
   
     # ── Neovim helpers ───────────────────────────────────────
     glow        # :Glow markdown preview

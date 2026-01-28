@@ -63,16 +63,19 @@ require("lazy").setup({
   { "nvim-lualine/lualine.nvim" },
   { "nvim-tree/nvim-tree.lua" },
 
-  { "nvim-treesitter/nvim-treesitter", build = ":TSUpdate" },
-  { "nvim-treesitter/nvim-treesitter-textobjects" },
+  -- { "nvim-treesitter/nvim-treesitter", build = ":TSUpdate" },
+  -- { "nvim-treesitter/nvim-treesitter" },
+  -- { "nvim-treesitter/nvim-treesitter-textobjects", dependencies = { "nvim-treesitter/nvim-treesitter" } },
 
-  -- {
-  --   "nvim-telescope/telescope.nvim",
-  --   dependencies = {
-  --     "nvim-lua/plenary.nvim",
-  --     { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
-  --   },
-  -- },
+  {
+    "nvim-telescope/telescope.nvim",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
+    },
+  },
+
+  -- { "nvim-lua/plenary.nvim" },
 
   { url = "https://codeberg.org/andyg/leap.nvim" },
 

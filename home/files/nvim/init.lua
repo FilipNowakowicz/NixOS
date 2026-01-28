@@ -5,7 +5,7 @@ require("config.plugins")
 
 -- Plugins
 require("config.ui")
-require("config.lsp")
+-- require("config.lsp")
 require("config.dap")
 require("config.tests")
 require("config.tex")
