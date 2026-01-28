@@ -1,0 +1,75 @@
+local awful = require("awful")
+local ruled = require("ruled")
+
+ruled.client.connect_signal("request::rules", function()
+  -- Global rules for all clients
+  ruled.client.append_rule {
+    id         = "global",
+    rule       = {},
+    properties = {
+      focus             = awful.client.focus.filter,
+      raise             = true,
+      titlebars_enabled = false,
+      screen            = awful.screen.preferred,
+      placement         = awful.placement.no_overlap + awful.placement.no_offscreen,
+    },
+  }
+
+  -- All normal windows: tile, never start maximised/fullscreen/floating
+  ruled.client.append_rule {
+    id       = "normal_clients_tile",
+    rule_any = { type = { "normal" } },
+    properties = {
+      floating   = false,
+      fullscreen = false,
+      maximized  = false,
+      maximized_vertical = false,
+      maximized_horizontal = false,
+    },
+  }
+
+  -- Chromium and friends: force-disable start maximised
+  ruled.client.append_rule {
+    id       = "chromium_no_maximize",
+    rule_any = {
+      class = { "Chromium", "Google-chrome", "Brave-browser" },
+    },
+    properties = {
+      floating = false,
+      fullscreen = false,
+      maximized = false,
+      maximized_vertical = false,
+      maximized_horizontal = false,
+    },
+    callback = function(c)
+      c.fullscreen = false
+      c.maximized = false
+      c.maximized_vertical = false
+      c.maximized_horizontal = false
+    end,
+  }
+end)
+
+-- Extra safety: Chromium sometimes re-asserts maximised after mapping
+client.connect_signal("property::maximized", function(c)
+  if c.class == "Chromium"
+    or c.class == "Google-chrome"
+    or c.class == "Brave-browser"
+  then
+    c.maximized = false
+    c.maximized_vertical = false
+    c.maximized_horizontal = false
+  end
+end)
+
+-- Notification rules
+ruled.notification.connect_signal("request::rules", function()
+  ruled.notification.append_rule {
+    rule       = {},
+    properties = {
+      screen           = awful.screen.preferred,
+      implicit_timeout = 5,
+      position         = "bottom_middle",
+    },
+  }
+end)

@@ -1,0 +1,50 @@
+/* Colors are fully inlined to avoid external imports. */
+configuration {
+    modi: "drun";
+    show-icons: false;
+    matching: "fuzzy";
+    auto-complete: true;
+}
+
+* {
+    font: "Sans 10";
+    background-color: rgba(24, 24, 24, 0.9);
+    text-color: #f0f0f0;
+}
+
+window {
+    padding: 8px;
+    border-radius: 6px;
+}
+
+mainbox {
+    padding: 6px;
+    spacing: 6px;
+}
+
+inputbar {
+    padding: 6px;
+    border-radius: 4px;
+    background-color: rgba(40, 40, 40, 0.9);
+}
+
+listview {
+    padding: 6px 0;
+    columns: 1;
+    lines: 7;
+    fixed-height: true;
+}
+
+entry {
+    padding: 4px;
+}
+
+element {
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+element selected {
+    background-color: rgba(70, 70, 70, 0.85);
+    text-color: #ffffff;
+}
