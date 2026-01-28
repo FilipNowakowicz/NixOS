@@ -18,46 +18,46 @@ The repository separates hardware, host identity, system profiles, and user conf
 ```
 .
 ├── flake.lock
-├── flake.nix
+├── flake.nix                     # Flake entry point: defines systems, hosts, Home Manager
 ├── hosts
 │   └── main
-│       ├── default.nix
+│       ├── default.nix           # Main host config (imports NixOS profiles/modules)
 │       └── hardware-configuration.nix
 ├── modules
 │   └── nixos
 │       ├── features
 │       └── profiles
-│           ├── base.nix
-│           ├── desktop.nix
-│           └── security.nix
+│           ├── base.nix           # Core system baseline (nix, users, locale)
+│           ├── desktop.nix        # Desktop system layer (X11, WM, audio)
+│           └── security.nix       # System hardening (firewall, sudo, sysctl)
 ├── home
+│   ├── profiles
+│   │   ├── base.nix               # Base Home Manager layer (CLI tools, defaults)
+│   │   └── desktop.nix            # Desktop HM layer (GUI apps, services)
+│   ├── users
+│   │   └── user
+│   │       └── home.nix           # User HM entry point (imports profiles + files)
 │   ├── files
-│   │   ├── awesome
+│   │   ├── awesome                # Awesome Window Manager
 │   │   │   ├── autorun.sh
 │   │   │   ├── hash
 │   │   │   ├── helpers
-│   │   │   ├── rc.lua
+│   │   │   ├── rc.lua             
 │   │   │   └── theme
-│   │   ├── kitty
+│   │   ├── kitty                  # Kitty Terminal
 │   │   │   ├── current-theme.conf
-│   │   │   └── kitty.conf
-│   │   ├── nvim
-│   │   │   ├── init.lua
+│   │   │   └── kitty.conf         
+│   │   ├── nvim                   # Neovim
+│   │   │   ├── init.lua           
 │   │   │   ├── lazy-lock.json
 │   │   │   ├── lua
 │   │   │   └── spell
-│   │   ├── tmux
+│   │   ├── tmux                   # Terminal Multiplexer
 │   │   │   └── tmux.conf
-│   │   └── zsh
+│   │   └── zsh                    # Z Shell
 │   │       ├── zshenv
 │   │       └── zshrc
-│   ├── profiles
-│   │   ├── base.nix
-│   │   └── desktop.nix
-│   └── users
-│       └── user
-│           └── home.nix
-└── README.md
+└── README.md                     
 
 ```
 
