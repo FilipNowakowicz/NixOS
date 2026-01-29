@@ -18,7 +18,10 @@
     displayManager.startx.enable = true;
 
     # Window manager
-    windowManager.awesome.enable = true;
+    windowManager.awesome = {
+      enable = true;
+      package = pkgs.awesome-git;
+    };
 
     # Don’t spawn xterm automatically
     desktopManager.xterm.enable = false;
