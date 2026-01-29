@@ -56,12 +56,11 @@
     lua52Packages.lgi
     xorg.xmessage
     pasystray
-    xfce.xfce-polkit
     gnome-keyring
     networkmanagerapplet
     cbatticon
     picom
-    polkit-gnome
+    polkit_gnome
   ];
 
   fonts = {
