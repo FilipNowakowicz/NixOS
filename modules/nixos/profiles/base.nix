@@ -20,6 +20,8 @@
   programs.zsh.enable = true;
   users.defaultUserShell = pkgs.zsh;
 
+  console.keyMap = "dvorak";
+
   # OS Essential Packages
   environment.systemPackages = with pkgs; [
     curl
