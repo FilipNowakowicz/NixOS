@@ -12,8 +12,8 @@ awful.rules.rules = {
       screen            = awful.screen.preferred,
       placement         = awful.placement.no_overlap + awful.placement.no_offscreen,
     
-      keys              = clientkeys,
-      buttons           = clientbuttons,
+      keys              = Global.Clientkeys,
+      buttons           = Global.ClientButtons,
     },
   },
 
