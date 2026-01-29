@@ -41,7 +41,6 @@
         main = mkNixos "main";
       };
 
-      # ADD THIS BLOCK
       homeConfigurations = {
         user = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;

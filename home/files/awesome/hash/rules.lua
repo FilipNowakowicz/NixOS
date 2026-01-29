@@ -1,11 +1,10 @@
 local awful = require("awful")
-local ruled = require("ruled")
 
-ruled.client.connect_signal("request::rules", function()
+-- Awesome 4.3 rules (no `ruled`)
+awful.rules.rules = {
   -- Global rules for all clients
-  ruled.client.append_rule {
-    id         = "global",
-    rule       = {},
+  {
+    rule = {},
     properties = {
       focus             = awful.client.focus.filter,
       raise             = true,
@@ -13,11 +12,10 @@ ruled.client.connect_signal("request::rules", function()
       screen            = awful.screen.preferred,
       placement         = awful.placement.no_overlap + awful.placement.no_offscreen,
     },
-  }
+  },
 
   -- All normal windows: tile, never start maximised/fullscreen/floating
-  ruled.client.append_rule {
-    id       = "normal_clients_tile",
+  {
     rule_any = { type = { "normal" } },
     properties = {
       floating   = false,
@@ -26,11 +24,10 @@ ruled.client.connect_signal("request::rules", function()
       maximized_vertical = false,
       maximized_horizontal = false,
     },
-  }
+  },
 
   -- Chromium and friends: force-disable start maximised
-  ruled.client.append_rule {
-    id       = "chromium_no_maximize",
+  {
     rule_any = {
       class = { "Chromium", "Google-chrome", "Brave-browser" },
     },
@@ -47,8 +44,8 @@ ruled.client.connect_signal("request::rules", function()
       c.maximized_vertical = false
       c.maximized_horizontal = false
     end,
-  }
-end)
+  },
+}
 
 -- Extra safety: Chromium sometimes re-asserts maximised after mapping
 client.connect_signal("property::maximized", function(c)
@@ -60,16 +57,4 @@ client.connect_signal("property::maximized", function(c)
     c.maximized_vertical = false
     c.maximized_horizontal = false
   end
-end)
-
--- Notification rules
-ruled.notification.connect_signal("request::rules", function()
-  ruled.notification.append_rule {
-    rule       = {},
-    properties = {
-      screen           = awful.screen.preferred,
-      implicit_timeout = 5,
-      position         = "bottom_middle",
-    },
-  }
 end)

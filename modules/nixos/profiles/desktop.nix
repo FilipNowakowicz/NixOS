@@ -20,7 +20,6 @@
     # Window manager
     windowManager.awesome = {
       enable = true;
-      package = pkgs.awesome-git;
     };
 
     # Don’t spawn xterm automatically
@@ -54,6 +53,7 @@
   environment.systemPackages = with pkgs; [
     gnome-themes-extra
     xorg.xinit
+    lua52Packages.lgi
   ];
 
   fonts = {
