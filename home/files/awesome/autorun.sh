@@ -14,8 +14,7 @@ if [ "$computer_type" = "8" ] || [ "$computer_type" = "9" ] || [ "$computer_type
   run cbatticon
 fi
 
-# Compositor (optional – comment out if you don’t want it). Use the user's
-# picom configuration if it exists.
+# Compositor
 if [ -f "$HOME/.config/picom/picom.conf" ]; then
   run picom --config "$HOME/.config/picom/picom.conf" -b
 else
@@ -26,9 +25,8 @@ fi
 run pasystray
 
 # Polkit agent
-run /usr/lib/xfce-polkit/xfce-polkit
+run polkit-gnome-authentication-agent-1
 
 # Keyring
 run dbus-update-activation-environment --all
-run gnome-keyring-daemon --start --components=secrets
-
+run gnome-keyring-daemon --start --components=secrets,ssh,pkcs11

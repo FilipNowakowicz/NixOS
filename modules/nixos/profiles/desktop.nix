@@ -54,6 +54,14 @@
     gnome-themes-extra
     xorg.xinit
     lua52Packages.lgi
+    xorg.xmessage
+    pasystray
+    xfce.xfce-polkit
+    gnome-keyring
+    networkmanagerapplet
+    cbatticon
+    picom
+    polkit-gnome
   ];
 
   fonts = {
