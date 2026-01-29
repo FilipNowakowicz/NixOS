@@ -9,16 +9,13 @@ jobs:
   flake-check:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # Install Nix
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v16
 
-      # Enable cache + faster builds
-      - name: Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v9
-
       - name: Flake check
         run: nix flake check --show-trace
+
+      - name: Eval main host
+        run: nix eval .#nixosConfigurations.main.config.system.build.toplevel --show-trace
