@@ -1,12 +1,11 @@
 -- Awesome WM configuration file
 
--- Standard libraries
 local awful = require("awful")
+local gears = require("gears")
 local beautiful = require("beautiful")
 
--- Global variables
 Global = {
-  ConfigFolder = awful.util.get_configuration_dir(),
+  ConfigFolder = gears.filesystem.get_configuration_dir(),
 
   Apps = {
     Terminal    = "kitty",
@@ -18,17 +17,28 @@ Global = {
   },
 
   Keys = {
-    ModKey      = "Mod4",
+    ModKey = "Mod4",
   },
 }
-
 -- Error handling
 require("hash.errors")
 
 -- Theme and layouts
-beautiful.init(Global.ConfigFolder .. "theme/theme.lua")
--- Expose the loaded theme table so widgets using Theme can access it
-Theme = beautiful.get()
+local naughty = require("naughty")
+
+local ok, err = pcall(function()
+  beautiful.init(Global.ConfigFolder .. "theme/theme.lua")
+end)
+
+if not ok then
+  naughty.notify({
+    preset = naughty.config.presets.critical,
+    title = "Theme load failed",
+    text = tostring(err),
+  })
+end
+
+Theme = beautiful
 require("awful.autofocus")
 require("hash.layouts")
 
