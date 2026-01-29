@@ -1,6 +1,10 @@
 -- Awesome WM configuration file
-
 local awful = require("awful")
+awful.spawn.with_shell("date; echo 'rc.lua: start' >> /tmp/awesome-boot.log")
+awful.spawn.with_shell("xsetroot -solid '#303030'")
+awful.spawn.with_shell("xmessage -center 'Awesome rc.lua started' &")
+
+-- local awful = require("awful")
 local gears = require("gears")
 local beautiful = require("beautiful")
 
