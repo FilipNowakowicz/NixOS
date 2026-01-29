@@ -35,7 +35,7 @@
     wireplumber.enable = true;
   };
 
-  hardware.pulseaudio.enable = false;
+  services.pulseaudio.enable = false;
 
   # Portals (needed for many desktop apps)
   xdg.portal = {

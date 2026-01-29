@@ -14,8 +14,8 @@
     networkmanager.enable = true;
   };
 
-  services.logind = {
-    lidSwitch = "suspend";
+  services.logind.settings = {
+    Login.HandleLidSwitch = "suspend";
     # Optional: keep running on AC power
     # lidSwitchExternalPower = "ignore";
   };

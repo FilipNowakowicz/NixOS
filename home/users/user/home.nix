@@ -11,8 +11,8 @@
 
   programs.git = {
     enable = true;
-    userName = "Filip Nowakowicz";
-    userEmail = "filip.nowakowicz@gmail.com";
+    settings.user.name = "Filip Nowakowicz";
+    settings.user.email = "filip.nowakowicz@gmail.com";
   };
 
   # Zsh configuration

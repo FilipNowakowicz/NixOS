@@ -48,60 +48,27 @@
     timewarrior
     yt-dlp
   ];
+
   home.sessionVariables = {
     EDITOR = "nvim";
     PAGER = "less -R";
   };
 
-  # Git enabled, but NO identity here (set in home/users/user/home.nix)
   programs.git = {
     enable = true;
-    extraConfig = {
+    settings = {
       init.defaultBranch = "main";
       pull.ff = "only";
       core.editor = "nvim";
     };
   };
 
-  # Neovim enabled (keep config tiny; move real config to home/files/ later)
-
-  programs.tmux = {
-    enable = true;
-    clock24 = true;
-    escapeTime = 10;
-    historyLimit = 15000;
-    extraConfig = ''
-      set -g mouse on
-      setw -g automatic-rename on
-      setw -g aggressive-resize on
-    '';
-  };
-
-  # Prompt (optional, but fine)
   programs.starship = {
     enable = true;
     enableZshIntegration = true;
     settings = {
       add_newline = false;
     };
-  };
-
-  # Zsh as the interactive shell config
-  programs.zsh = {
-    enable = true;
-    enableCompletion = true;
-
-    shellAliases = {
-      ll = "eza -lh";
-      la = "eza -lha";
-      gs = "git status -sb";
-      v = "nvim";
-      cat = "bat --style=plain";
-    };
-
-    initExtra = ''
-      eval "$(zoxide init zsh)"
-    '';
   };
 
   programs.fzf = {
