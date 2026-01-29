@@ -19,6 +19,9 @@ Global = {
   },
 }
 
+local keys = require("hash.keybindings")
+local globalkeys, clientkeys, clientbuttons = keys.get()
+root.keys(globalkeys)
 Global.ConfigFolder = awful.util.getdir("config")
 
 -- Error handling
@@ -40,6 +43,7 @@ end)
 -- Behaviors
 require("hash.signals")
 require("hash.rules")
-require("hash.keybindings")
+-- require("hash.keybindings")
+
 require("hash.wallpaper")
 require("hash.startup")

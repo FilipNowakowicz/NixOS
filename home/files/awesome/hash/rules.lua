@@ -11,6 +11,9 @@ awful.rules.rules = {
       titlebars_enabled = false,
       screen            = awful.screen.preferred,
       placement         = awful.placement.no_overlap + awful.placement.no_offscreen,
+    
+      keys              = clientkeys,
+      buttons           = clientbuttons,
     },
   },
 
