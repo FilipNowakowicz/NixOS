@@ -6,6 +6,8 @@ local beautiful = require("beautiful")
 
 -- Global variables
 Global = {
+  ConfigFolder = awful.util.get_configuration_dir(),
+
   Apps = {
     Terminal    = "kitty",
     Browser     = "firefox",
@@ -14,21 +16,17 @@ Global = {
     Rofi        = "rofi",
     PowerMenu   = "rofi-power-menu",
   },
+
   Keys = {
     ModKey      = "Mod4",
   },
 }
 
-local keys = require("hash.keybindings")
-local globalkeys, clientkeys, clientbuttons = keys.get()
-root.keys(globalkeys)
-Global.ConfigFolder = awful.util.getdir("config")
-
 -- Error handling
 require("hash.errors")
 
 -- Theme and layouts
-beautiful.init(Global.ConfigFolder .. "/theme/theme.lua")
+beautiful.init(Global.ConfigFolder .. "theme/theme.lua")
 -- Expose the loaded theme table so widgets using Theme can access it
 Theme = beautiful.get()
 require("awful.autofocus")
@@ -40,10 +38,15 @@ screen.connect_signal("request::desktop_decoration", function(s)
   require("hash.wibar")(s)
 end)
 
+-- Keybindings (Awesome 4.3 style)
+local keys = require("hash.keybindings")
+local globalkeys, clientkeys, clientbuttons = keys.get()
+root.keys(globalkeys)
+Global.ClientKeys = clientkeys
+Global.ClientButtons = clientbuttons
+
 -- Behaviors
 require("hash.signals")
 require("hash.rules")
--- require("hash.keybindings")
-
 require("hash.wallpaper")
 require("hash.startup")
