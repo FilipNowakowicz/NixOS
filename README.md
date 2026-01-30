@@ -85,14 +85,3 @@ Evaluate without installing (sanity check):
 
     nix flake check
     nix eval '.#nixosConfigurations.main.config.system.build.toplevel'
-
----
-
-## Home Manager
-
-Home Manager is integrated into NixOS and rebuilt alongside the system.
-User configuration is composed from reusable home profiles.
-
-
-Unlicensed / personal infrastructure.
-Reuse at your own risk.
