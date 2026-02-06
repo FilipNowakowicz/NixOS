@@ -141,10 +141,14 @@ end
 client.connect_signal("request::titlebars", function(c)
   local buttons = {
     awful.button({}, 1, function()
-      c:activate { context = "titlebar", action = "mouse_move" }
+      client.focus = c
+      c:raise()
+      awful.mouse.client.move(c)
     end),
     awful.button({}, 3, function()
-      c:activate { context = "titlebar", action = "mouse_resize" }
+      client.focus = c
+      c:raise()
+      awful.mouse.client.resize(c)
     end),
   }
 
