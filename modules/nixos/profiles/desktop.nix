@@ -63,14 +63,16 @@
     polkit_gnome
   ];
 
-  fonts = {
+  fonts = let
+    nerdFontsPkg = if pkgs ? nerdfonts then pkgs.nerdfonts else pkgs."nerd-fonts";
+  in {
     enableDefaultPackages = true;
     fontDir.enable = true;
     fontconfig.enable = true;
     packages = with pkgs; [
       dejavu_fonts
       liberation_ttf
-      (nerdfonts.override { fonts = [ "Iosevka" "NerdFontsSymbolsOnly" ]; })
+      (nerdFontsPkg.override { fonts = [ "Iosevka" "NerdFontsSymbolsOnly" ]; })
       noto-fonts
       noto-fonts-color-emoji
     ];
