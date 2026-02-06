@@ -85,7 +85,7 @@ do
 end
 
 -- Screen setup (tags and wibar)
-screen.connect_signal("request::desktop_decoration", function(s)
+awful.screen.connect_for_each_screen(function(s)
   awful.tag({ "", "", "", "", "", "", "", "", "", "" }, s, awful.layout.layouts[1])
 
   local wibar = safe("hash.wibar")
