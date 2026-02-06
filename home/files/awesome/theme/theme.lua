@@ -21,7 +21,7 @@ Theme.Spacing       = Theme.UniversalSize * (2 / 3)
 --------------------------------------------------------------------------------
 -- FONTS
 --------------------------------------------------------------------------------
-Theme.Font_Name = "Inter"
+Theme.Font_Name = "Iosevka Nerd Font"
 
 -- Original: Theme.Font_Size = Theme.UniversalSize * (2 / 5)   -- ~8px
 -- New: slightly larger for readability: ~10px when UniversalSize = 20
