@@ -3,7 +3,7 @@
 local gears = require("gears")
 
 local Theme = {}
-Theme.location = gears.filesystem.get_configuration_dir() .. "theme"
+Theme.location = gears.filesystem.get_configuration_dir() .. "theme/"
 
 
 --------------------------------------------------------------------------------
@@ -21,13 +21,13 @@ Theme.Spacing       = Theme.UniversalSize * (2 / 3)
 --------------------------------------------------------------------------------
 -- FONTS
 --------------------------------------------------------------------------------
-Theme.Font_Name = "Inter 10"
+Theme.Font_Name = "Inter"
 
 -- Original: Theme.Font_Size = Theme.UniversalSize * (2 / 5)   -- ~8px
 -- New: slightly larger for readability: ~10px when UniversalSize = 20
 Theme.Font_Size = Theme.UniversalSize * (1 / 2)
 
-Theme.Font      = Theme.Font_Name .. " " .. tostring(Theme.Font_Size)
+Theme.Font      = string.format("%s %d", Theme.Font_Name, Theme.Font_Size)
 
 
 --------------------------------------------------------------------------------

@@ -1,19 +1,13 @@
-local wibox = require("wibox")
 local awful = require("awful")
+local gears = require("gears")
 
+local function set_wallpaper(s)
+  if Theme.Wallpaper and Theme.Wallpaper ~= "" then
+    gears.wallpaper.maximized(Theme.Wallpaper, s, true)
+  else
+    gears.wallpaper.set("#303030")
+  end
+end
 
-screen.connect_signal("request::wallpaper", function(s)
-  awful.wallpaper
-  {
-    screen = s,
-    widget =
-    {
-      image                 = Theme.Wallpaper,
-      upscale               = true,
-      downscale             = true,
-      horizontal_fit_policy = "fit",
-      vertical_fit_policy   = "fit",
-      widget                = wibox.widget.imagebox,
-    },
-  }
-end)
+awful.screen.connect_for_each_screen(set_wallpaper)
+screen.connect_signal("property::geometry", set_wallpaper)
