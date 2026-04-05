@@ -24,7 +24,7 @@ in
 
   # Wallpaper
   home.file.".local/share/wallpapers/wallpaper1.png".source =
-    ../../wallpapers/wallpaper1.png;
+    ../../theme/wallpapers/wallpaper1.png;
 
   xdg.enable = true;
 
