@@ -12,19 +12,17 @@
   boot.kernelModules = [ ];
   boot.extraModulePackages = [ ];
 
-  # Adjust labels to match your VM's actual disk setup,
-  # or replace with UUIDs from `blkid` on the VM.
   fileSystems."/" = {
-    device = "/dev/disk/by-label/vm-root";
+    device = "/dev/disk/by-label/main-root";
     fsType = "ext4";
   };
 
   fileSystems."/boot" = {
-    device = "/dev/disk/by-label/vm-boot";
+    device = "/dev/disk/by-label/main-boot";
     fsType = "vfat";
   };
 
-  swapDevices = [{ device = "/dev/disk/by-label/vm-swap"; }];
+  swapDevices = [{ device = "/dev/disk/by-label/main-swap"; }];
 
   # Standard QEMU virtio disk; use systemd-boot if VM is UEFI.
   boot.loader.grub = {
