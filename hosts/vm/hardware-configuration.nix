@@ -24,9 +24,6 @@
 
   swapDevices = [{ device = "/dev/disk/by-label/main-swap"; }];
 
-  # Standard QEMU virtio disk; use systemd-boot if VM is UEFI.
-  boot.loader.grub = {
-    enable = true;
-    device = "/dev/vda";
-  };
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = true;
 }
