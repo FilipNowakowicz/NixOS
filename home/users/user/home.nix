@@ -146,7 +146,7 @@ in
   '';
   xdg.configFile."hypr/hyprpaper.conf".text = ''
     preload   = ~/.local/share/wallpapers/wallpaper1.png
-    wallpaper = ,~/.local/share/wallpapers/wallpaper1.png
+    wallpaper = Virtual-1,~/.local/share/wallpapers/wallpaper1.png
     splash    = false
   '';
 
