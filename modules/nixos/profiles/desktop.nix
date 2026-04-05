@@ -4,9 +4,6 @@
   services.xserver = {
     enable = true;
 
-    # VM-friendly Xorg driver
-    videoDrivers = [ "virtio" ];
-
     # Keyboard layout (X11)
     xkb = {
       layout = "us";

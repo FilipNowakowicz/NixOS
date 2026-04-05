@@ -1,0 +1,40 @@
+{ pkgs, ... }:
+{
+  imports = [
+    ./hardware-configuration.nix
+    ../../modules/nixos/profiles/base.nix
+    ../../modules/nixos/profiles/desktop.nix
+    ../../modules/nixos/profiles/security.nix
+  ];
+
+  system.stateVersion = "24.11";
+
+  networking = {
+    hostName = "vm";
+    networkmanager.enable = true;
+  };
+
+  # Enable SSH for remote deployment via `ssh nixvm`
+  services.openssh = {
+    enable = true;
+    openFirewall = true;
+  };
+
+  # Virtio GPU — VM-specific, kept out of the shared desktop profile
+  services.xserver.videoDrivers = [ "virtio" ];
+
+  users.users.user = {
+    isNormalUser = true;
+    description = "Primary user";
+    extraGroups = [ "wheel" "networkmanager" "video" ];
+    shell = pkgs.zsh;
+  };
+
+  home-manager = {
+    useGlobalPkgs = true;
+    useUserPackages = true;
+    users.user = {
+      imports = [ ../../home/users/user/home.nix ];
+    };
+  };
+}

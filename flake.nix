@@ -39,6 +39,7 @@
 
       nixosConfigurations = {
         main = mkNixos "main";
+        vm   = mkNixos "vm";
       };
 
       homeConfigurations = {
