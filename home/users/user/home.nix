@@ -168,7 +168,11 @@ in
             "format": "{icon}",
             "format-icons": {
                 "active":  "●",
-                "default": "○"
+                "default": "●",
+                "empty":   "○"
+            },
+            "persistent-workspaces": {
+                "*": 10
             },
             "on-click": "activate",
             "sort-by-number": true
@@ -245,11 +249,15 @@ in
 
     #workspaces button {
         padding:    0 6px;
-        color:      #${colors.brown};
+        color:      #${colors.text};
         background: transparent;
         font-size:  10px;
         transition: color 150ms ease;
         box-shadow: none;
+    }
+
+    #workspaces button.empty {
+        color: #${colors.brown};
     }
 
     #workspaces button.active {
