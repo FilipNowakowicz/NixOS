@@ -12,7 +12,7 @@ approaches proactively. Explain why, not just what.
 - **Target:** NixOS VM via `ssh nixvm` (~/.ssh/config alias on Arch)
 - **Deploy (VM):** `nixos-rebuild switch --flake .#vm --target-host nixvm --use-remote-sudo`
 - **Deploy (main):** `nixos-rebuild switch --flake .#main`
-- **Hot-reload:** `ssh nixvm 'DISPLAY=:0 hyprctl reload'`
+- **Hot-reload:** `ssh nixvm 'hyprctl reload'`
 - **Launch VM:** `qemu-system-x86_64 -enable-kvm -machine q35 -cpu host -smp 4 -m 8G -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/x64/OVMF_CODE.4m.fd -drive if=pflash,format=raw,file=/vmstore/images/nixos-test-vars.fd -drive file=/vmstore/images/nixos-test.qcow2,if=virtio -boot menu=on -netdev user,id=net0,hostfwd=tcp::2222-:22 -device virtio-net-pci,netdev=net0 -daemonize -display none`
 - **Git** is for version control only, not deployment
 
@@ -32,11 +32,10 @@ approaches proactively. Explain why, not just what.
 
 ## Current Focus
 
-Migrating from AwesomeWM (X11) to Hyprland (Wayland) with Waybar.
-The `home/files/awesome/` directory is being replaced — do not
-spend time adapting or fixing it.
-VM host needs creating — virtio config currently lives in main,
-needs extracting into hosts/vm/.
+Hyprland migration in progress. System and home profiles have been
+converted to Wayland — base hyprland.conf exists with dvorak input
+and keybindings. Next: individual app configs (Waybar, Hyprlock,
+Hyprpaper, Mako, Rofi, Kitty, Neovim, etc.).
 
 ---
 
@@ -50,7 +49,7 @@ needs extracting into hosts/vm/.
 | Editor | Neovim |
 | Shell | Zsh |
 | Prompt | Starship |
-| Launcher | Rofi-wayland |
+| Launcher | Rofi |
 | Notifications | Mako |
 | Screen lock | Hyprlock |
 | Wallpaper | Hyprpaper |
@@ -64,7 +63,7 @@ needs extracting into hosts/vm/.
 - Hyprland migration (in progress)
 - Individual app configs (Waybar, Kitty, Neovim, Zsh, Rofi, etc.)
 - Multi-monitor and multi-device support via Hyprland
-- Clean separation between vm and main host configs
+- Clean separation between vm and main host configs ✓
 - disko for declarative disk partitioning
 - nixos-generators for image/ISO generation
 
@@ -77,3 +76,4 @@ needs extracting into hosts/vm/.
 - Prefer home-manager for user-level config over system-level
 - Keep things declarative — avoid imperative workarounds
 - Flag anything that might cause issues on rebuild
+- Always validate changes by running `nix build '.#nixosConfigurations.vm.config.system.build.toplevel' --no-link` before considering a task done

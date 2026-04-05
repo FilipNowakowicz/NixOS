@@ -5,7 +5,7 @@
     kitty
 
     # ── Launcher ─────────────────────────────────────────────
-    rofi-wayland
+    rofi
 
     # ── Wayland utilities ────────────────────────────────────
     wl-clipboard
