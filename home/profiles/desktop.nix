@@ -13,6 +13,7 @@
     slurp         # region select (used with grim)
     waybar
     hyprpaper
+    hyprlock
 
     # ── Desktop UX ───────────────────────────────────────────
     gsimplecal
@@ -42,6 +43,4 @@
   # GTK theming
   gtk.enable = true;
 
-  # Notifications (Wayland)
-  services.mako.enable = true;
 }

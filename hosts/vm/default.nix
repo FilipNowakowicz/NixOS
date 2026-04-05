@@ -20,9 +20,6 @@
     openFirewall = true;
   };
 
-  # Virtio GPU — VM-specific, kept out of the shared desktop profile
-  services.xserver.videoDrivers = [ "virtio" ];
-
   users.users.user = {
     isNormalUser = true;
     description = "Primary user";

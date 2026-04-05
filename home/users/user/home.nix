@@ -18,9 +18,68 @@ in
     settings.user.email = "filip.nowakowicz@gmail.com";
   };
 
-  # Zsh
-  home.file.".zshenv".source = ../../files/zsh/zshenv;
-  home.file.".zshrc".source  = ../../files/zsh/zshrc;
+  # PATH addition from ~/.local/bin
+  home.sessionPath = [ "${config.home.homeDirectory}/.local/bin" ];
+
+  # Zsh — user-specific aliases and shell functions
+  # Base options, plugins, and vi-mode are set in home/profiles/base.nix
+  programs.zsh = {
+    shellAliases = {
+      # ── Files ──────────────────────────────────────────────
+      ll   = "ls -lh --color=auto";
+      la   = "ls -A";
+      l    = "ls -CF";
+      cp   = "cp -i";
+      mv   = "mv -i";
+      # ── Navigation ─────────────────────────────────────────
+      ".."   = "cd ..";
+      "..."  = "cd ../..";
+      "...." = "cd ../../..";
+      d      = "dirs -v";
+      # ── Git ────────────────────────────────────────────────
+      g    = "git";
+      ga   = "git add";
+      gd   = "git diff";
+      gco  = "git checkout";
+      gb   = "git branch";
+      gc   = "git commit -m";
+      gca  = "git commit -am";
+      gp   = "git push";
+      gl   = "git pull";
+      glog = "git log --oneline --graph --decorate";
+      # ── System ─────────────────────────────────────────────
+      battery          = "acpi -b";
+      buds             = "bluetoothctl connect DC:69:E2:CF:9A:BD";
+      headset          = "bluetoothctl connect 40:58:99:3D:C8:D3";
+      whatsapp         = "wasistlos &";
+      vnc-on           = ''systemctl --user start x0vncserver.service && echo "VNC started"'';
+      vnc-off          = ''systemctl --user stop x0vncserver.service && echo "VNC stopped"'';
+      vnc-status       = "systemctl --user status x0vncserver.service --no-pager";
+      tailscale-on     = ''sudo systemctl start tailscaled && sudo tailscale up && echo "Tailscale connected"'';
+      tailscale-off    = ''sudo systemctl stop tailscaled && echo "Tailscale stopped"'';
+      tailscale-status = "tailscale status";
+      ollama3          = "ollama run llama3.1:8b";
+      ollamamath       = "ollama run wizard-math:7b";
+      backup           = "sudo -E /usr/local/bin/backup-borg.sh";
+    };
+
+    initContent = ''
+      mkcd()   { mkdir -p -- "$1" && cd -- "$1"; }
+      detach() { setsid -f "$@" >/dev/null 2>&1 < /dev/null; }
+      extract() {
+        [[ -f "$1" ]] || { echo "extract: file not found: $1" >&2; return 1; }
+        case "$1" in
+          *.tar.bz2) tar xjf "$1" ;;
+          *.tar.gz)  tar xzf "$1" ;;
+          *.tar.xz)  tar xJf "$1" ;;
+          *.tar.zst) tar --zstd -xf "$1" ;;
+          *.zip)     unzip "$1" ;;
+          *.7z)      7z x "$1" ;;
+          *) echo "extract: unsupported format: $1" >&2; return 2 ;;
+        esac
+      }
+    '';
+  };
 
   # Wallpaper
   home.file.".local/share/wallpapers/wallpaper1.png".source =
@@ -30,7 +89,6 @@ in
 
   # ── Neovim / Tmux ────────────────────────────────────────────────────────────
   xdg.configFile."nvim".source = ../../files/nvim;
-  xdg.configFile."tmux".source = ../../files/tmux;
 
   # ── Kitty ────────────────────────────────────────────────────────────────────
   # Per-file so current-theme.conf can be generated from colors.nix
@@ -226,6 +284,74 @@ in
 
     #battery.warning  { color: #${colors.orange}; }
     #battery.critical { color: #${colors.amber};  }
+  '';
+
+  # ── Mako ─────────────────────────────────────────────────────────────────────
+  services.mako = {
+    enable = true;
+    settings = {
+      font             = "JetBrainsMono Nerd Font 11";
+      background-color = "#${colors.bg}";
+      text-color       = "#${colors.text}";
+      border-color     = "#${colors.orange}";
+      border-radius    = 8;
+      border-size      = 2;
+      anchor           = "top-right";
+      margin           = "12";
+      padding          = "10 14";
+      width            = 300;
+      default-timeout  = 5000;
+      max-visible      = 5;
+    };
+  };
+
+  # ── Hyprlock ─────────────────────────────────────────────────────────────────
+  xdg.configFile."hypr/hyprlock.conf".text = ''
+    general {
+      disable_loading_bar = true
+      hide_cursor         = true
+      grace               = 0
+    }
+
+    background {
+      monitor =
+      path        = ~/.local/share/wallpapers/wallpaper1.png
+      blur_passes = 3
+      blur_size   = 8
+      brightness  = 0.5
+    }
+
+    # Clock
+    label {
+      monitor     =
+      text        = $TIME
+      color       = rgba(${colors.text}ff)
+      font_size   = 72
+      font_family = JetBrainsMono Nerd Font
+      halign      = center
+      valign      = center
+      position    = 0, 160
+    }
+
+    # Password input
+    input-field {
+      monitor          =
+      size             = 240, 48
+      outline_thickness = 2
+      dots_size        = 0.2
+      dots_spacing     = 0.35
+      outer_color      = rgb(${colors.amber})
+      inner_color      = rgb(${colors.bg})
+      font_color       = rgb(${colors.text})
+      fade_on_empty    = true
+      placeholder_text = <i>Password</i>
+      check_color      = rgb(${colors.amber})
+      fail_color       = rgb(cc241d)
+      fail_text        = <i>$FAIL ($ATTEMPTS)</i>
+      halign           = center
+      valign           = center
+      position         = 0, -80
+    }
   '';
 
   # ── Rofi ─────────────────────────────────────────────────────────────────────

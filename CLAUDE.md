@@ -32,10 +32,9 @@ approaches proactively. Explain why, not just what.
 
 ## Current Focus
 
-Hyprland migration in progress. System and home profiles have been
-converted to Wayland — base hyprland.conf exists with dvorak input
-and keybindings. Next: individual app configs (Waybar, Hyprlock,
-Hyprpaper, Mako, Rofi, Kitty, Neovim, etc.).
+Core Hyprland migration done. Remaining app configs to complete:
+Mako (colors + position), Hyprlock, Neovim theming, Starship prompt.
+Multi-monitor support not yet configured.
 
 ---
 
@@ -60,10 +59,15 @@ Hyprpaper, Mako, Rofi, Kitty, Neovim, etc.).
 
 ## Goals
 
-- Hyprland migration (in progress)
-- Individual app configs (Waybar, Kitty, Neovim, Zsh, Rofi, etc.)
-- Multi-monitor and multi-device support via Hyprland
+- Hyprland migration ✓
+- Waybar config + theme ✓
+- Kitty config + theme ✓
+- Zsh via programs.zsh with nix-managed plugins ✓
+- Rofi config + theme ✓
+- Hyprpaper + wallpaper in repo ✓
 - Clean separation between vm and main host configs ✓
+- Individual app configs — Mako, Hyprlock, Starship, Neovim theming (in progress)
+- Multi-monitor and multi-device support via Hyprland
 - disko for declarative disk partitioning
 - nixos-generators for image/ISO generation
 - deploy-rs for declarative remote deployments
