@@ -144,11 +144,6 @@ in
     $col_active   = rgb(${colors.amber})
     $col_inactive = rgb(${colors.brown})
   '';
-  xdg.configFile."hypr/hyprpaper.conf".text = ''
-    preload   = ~/.local/share/wallpapers/wallpaper1.png
-    wallpaper = Virtual-1,~/.local/share/wallpapers/wallpaper1.png
-    splash    = false
-  '';
 
   # ── Waybar ───────────────────────────────────────────────────────────────────
   xdg.configFile."waybar/config".text = ''

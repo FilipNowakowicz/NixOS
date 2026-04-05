@@ -12,7 +12,7 @@
     grim          # screenshot
     slurp         # region select (used with grim)
     waybar
-    hyprpaper
+    swaybg
     hyprlock
 
     # ── Desktop UX ───────────────────────────────────────────
