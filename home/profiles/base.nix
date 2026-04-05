@@ -70,6 +70,17 @@
     enableZshIntegration = true;
     settings = {
       add_newline = false;
+      format = "$directory$character";
+      directory = {
+        truncation_length = 2;
+        truncate_to_repo  = false;
+        format            = "$path ";
+        style             = "";
+      };
+      character = {
+        success_symbol = "[%]()";
+        error_symbol   = "[%](red)";
+      };
     };
   };
 
