@@ -146,18 +146,28 @@ in
   '';
 
   # ── Waybar ───────────────────────────────────────────────────────────────────
+  home.file.".local/bin/waybar-weather" = {
+    executable = true;
+    text = ''
+      #!/usr/bin/env bash
+      result=$(curl -sf --max-time 5 "wttr.in/Warsaw?format=%c+%t")
+      [ -n "$result" ] && echo "$result" || echo "? --"
+    '';
+  };
+
   xdg.configFile."waybar/config".text = ''
     {
         "layer": "top",
         "position": "top",
-        "margin-top": 8,
+        "height": 48,
+        "margin-top": 6,
         "margin-left": 12,
         "margin-right": 12,
-        "spacing": 0,
+        "spacing": 4,
 
         "modules-left":   ["hyprland/workspaces"],
-        "modules-center": ["clock"],
-        "modules-right":  ["group/right"],
+        "modules-center": ["clock", "custom/weather"],
+        "modules-right":  ["network", "bluetooth", "pulseaudio", "battery", "tray"],
 
         "hyprland/workspaces": {
             "format": "{icon}",
@@ -174,7 +184,8 @@ in
         },
 
         "clock": {
-            "format": "{:%H:%M\n%a %d %b}",
+            "interval": 1,
+            "format": "{:%H:%M:%S}\n{:%A, %B %d}",
             "tooltip-format": "<tt><small>{calendar}</small></tt>",
             "calendar": {
                 "mode": "month",
@@ -182,26 +193,35 @@ in
                 "format": {
                     "today": "<span color='#${colors.amber}'><b>{}</b></span>"
                 }
-            },
-            "on-click": "gsimplecal"
+            }
         },
 
-        "group/right": {
-            "orientation": "horizontal",
-            "modules": ["network", "pulseaudio", "tray"]
+        "custom/weather": {
+            "exec": "$HOME/.local/bin/waybar-weather",
+            "interval": 1800,
+            "format": "{}",
+            "tooltip": false
         },
 
         "network": {
-            "format-wifi":        "  {essid}",
-            "format-ethernet":    "󰈀  {ifname}",
+            "format-wifi":         "󰤨  {essid}",
+            "format-ethernet":     "󰈀  {ifname}",
             "format-disconnected": "󰤭",
             "tooltip-format": "{ifname}: {ipaddr}/{cidr}",
             "max-length": 20
         },
 
+        "bluetooth": {
+            "format":           "󰂯",
+            "format-connected": "󰂱  {device_alias}",
+            "format-off":       "󰂲",
+            "tooltip-format":   "{controller_alias}\t{controller_address}",
+            "on-click":         "blueman-manager"
+        },
+
         "pulseaudio": {
             "format":       "{icon}  {volume}%",
-            "format-muted": "󰝟  muted",
+            "format-muted": "󰝟",
             "format-icons": {
                 "default": ["󰕿", "󰖀", "󰕾"]
             },
@@ -209,9 +229,19 @@ in
             "scroll-step": 5
         },
 
+        "battery": {
+            "format":          "{icon}  {capacity}%",
+            "format-charging": "󰂄  {capacity}%",
+            "format-icons":    ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
+            "states": {
+                "warning":  30,
+                "critical": 15
+            }
+        },
+
         "tray": {
-            "icon-size": 16,
-            "spacing":    8
+            "icon-size": 14,
+            "spacing":    6
         }
     }
   '';
@@ -219,7 +249,7 @@ in
   xdg.configFile."waybar/style.css".text = ''
     * {
         font-family: "Inter", "JetBrainsMono Nerd Font", sans-serif;
-        font-size: 13px;
+        font-size: 12px;
         min-height: 0;
     }
 
@@ -228,22 +258,30 @@ in
         color: #${colors.text};
     }
 
-    /* ── Pills ────────────────────────────────────────────── */
+    /* ── Pill base ────────────────────────────────────────── */
 
     #workspaces,
     #clock,
-    #right {
-        background: rgba(28, 26, 24, 0.70);
+    #custom-weather,
+    #network,
+    #bluetooth,
+    #pulseaudio,
+    #battery,
+    #tray {
+        background: rgba(28, 26, 24, 0.75);
         border-radius: 12px;
-        margin: 8px 4px;
-        padding: 0 8px;
-        border: 1px solid rgba(196, 110, 26, 0.30);
+        margin: 6px 3px;
+        border: 1px solid rgba(196, 110, 26, 0.25);
     }
 
     /* ── Workspaces ───────────────────────────────────────── */
 
+    #workspaces {
+        padding: 0 4px;
+    }
+
     #workspaces button {
-        padding:    0 6px;
+        padding:    0 5px;
         color:      #${colors.text};
         background: transparent;
         font-size:  10px;
@@ -268,19 +306,29 @@ in
     /* ── Clock ────────────────────────────────────────────── */
 
     #clock {
-        padding:     0 20px;
+        padding:     0 18px;
+        font-size:   13px;
         font-weight: 500;
-        font-size:   14px;
+        line-height: 1.3;
     }
 
-    /* ── Right group ──────────────────────────────────────── */
+    /* ── Weather ──────────────────────────────────────────── */
+
+    #custom-weather {
+        padding: 0 14px;
+    }
+
+    /* ── Right modules ────────────────────────────────────── */
 
     #network,
+    #bluetooth,
     #pulseaudio,
+    #battery {
+        padding: 0 12px;
+    }
+
     #tray {
-        padding:    0 10px;
-        background: transparent;
-        color:      #${colors.text};
+        padding: 0 8px;
     }
 
     /* ── Status ───────────────────────────────────────────── */

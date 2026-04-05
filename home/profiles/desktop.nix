@@ -18,8 +18,9 @@
     # ── Desktop UX ───────────────────────────────────────────
     gsimplecal
     pavucontrol
+    blueman
 
-    # ── Browsers / Apps ──────────────────────────────────────
+    #── Browsers / Apps ──────────────────────────────────────
     firefox
     chromium
     keepassxc
@@ -42,5 +43,13 @@
 
   # GTK theming
   gtk.enable = true;
+
+  # Cursor
+  home.pointerCursor = {
+    gtk.enable = true;
+    name    = "Bibata-Modern-Classic";
+    package = pkgs.bibata-cursors;
+    size    = 24;
+  };
 
 }
