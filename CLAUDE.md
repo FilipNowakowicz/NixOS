@@ -64,6 +64,8 @@ needs extracting into hosts/vm/.
 - Individual app configs (Waybar, Kitty, Neovim, Zsh, Rofi, etc.)
 - Multi-monitor and multi-device support via Hyprland
 - Clean separation between vm and main host configs
+- disko for declarative disk partitioning
+- nixos-generators for image/ISO generation
 
 ---
 
