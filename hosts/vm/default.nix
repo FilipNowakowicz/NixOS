@@ -9,6 +9,8 @@
 
   system.stateVersion = "24.11";
 
+  nix.settings.trusted-users = [ "root" "user" ];
+
   networking = {
     hostName = "vm";
     networkmanager.enable = true;
