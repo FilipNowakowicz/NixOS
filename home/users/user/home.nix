@@ -185,7 +185,7 @@ in
 
         "clock": {
             "interval": 1,
-            "format": "{:%H:%M:%S}\n{:%A, %B %d}",
+            "format": "{:%H:%M:%S%n%A, %B %d}",
             "tooltip-format": "<tt><small>{calendar}</small></tt>",
             "calendar": {
                 "mode": "month",
@@ -290,7 +290,7 @@ in
     }
 
     #workspaces button.empty {
-        color: #${colors.brown};
+        color: rgba(240, 208, 160, 0.3);
     }
 
     #workspaces button.active {
