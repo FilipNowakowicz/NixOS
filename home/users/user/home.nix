@@ -173,11 +173,7 @@ in
             "format": "{icon}",
             "format-icons": {
                 "active":  "●",
-                "default": "●",
-                "empty":   "○"
-            },
-            "persistent-workspaces": {
-                "*": 10
+                "default": "○"
             },
             "on-click": "activate",
             "sort-by-number": true
@@ -287,10 +283,6 @@ in
         font-size:  10px;
         transition: color 150ms ease;
         box-shadow: none;
-    }
-
-    #workspaces button.empty {
-        color: rgba(240, 208, 160, 0.3);
     }
 
     #workspaces button.active {
