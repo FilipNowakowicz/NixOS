@@ -66,6 +66,7 @@ Hyprpaper, Mako, Rofi, Kitty, Neovim, etc.).
 - Clean separation between vm and main host configs ✓
 - disko for declarative disk partitioning
 - nixos-generators for image/ISO generation
+- deploy-rs for declarative remote deployments
 
 ---
 
@@ -76,4 +77,4 @@ Hyprpaper, Mako, Rofi, Kitty, Neovim, etc.).
 - Prefer home-manager for user-level config over system-level
 - Keep things declarative — avoid imperative workarounds
 - Flag anything that might cause issues on rebuild
-- Always validate changes by running `nix build '.#nixosConfigurations.vm.config.system.build.toplevel' --no-link` before considering a task done
+- Run `nix flake check` and `nix build '.#nixosConfigurations.vm.config.system.build.toplevel' --no-link` after changes to `.nix` files — skip for documentation or dotfile/config edits

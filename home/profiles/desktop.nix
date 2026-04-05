@@ -12,8 +12,10 @@
     grim          # screenshot
     slurp         # region select (used with grim)
     waybar
+    hyprpaper
 
     # ── Desktop UX ───────────────────────────────────────────
+    gsimplecal
     pavucontrol
 
     # ── Browsers / Apps ──────────────────────────────────────
@@ -39,12 +41,6 @@
 
   # GTK theming
   gtk.enable = true;
-
-  # XDG user directories
-  xdg.userDirs = {
-    enable = true;
-    createDirectories = true;
-  };
 
   # Notifications (Wayland)
   services.mako.enable = true;

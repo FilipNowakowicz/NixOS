@@ -46,6 +46,7 @@
       noto-fonts
       noto-fonts-color-emoji
       nerd-fonts.jetbrains-mono
+      inter
     ];
   };
 }

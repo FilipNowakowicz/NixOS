@@ -80,4 +80,17 @@
     enable = true;
     enableZshIntegration = true;
   };
+
+  xdg.userDirs = {
+    enable = true;
+    createDirectories = true;
+    download    = "${config.home.homeDirectory}/downloads";
+    desktop     = null;
+    documents   = null;
+    music       = null;
+    pictures    = null;
+    publicShare = null;
+    templates   = null;
+    videos      = null;
+  };
 }
