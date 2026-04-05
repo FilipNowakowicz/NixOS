@@ -309,7 +309,6 @@ in
         padding:     0 18px;
         font-size:   13px;
         font-weight: 500;
-        line-height: 1.3;
     }
 
     /* ── Weather ──────────────────────────────────────────── */
