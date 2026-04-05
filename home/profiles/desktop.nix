@@ -1,35 +1,34 @@
 { pkgs, ... }:
 {
-  # Desktop / GUI Packages
   home.packages = with pkgs; [
-    # ── Terminal / Launcher ──────────────────────────────────
+    # ── Terminal ─────────────────────────────────────────────
     kitty
-    rofi
-  
+
+    # ── Launcher ─────────────────────────────────────────────
+    rofi-wayland
+
+    # ── Wayland utilities ────────────────────────────────────
+    wl-clipboard
+    grim          # screenshot
+    slurp         # region select (used with grim)
+    waybar
+
     # ── Desktop UX ───────────────────────────────────────────
-    dunst
-    picom
-    feh
-    flameshot
     pavucontrol
-  
+
     # ── Browsers / Apps ──────────────────────────────────────
     firefox
     chromium
     keepassxc
     mpv
     vscode
-  
-    # ── TeX / PDF ────────────────────────────────────────────
+
+    # ── PDF / TeX ────────────────────────────────────────────
     zathura
     texlive.combined.scheme-medium
     texlab
-  
-    # ── Clipboard ────────────────────────────────────────────
-    xclip
-    xsel
-  
-    # ── Visuals / Toys (optional) ────────────────────────────
+
+    # ── Visuals / Toys ───────────────────────────────────────
     cava
     fastfetch
     pipes-rs
@@ -38,10 +37,8 @@
     cmatrix
   ];
 
-  # GTK theming support (needed by many desktop apps)
-  gtk = {
-    enable = true;
-  };
+  # GTK theming
+  gtk.enable = true;
 
   # XDG user directories
   xdg.userDirs = {
@@ -49,13 +46,6 @@
     createDirectories = true;
   };
 
-  # Notifications
-  services.dunst.enable = true;
-
-  # Compositor (optional, but typical with AwesomeWM)
-  services.picom = {
-    enable = true;
-    fade = true;
-    shadow = true;
-  };
+  # Notifications (Wayland)
+  services.mako.enable = true;
 }

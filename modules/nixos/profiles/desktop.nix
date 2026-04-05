@@ -1,31 +1,12 @@
 { pkgs, ... }:
-
 {
-  services.xserver = {
-    enable = true;
+  # Hyprland compositor (enables Wayland session, polkit, etc.)
+  programs.hyprland.enable = true;
 
-    # Keyboard layout (X11)
-    xkb = {
-      layout = "us";
-      variant = "dvorak";
-      options = "caps:escape";
-    };
+  # Input (no xserver)
+  services.libinput.enable = true;
 
-    # startx workflow (no display manager)
-    displayManager.startx.enable = true;
-
-    # Window manager
-    windowManager.awesome = {
-      enable = true;
-    };
-
-    # Don’t spawn xterm automatically
-    desktopManager.xterm.enable = false;
-  };
-
-  services.displayManager.defaultSession = "none+awesome";
-
-  # Audio (modern stack)
+  # Audio
   services.pipewire = {
     enable = true;
     alsa.enable = true;
@@ -33,31 +14,26 @@
     pulse.enable = true;
     wireplumber.enable = true;
   };
-
   services.pulseaudio.enable = false;
 
-  # Portals (needed for many desktop apps)
+  # XDG portals (Hyprland + GTK fallback)
   xdg.portal = {
     enable = true;
-    extraPortals = with pkgs; [ xdg-desktop-portal-gtk ];
+    extraPortals = with pkgs; [
+      xdg-desktop-portal-hyprland
+      xdg-desktop-portal-gtk
+    ];
     config.common.default = "*";
   };
 
   services.flatpak.enable = true;
   programs.dconf.enable = true;
 
-  # Minimal X11 bits + theme assets
   environment.systemPackages = with pkgs; [
-    gnome-themes-extra
-    xorg.xinit
-    lua52Packages.lgi
-    xorg.xmessage
-    pasystray
     gnome-keyring
     networkmanagerapplet
-    cbatticon
-    picom
     polkit_gnome
+    gnome-themes-extra
   ];
 
   fonts = {
@@ -69,6 +45,7 @@
       liberation_ttf
       noto-fonts
       noto-fonts-color-emoji
+      nerd-fonts.jetbrains-mono
     ];
   };
 }

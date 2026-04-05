@@ -21,8 +21,8 @@
 
   # XDG configuration
   xdg.enable = true;
-  xdg.configFile."nvim".source = ../../files/nvim;
+  xdg.configFile."nvim".source   = ../../files/nvim;
   xdg.configFile."kitty".source  = ../../files/kitty;
   xdg.configFile."tmux".source   = ../../files/tmux;
-  xdg.configFile."awesome".source = ../../files/awesome;
+  xdg.configFile."hypr".source   = ../../files/hypr;
 }
