@@ -30,9 +30,9 @@ The VM uses impermanence — a fresh install is required whenever the disk layou
 4. Boot the ISO in the VM:
    `nix run '.#launch-vm-iso' -- result/iso/*.iso`
 5. From the Arch host dev shell, install:
-   `nixos-anywhere --flake '.#vm' --copy-host-store root@nixvm`
+   `nixos-anywhere --flake '.#vm' --no-substitute-on-destination root@nixvm`
    - nixos-anywhere SSHes into the live ISO, runs disko to partition `/dev/vda`, installs NixOS, reboots
-   - `--copy-host-store` copies the Nix store directly from this machine over SSH instead of downloading from cache.nixos.org — significantly faster for local VMs
+   - `--no-substitute-on-destination` forces the target to receive all store paths from the local machine instead of downloading from cache.nixos.org — faster for local VMs and avoids network issues
 6. After reboot, launch the VM normally: `nix run '.#launch-vm'`
 7. Deploy updates: `deploy .#vm`
 
