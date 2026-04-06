@@ -2,6 +2,7 @@
 {
   imports = [
     inputs.disko.nixosModules.disko
+    inputs.impermanence.nixosModules.impermanence
     ./disko.nix
     ./hardware-configuration.nix
     ../../modules/nixos/profiles/base.nix
@@ -33,7 +34,25 @@
     openFirewall = true;
   };
 
+  fileSystems."/persist".neededForBoot = true;
+
+  environment.persistence."/persist" = {
+    hideMounts = true;
+    directories = [
+      "/var/log"
+      "/var/lib/nixos"
+      "/var/lib/systemd/coredump"
+      "/etc/NetworkManager/system-connections"
+    ];
+    files = [
+      "/etc/machine-id"
+      "/etc/ssh/ssh_host_ed25519_key"
+      "/etc/ssh/ssh_host_ed25519_key.pub"
+    ];
+  };
+
   users.users.user = {
+    home = "/home/user";
     isNormalUser = true;
     description = "Primary user";
     extraGroups = [ "wheel" "networkmanager" "video" ];

@@ -18,12 +18,21 @@
           };
         };
         root = {
-          size    = "100%";
+          size    = "8G";
           content = {
             type       = "filesystem";
             format     = "ext4";
             mountpoint = "/";
             extraArgs  = [ "-L" "main-root" ];
+          };
+        };
+        persist = {
+          size    = "100%";
+          content = {
+            type       = "filesystem";
+            format     = "ext4";
+            mountpoint = "/persist";
+            extraArgs  = [ "-L" "persist" ];
           };
         };
       };

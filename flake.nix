@@ -29,9 +29,11 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    impermanence.url = "github:nix-community/impermanence";
   };
 
-  outputs = inputs@{ self, nixpkgs, home-manager, deploy-rs, nixos-anywhere, sops-nix, ... }:
+  outputs = inputs@{ self, nixpkgs, home-manager, deploy-rs, nixos-anywhere, sops-nix, impermanence, ... }:
     let
       system = "x86_64-linux";
 
