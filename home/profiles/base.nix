@@ -1,9 +1,7 @@
 { config, pkgs, ... }:
 {
-  home.stateVersion = "24.11";
   programs.home-manager.enable = true;
 
-  # CLI packages
   home.packages = with pkgs; [
     # ── Core CLI ─────────────────────────────────────────────
     bat
@@ -11,7 +9,6 @@
     curl
     eza
     fd
-    fzf
     jq
     less
     ripgrep
@@ -20,14 +17,12 @@
     wget
     which
     zip
-  
+
     # ── Shell / Workflow ─────────────────────────────────────
     tmux
-    zoxide
-  
+
     # ── Editor / Dev ─────────────────────────────────────────
     neovim-unwrapped
-    git
     lazygit
     nodejs
     python3
@@ -35,12 +30,11 @@
     clang-tools
     gnumake
     gcc
-    gnumake
     tree-sitter
-  
+
     # ── Neovim helpers ───────────────────────────────────────
     glow        # :Glow markdown preview
-  
+
     # ── Utilities ────────────────────────────────────────────
     yazi
     hledger
@@ -60,8 +54,8 @@
     enable = true;
     settings = {
       init.defaultBranch = "main";
-      pull.ff = "only";
-      core.editor = "nvim";
+      pull.ff            = "only";
+      core.editor        = "nvim";
     };
   };
 
@@ -82,6 +76,13 @@
         error_symbol   = "[%](red)";
       };
     };
+  };
+
+  programs.keychain = {
+    enable = true;
+    enableZshIntegration = true;
+    keys       = [ "id_ed25519" ];
+    extraFlags = [ "--quiet" ];
   };
 
   programs.fzf = {

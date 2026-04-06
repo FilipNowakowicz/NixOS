@@ -13,9 +13,20 @@
       url = "github:serokell/deploy-rs";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    nixos-anywhere = {
+      url = "github:nix-community/nixos-anywhere";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.disko.follows = "disko";
+    };
   };
 
-  outputs = inputs@{ self, nixpkgs, home-manager, deploy-rs, ... }:
+  outputs = inputs@{ self, nixpkgs, home-manager, deploy-rs, nixos-anywhere, ... }:
     let
       system = "x86_64-linux";
 
@@ -40,7 +51,10 @@
 
       devShells.${system}.default = pkgs.mkShell {
         packages = (with pkgs; [ nixd statix deadnix ])
-          ++ [ deploy-rs.packages.${system}.deploy-rs ];
+          ++ [
+            deploy-rs.packages.${system}.deploy-rs
+            nixos-anywhere.packages.${system}.nixos-anywhere
+          ];
       };
 
       nixosConfigurations = {
@@ -50,8 +64,10 @@
 
       # ── deploy-rs ──────────────────────────────────────────────────────────────
       deploy.nodes.vm = {
-        hostname = "nixvm";          # uses ~/.ssh/config alias → localhost:2222
-        sshUser  = "user";           # SSH as user, sudo to root for activation
+        hostname      = "nixvm";     # uses ~/.ssh/config alias → localhost:2222
+        sshUser       = "user";      # SSH as user, sudo to root for activation
+        magicRollback = false;       # VM is local; rollback machinery not needed
+        autoRollback  = false;
         profiles.system = {
           user = "root";
           path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.vm;

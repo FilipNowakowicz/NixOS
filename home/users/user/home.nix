@@ -85,9 +85,7 @@ in
   home.file.".local/share/wallpapers/wallpaper1.png".source =
     ../../theme/wallpapers/wallpaper1.png;
 
-  xdg.enable = true;
-
-  # ── Neovim / Tmux ────────────────────────────────────────────────────────────
+  # ── Neovim ───────────────────────────────────────────────────────────────────
   xdg.configFile."nvim".source = ../../files/nvim;
 
   # ── Kitty ────────────────────────────────────────────────────────────────────

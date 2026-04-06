@@ -9,10 +9,9 @@
   # Audio
   services.pipewire = {
     enable = true;
-    alsa.enable = true;
+    alsa.enable       = true;
     alsa.support32Bit = true;
-    pulse.enable = true;
-    wireplumber.enable = true;
+    pulse.enable      = true;
   };
   services.pulseaudio.enable = false;
 
@@ -39,7 +38,6 @@
   fonts = {
     enableDefaultPackages = true;
     fontDir.enable = true;
-    fontconfig.enable = true;
     packages = with pkgs; [
       dejavu_fonts
       liberation_ttf

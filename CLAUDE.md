@@ -10,20 +10,28 @@ approaches proactively. Explain why, not just what.
 
 - **Dev machine:** Arch Linux
 - **Target:** NixOS VM via `ssh nixvm` (~/.ssh/config alias on Arch)
-- **Deploy (VM):** `deploy .#vm` (requires `nix develop` or direnv to load the dev shell)
+- **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nixd`, `statix`, `deadnix`
+- **Deploy (VM):** `deploy .#vm`
 - **Deploy (main):** `nixos-rebuild switch --flake .#main`
 - **Hot-reload:** `ssh nixvm 'hyprctl reload'`
-- **Dev shell:** `nix develop` — provides `deploy-rs`, `nixd`, `statix`, `deadnix`
 - **Launch VM:** `qemu-system-x86_64 -enable-kvm -machine q35 -cpu host -smp 4 -m 8G -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/x64/OVMF_CODE.4m.fd -drive if=pflash,format=raw,file=/vmstore/images/nixos-test-vars.fd -drive file=/vmstore/images/nixos-test.qcow2,if=virtio -boot menu=on -netdev user,id=net0,hostfwd=tcp::2222-:22 -device virtio-net-pci,netdev=net0 -daemonize -display none`
 - **Git** is for version control only, not deployment
+
+### Fresh VM install
+
+1. Create empty disk image: `qemu-img create -f qcow2 /vmstore/images/nixos-test.qcow2 40G`
+2. Boot the NixOS minimal ISO in the VM (add `-cdrom nixos.iso` to the launch command)
+3. From the Arch host dev shell: `nixos-anywhere --flake '.#vm' root@nixvm`
+   - nixos-anywhere SSHes into the live ISO, runs disko to partition `/dev/vda`, installs NixOS, reboots
+4. After reboot, deploy updates normally: `deploy .#vm`
 
 ---
 
 ## Repository Structure
 
-- `flake.nix` — entry point, defines hosts and home-manager
-- `hosts/main/` — real machine config, standard hardware drivers
-- `hosts/vm/` — VM config, virtio drivers, used for testing
+- `flake.nix` — entry point, defines hosts, home-manager, deploy-rs nodes
+- `hosts/main/` — real machine config, hardware drivers, disko layout
+- `hosts/vm/` — VM config, virtio drivers, disko layout, used for testing
 - `modules/nixos/profiles/` — system profiles (base, desktop, security)
 - `home/profiles/` — home-manager profiles (base, desktop)
 - `home/files/` — dotfiles managed via home-manager
@@ -33,9 +41,8 @@ approaches proactively. Explain why, not just what.
 
 ## Current Focus
 
-Core Hyprland migration done. Remaining app configs to complete:
-Mako (colors + position), Hyprlock, Neovim theming, Starship prompt.
-Multi-monitor support not yet configured.
+- Neovim theming from colors.nix
+- Multi-monitor support via Hyprland
 
 ---
 
@@ -52,7 +59,7 @@ Multi-monitor support not yet configured.
 | Launcher | Rofi |
 | Notifications | Mako |
 | Screen lock | Hyprlock |
-| Wallpaper | Hyprpaper |
+| Wallpaper | swaybg |
 | Clipboard | wl-clipboard |
 | System monitor | Btop |
 
@@ -60,18 +67,9 @@ Multi-monitor support not yet configured.
 
 ## Goals
 
-- Hyprland migration ✓
-- Waybar config + theme ✓
-- Kitty config + theme ✓
-- Zsh via programs.zsh with nix-managed plugins ✓
-- Rofi config + theme ✓
-- Hyprpaper + wallpaper in repo ✓
-- Clean separation between vm and main host configs ✓
-- Individual app configs — Mako, Hyprlock, Starship, Neovim theming (in progress)
-- Multi-monitor and multi-device support via Hyprland
-- disko for declarative disk partitioning
+- Neovim theming (in progress)
+- Multi-monitor support via Hyprland
 - nixos-generators for image/ISO generation
-- deploy-rs for declarative remote deployments ✓
 
 ---
 

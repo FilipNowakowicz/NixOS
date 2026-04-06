@@ -1,6 +1,8 @@
-{ pkgs, ... }:
+{ pkgs, inputs, ... }:
 {
   imports = [
+    inputs.disko.nixosModules.disko
+    ./disko.nix
     ./hardware-configuration.nix
     ../../modules/nixos/profiles/base.nix
     ../../modules/nixos/profiles/desktop.nix
@@ -10,6 +12,8 @@
   system.stateVersion = "24.11";
 
   nix.settings.trusted-users = [ "root" "user" ];
+
+  zramSwap.enable = true;
 
   security.sudo.extraRules = [
     {
