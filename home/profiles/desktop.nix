@@ -16,21 +16,13 @@
     hyprlock
 
     # ── Desktop UX ───────────────────────────────────────────
-    gsimplecal
     pavucontrol
     blueman
 
     #── Browsers / Apps ──────────────────────────────────────
     firefox
-    chromium
     keepassxc
     mpv
-    vscode
-
-    # ── PDF / TeX ────────────────────────────────────────────
-    zathura
-    texlive.combined.scheme-medium
-    texlab
 
     # ── Visuals / Toys ───────────────────────────────────────
     cava

@@ -18,9 +18,6 @@
     which
     zip
 
-    # ── Shell / Workflow ─────────────────────────────────────
-    tmux
-
     # ── Editor / Dev ─────────────────────────────────────────
     neovim-unwrapped
     lazygit
@@ -37,7 +34,6 @@
 
     # ── Utilities ────────────────────────────────────────────
     yazi
-    hledger
     taskwarrior3
     timewarrior
     yt-dlp
