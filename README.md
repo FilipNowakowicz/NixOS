@@ -93,7 +93,9 @@ nix run '.#launch-vm-iso' -- result/iso/*.iso
 
 # 5. From the Arch host dev shell, install over SSH
 nix develop
-nixos-anywhere --flake '.#vm' root@nixvm
+nixos-anywhere --flake '.#vm' --copy-host-store root@nixvm
+# --copy-host-store copies the Nix store directly over SSH instead of downloading
+# from cache.nixos.org — significantly faster for local VMs
 # nixos-anywhere partitions /dev/vda via disko, installs NixOS, reboots
 
 # 6. After reboot, launch normally
