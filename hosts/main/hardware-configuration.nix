@@ -1,4 +1,4 @@
-{ modulesPath, ... }:
+{ config, modulesPath, ... }:
 {
   imports = [
     "${modulesPath}/installer/scan/not-detected.nix"
@@ -14,4 +14,35 @@
 
   boot.loader.systemd-boot.enable      = true;
   boot.loader.efi.canTouchEfiVariables = true;
+
+  # ── Graphics ─────────────────────────────────────────────────────────────────
+
+  # Needed for both Intel (Mesa) and NVIDIA (VA-API consumers, Hyprland, etc.)
+  hardware.graphics.enable = true;
+
+  # Loads the NVIDIA kernel module and wires up the Xorg/DRM stack
+  services.xserver.videoDrivers = [ "nvidia" ];
+
+  hardware.nvidia = {
+    modesetting.enable     = true;   # required for Wayland / Hyprland
+    powerManagement.enable = true;   # suspend/resume reliability on laptops
+    open                   = false;  # use proprietary kernel module
+    nvidiaSettings         = true;
+    package                = config.boot.kernelPackages.nvidiaPackages.stable;
+
+    # PRIME offload — Hyprland renders on the Intel iGPU by default.
+    # The NVIDIA GPU is available on demand via `nvidia-offload <cmd>`.
+    #
+    # Verify bus IDs before the first install:
+    #   lspci | grep -E "VGA|3D"
+    # Format expected by NixOS: "PCI:<bus>:<slot>:<function>" (decimal)
+    prime = {
+      offload = {
+        enable           = true;
+        enableOffloadCmd = true;  # adds `nvidia-offload` wrapper to $PATH
+      };
+      intelBusId  = "PCI:0:2:0";  # TODO: verify with lspci on real hardware
+      nvidiaBusId = "PCI:1:0:0";  # TODO: verify with lspci on real hardware
+    };
+  };
 }

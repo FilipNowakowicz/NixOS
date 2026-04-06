@@ -52,15 +52,11 @@ in
       buds             = "bluetoothctl connect DC:69:E2:CF:9A:BD";
       headset          = "bluetoothctl connect 40:58:99:3D:C8:D3";
       whatsapp         = "wasistlos &";
-      vnc-on           = ''systemctl --user start x0vncserver.service && echo "VNC started"'';
-      vnc-off          = ''systemctl --user stop x0vncserver.service && echo "VNC stopped"'';
-      vnc-status       = "systemctl --user status x0vncserver.service --no-pager";
       tailscale-on     = ''sudo systemctl start tailscaled && sudo tailscale up && echo "Tailscale connected"'';
       tailscale-off    = ''sudo systemctl stop tailscaled && echo "Tailscale stopped"'';
       tailscale-status = "tailscale status";
       ollama3          = "ollama run llama3.1:8b";
       ollamamath       = "ollama run wizard-math:7b";
-      backup           = "sudo -E /usr/local/bin/backup-borg.sh";
     };
 
     initContent = ''

@@ -16,6 +16,17 @@
     networkmanager.enable = true;
   };
 
+  # ── NVIDIA / Wayland env vars ────────────────────────────────────────────────
+  environment.sessionVariables = {
+    NIXOS_OZONE_WL              = "1";           # Electron apps: use Wayland backend
+    LIBVA_DRIVER_NAME           = "iHD";         # VA-API → Intel Media Driver
+    __GLX_VENDOR_LIBRARY_NAME   = "mesa";        # GLX → Mesa (Intel) by default
+    # Pins Hyprland's primary GPU to the Intel iGPU so it doesn't accidentally
+    # pick the NVIDIA card.  Verify after install:
+    #   ls -la /dev/dri/by-path/ | grep 'pci-0000:00:02'
+    AQ_DRM_DEVICES              = "/dev/dri/card1"; # TODO: verify (Intel is usually card1 with PRIME)
+  };
+
   services.logind.settings = {
     Login.HandleLidSwitch = "suspend";
     # Optional: keep running on AC power

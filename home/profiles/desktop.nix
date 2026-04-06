@@ -23,6 +23,7 @@
     firefox
     keepassxc
     mpv
+    wasistlos
 
     # ── Visuals / Toys ───────────────────────────────────────
     cava

@@ -23,3 +23,9 @@ jobs:
 
       - name: Eval main host
         run: nix eval .#nixosConfigurations.main.config.system.build.toplevel --show-trace
+
+      - name: Eval vm host
+        run: nix eval .#nixosConfigurations.vm.config.system.build.toplevel --show-trace
+
+      - name: Eval homeserver host
+        run: nix eval .#nixosConfigurations.homeserver.config.system.build.toplevel --show-trace
