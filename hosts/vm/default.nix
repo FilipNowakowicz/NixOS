@@ -11,6 +11,13 @@
 
   nix.settings.trusted-users = [ "root" "user" ];
 
+  security.sudo.extraRules = [
+    {
+      users   = [ "user" ];
+      commands = [ { command = "ALL"; options = [ "NOPASSWD" ]; } ];
+    }
+  ];
+
   networking = {
     hostName = "vm";
     networkmanager.enable = true;
