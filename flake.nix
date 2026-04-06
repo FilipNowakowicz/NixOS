@@ -86,6 +86,36 @@
               -daemonize -display none
           '');
         };
+        reinstall-vm = {
+          type = "app";
+          program = toString (pkgs.writeShellScript "reinstall-vm" ''
+            set -euo pipefail
+
+            # Clear stale SSH host key for the VM
+            ssh-keygen -R '[localhost]:2222'
+
+            # Temp dir for injected host keys; cleaned up on exit
+            tmpdir=$(mktemp -d)
+            trap "rm -rf $tmpdir" EXIT
+
+            mkdir -p "$tmpdir/etc/ssh"
+
+            # Decrypt host keys from sops-encrypted secrets
+            sops --decrypt hosts/vm/secrets/ssh_host_ed25519_key.enc \
+              > "$tmpdir/etc/ssh/ssh_host_ed25519_key"
+            sops --decrypt hosts/vm/secrets/ssh_host_ed25519_key.pub.enc \
+              > "$tmpdir/etc/ssh/ssh_host_ed25519_key.pub"
+
+            chmod 600 "$tmpdir/etc/ssh/ssh_host_ed25519_key"
+
+            # Install — inject host keys so the age identity is stable from first boot
+            nixos-anywhere \
+              --flake '.#vm' \
+              --extra-files "$tmpdir" \
+              --no-substitute-on-destination \
+              root@nixvm
+          '');
+        };
       };
 
       packages.${system} = {

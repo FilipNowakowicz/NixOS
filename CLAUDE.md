@@ -29,10 +29,12 @@ The VM uses impermanence — a fresh install is required whenever the disk layou
    `nix build '.#packages.x86_64-linux.installer-iso'`
 4. Boot the ISO in the VM:
    `nix run '.#launch-vm-iso' -- result/iso/*.iso`
-5. From the Arch host dev shell, install:
-   `nixos-anywhere --flake '.#vm' --no-substitute-on-destination root@nixvm`
-   - nixos-anywhere SSHes into the live ISO, runs disko to partition `/dev/vda`, installs NixOS, reboots
-   - `--no-substitute-on-destination` forces the target to receive all store paths from the local machine instead of downloading from cache.nixos.org — faster for local VMs and avoids network issues
+5. From the Arch host dev shell, reinstall:
+   `nix run '.#reinstall-vm'`
+   - Clears the stale SSH host key from `~/.ssh/known_hosts`
+   - Decrypts the VM's SSH host keys from sops secrets and injects them via `--extra-files` so the age identity is stable from first boot (required for sops secret decryption)
+   - Runs `nixos-anywhere` with `--no-substitute-on-destination` — forces the target to receive all store paths from the local machine instead of downloading from cache.nixos.org, faster for local VMs and avoids network issues
+   - nixos-anywhere partitions `/dev/vda` via disko, installs NixOS, reboots
 6. After reboot, launch the VM normally: `nix run '.#launch-vm'`
 7. Deploy updates: `deploy .#vm`
 
