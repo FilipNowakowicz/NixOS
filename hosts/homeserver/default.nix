@@ -62,10 +62,7 @@
     useGlobalPkgs = true;
     useUserPackages = true;
     users.user = {
-      imports = [
-        ../../home/users/user/home.nix
-        ../../home/profiles/base.nix
-      ];
+      imports = [ ../../home/users/user/home.nix ];
     };
   };
 }
