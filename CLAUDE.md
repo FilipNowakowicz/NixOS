@@ -96,9 +96,7 @@ Secrets are managed with sops-nix and age encryption.
 
 ## Goals
 
-- Neovim theming (in progress)
-- Multi-monitor support via Hyprland
-
+- Hyprland - Theming, Widgets, Multi-monitor (Low Priority)
 ---
 
 ## Preferences

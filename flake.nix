@@ -138,19 +138,32 @@
       };
 
       nixosConfigurations = {
-        main = mkNixos "main";
-        vm   = mkNixos "vm";
+        main       = mkNixos "main";
+        vm         = mkNixos "vm";
+        homeserver = mkNixos "homeserver";
       };
 
       # ── deploy-rs ──────────────────────────────────────────────────────────────
-      deploy.nodes.vm = {
-        hostname      = "nixvm";     # uses ~/.ssh/config alias → localhost:2222
-        sshUser       = "user";      # SSH as user, sudo to root for activation
-        magicRollback = false;       # VM is local; rollback machinery not needed
-        autoRollback  = false;
-        profiles.system = {
-          user = "root";
-          path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.vm;
+      deploy.nodes = {
+        vm = {
+          hostname      = "nixvm";     # uses ~/.ssh/config alias → localhost:2222
+          sshUser       = "user";
+          magicRollback = false;       # VM is local; rollback machinery not needed
+          autoRollback  = false;
+          profiles.system = {
+            user = "root";
+            path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.vm;
+          };
+        };
+        homeserver = {
+          hostname      = "homeserver";
+          sshUser       = "user";
+          magicRollback = false;
+          autoRollback  = false;
+          profiles.system = {
+            user = "root";
+            path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.homeserver;
+          };
         };
       };
 
