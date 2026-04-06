@@ -29,9 +29,14 @@
       url = "github:nix-community/nixos-generators";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = inputs@{ self, nixpkgs, home-manager, deploy-rs, nixos-anywhere, nixos-generators, ... }:
+  outputs = inputs@{ self, nixpkgs, home-manager, deploy-rs, nixos-anywhere, nixos-generators, sops-nix, ... }:
     let
       system = "x86_64-linux";
 
@@ -48,6 +53,7 @@
         modules = [
           ./hosts/${host}/default.nix
           home-manager.nixosModules.home-manager
+          sops-nix.nixosModules.sops
         ];
       };
     in
