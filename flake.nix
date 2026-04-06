@@ -24,9 +24,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.disko.follows = "disko";
     };
+
+    nixos-generators = {
+      url = "github:nix-community/nixos-generators";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = inputs@{ self, nixpkgs, home-manager, deploy-rs, nixos-anywhere, ... }:
+  outputs = inputs@{ self, nixpkgs, home-manager, deploy-rs, nixos-anywhere, nixos-generators, ... }:
     let
       system = "x86_64-linux";
 
@@ -47,6 +52,15 @@
       };
     in
     {
+      packages.${system} = {
+        installer-iso = nixos-generators.nixosGenerate {
+          inherit system;
+          format = "iso";
+          modules = [ ./hosts/installer/default.nix ];
+          specialArgs = { inherit inputs; };
+        };
+      };
+
       formatter.${system} = pkgs.nixfmt;
 
       devShells.${system}.default = pkgs.mkShell {
