@@ -1,4 +1,4 @@
-{ pkgs, inputs, ... }:
+{ config, pkgs, inputs, ... }:
 {
   imports = [
     inputs.disko.nixosModules.disko
@@ -33,11 +33,24 @@
     # lidSwitchExternalPower = "ignore";
   };
 
+  sops = {
+    defaultSopsFile = ./secrets/secrets.yaml;
+    defaultSopsFormat = "yaml";
+    # Uses ~/.ssh/id_ed25519 for now; replace with host key after openssh generates it:
+    #   ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub → update .sops.yaml + sops updatekeys
+    age.sshKeyPaths = [ "/home/user/.ssh/id_ed25519" ];
+    secrets.user_password.neededForUsers = true;
+  };
+
   users.users.user = {
     isNormalUser = true;
     description = "Primary user";
     extraGroups = [ "wheel" "networkmanager" "video" ];
     shell = pkgs.zsh;
+    hashedPasswordFile = config.sops.secrets.user_password.path;
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJVv8FZjCgmWqmkSLYv0uMySdxpzJUMtoXAwXDonTM7k user@main"
+    ];
   };
 
   home-manager = {

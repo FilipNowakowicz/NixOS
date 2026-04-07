@@ -18,8 +18,11 @@ in
     settings.user.email = "filip.nowakowicz@gmail.com";
   };
 
-  # PATH addition from ~/.local/bin
-  home.sessionPath = [ "${config.home.homeDirectory}/.local/bin" ];
+  # PATH additions
+  home.sessionPath = [
+    "${config.home.homeDirectory}/.local/bin"
+    "${config.home.homeDirectory}/.npm-global/bin"
+  ];
 
   # Zsh — user-specific aliases and shell functions
   # Base options, plugins, and vi-mode are set in home/profiles/base.nix

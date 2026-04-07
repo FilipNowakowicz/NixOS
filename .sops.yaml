@@ -4,9 +4,21 @@ keys:
 
   # VM SSH host key converted to age: ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub
   - &vm_host age18g3r6u8cpw8re990wvpsk8rrvphz5ndthmck4ufk96prua8vuchqkg4h0e
+
+  # Main host: user SSH key used until openssh generates /etc/ssh/ssh_host_ed25519_key.
+  # After first `nixos-rebuild switch` (openssh will generate the host key), run:
+  #   ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub
+  # Replace this key with that output and re-encrypt:
+  #   sops updatekeys hosts/main/secrets/secrets.yaml
+  - &main_host age1qnwqt3u884rp2vasnnazaaayp9s2775xjwqnsnkm97ysrc8yteyqy0jk3t
 creation_rules:
   - path_regex: hosts/vm/secrets/.*
     key_groups:
       - age:
           - *user
           - *vm_host
+  - path_regex: hosts/main/secrets/.*
+    key_groups:
+      - age:
+          - *user
+          - *main_host

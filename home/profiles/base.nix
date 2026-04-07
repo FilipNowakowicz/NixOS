@@ -37,6 +37,9 @@
     taskwarrior3
     timewarrior
     yt-dlp
+
+    # ── AI ───────────────────────────────────────────────────────
+    claude-code
   ];
 
   home.sessionVariables = {

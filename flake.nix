@@ -130,7 +130,7 @@
       formatter.${system} = pkgs.nixfmt;
 
       devShells.${system}.default = pkgs.mkShell {
-        packages = (with pkgs; [ nixd statix deadnix ])
+        packages = (with pkgs; [ nixd statix deadnix sops ssh-to-age ])
           ++ [
             deploy-rs.packages.${system}.deploy-rs
             nixos-anywhere.packages.${system}.nixos-anywhere
