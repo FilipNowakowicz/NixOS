@@ -18,3 +18,8 @@ creation_rules:
       - age:
           - *user
           - *main_host
+  - path_regex: hosts/homeserver/secrets/.*
+    key_groups:
+      - age:
+          - *user
+          # homeserver_host key will be added after first deploy

@@ -32,6 +32,8 @@
     openFirewall = false;
   };
 
+  services.mullvad-vpn.enable = true;
+
   services.logind.settings = {
     Login.HandleLidSwitch = "suspend";
     # Optional: keep running on AC power
