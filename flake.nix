@@ -135,6 +135,9 @@
             deploy-rs.packages.${system}.deploy-rs
             nixos-anywhere.packages.${system}.nixos-anywhere
           ];
+        shellHook = ''
+          exec ${pkgs.zsh}/bin/zsh
+        '';
       };
 
       nixosConfigurations = {

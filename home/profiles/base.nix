@@ -63,12 +63,19 @@
     enableZshIntegration = true;
     settings = {
       add_newline = false;
-      format = "$directory$character";
+      format = "$directory$nix_shell$character";
       directory = {
         truncation_length = 2;
         truncate_to_repo  = false;
         format            = "$path ";
         style             = "";
+      };
+      nix_shell = {
+        format      = "[$symbol]($style) ";
+        symbol      = "nix ";
+        style       = "fg:#83a598";
+        impure_msg  = "";
+        pure_msg    = "";
       };
       character = {
         success_symbol = "[%]()";

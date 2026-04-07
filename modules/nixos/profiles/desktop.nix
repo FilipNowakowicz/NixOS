@@ -27,6 +27,17 @@
 
   programs.dconf.enable = true;
 
+  # Display manager
+  services.greetd = {
+    enable = true;
+    settings = {
+      default_session = {
+        command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --cmd Hyprland";
+        user = "greeter";
+      };
+    };
+  };
+
   environment.systemPackages = with pkgs; [
     gnome-keyring
     networkmanagerapplet
