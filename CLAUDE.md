@@ -12,7 +12,7 @@ approaches proactively. Explain why, not just what.
 - **Target:** NixOS VM via `ssh nixvm` (~/.ssh/config alias on Arch)
 - **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nixd`, `statix`, `deadnix`
 - **Deploy (VM):** `deploy .#vm`
-- **Deploy (main):** `nixos-rebuild switch --flake .#main`
+- **Deploy (main):** `sudo nixos-rebuild switch --flake .#main` (alias: `rebuild`)
 - **Hot-reload:** `ssh nixvm 'hyprctl reload'`
 - **Launch VM:** `nix run '.#launch-vm'`
 - **Git** is for version control only, not deployment
@@ -70,8 +70,6 @@ Secrets are managed with sops-nix and age encryption.
 
 ## Current Focus
 
-- Neovim theming from colors.nix
-- Multi-monitor support via Hyprland
 
 ---
 
@@ -96,7 +94,6 @@ Secrets are managed with sops-nix and age encryption.
 
 ## Goals
 
-- Hyprland - Theming, Widgets, Multi-monitor (Low Priority)
 ---
 
 ## Preferences

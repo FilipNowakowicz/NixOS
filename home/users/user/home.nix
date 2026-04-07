@@ -51,7 +51,7 @@ in
       gl   = "git pull";
       glog = "git log --oneline --graph --decorate";
       # ── System ─────────────────────────────────────────────
-      rebuild          = "sudo nixos-rebuild switch --flake '/home/user/nix#main'";
+      rebuild          = "sudo nixos-rebuild switch --flake .#main";
       battery          = "acpi -b";
       buds             = "bluetoothctl connect DC:69:E2:CF:9A:BD";
       headset          = "bluetoothctl connect 40:58:99:3D:C8:D3";

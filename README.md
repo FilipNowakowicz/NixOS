@@ -70,7 +70,7 @@ The repository separates hardware, host identity, system profiles, and user conf
 
 | Host | Description | Deploy |
 |------|-------------|--------|
-| `main` | Primary workstation | `nixos-rebuild switch --flake .#main` |
+| `main` | Primary workstation | `sudo nixos-rebuild switch --flake .#main` (alias: `rebuild`) |
 | `vm`   | QEMU/KVM test VM    | `deploy .#vm` (from dev shell) |
 
 ### Fresh VM install
