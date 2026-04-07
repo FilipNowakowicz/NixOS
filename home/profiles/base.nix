@@ -71,11 +71,9 @@
         style             = "";
       };
       nix_shell = {
-        format      = "[$symbol]($style) ";
-        symbol      = "nix ";
-        style       = "fg:#83a598";
-        impure_msg  = "";
-        pure_msg    = "";
+	format = "[\\($symbol\\)]($style) ";
+	symbol = "nix";
+	style  = "fg:#83a598";
       };
       character = {
         success_symbol = "[%]()";

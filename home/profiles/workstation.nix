@@ -10,5 +10,8 @@
     texlive.combined.scheme-medium
     texlab
     ltex-ls-plus
+
+    # ── Learning ─────────────────────────────────────────────
+    anki
   ];
 }
