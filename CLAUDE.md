@@ -94,6 +94,19 @@ Secrets are managed with sops-nix and age encryption.
 
 ## Goals
 
+### Homeserver
+- Deploy onto old laptop via nixos-anywhere (replace hardware-configuration.nix stub)
+- Add sops-nix + impermanence to homeserver config
+- Bring up Tailscale
+- Bring up Syncthing
+- Bring up Vaultwarden
+
+### UI (Deferred)
+- Waybar redesign (thinner bar, pill modules, weather)
+- eww floating widgets (clock, weather, Spotify, WiFi, Bluetooth, brightness)
+
+### Low Priority
+- Lanzaboote (main hardware only)
 ---
 
 ## Preferences
