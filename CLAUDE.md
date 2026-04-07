@@ -104,3 +104,5 @@ Secrets are managed with sops-nix and age encryption.
 - Keep things declarative — avoid imperative workarounds
 - Flag anything that might cause issues on rebuild
 - Run `nix flake check` and `nix build '.#nixosConfigurations.vm.config.system.build.toplevel' --no-link` after changes to `.nix` files — skip for documentation or dotfile/config edits
+- When commiting do not add co-authorship
+- Never push commits
