@@ -1,4 +1,6 @@
-pcall(vim.cmd.colorscheme, "vague")
+vim.g.gruvbox_material_background = "medium"
+vim.g.gruvbox_material_foreground = "material"
+pcall(vim.cmd.colorscheme, "gruvbox-material")
 
 pcall(function()
   require("nvim-tree").setup()

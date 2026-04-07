@@ -15,7 +15,7 @@ vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
   { "rebelot/kanagawa.nvim", lazy = false, priority = 1000 },
-  { "vague-theme/vague.nvim", lazy = false, priority = 1000 },
+  { "sainnhe/gruvbox-material", lazy = false, priority = 1000 },
 
   { "nvim-tree/nvim-web-devicons", lazy = true },
 
