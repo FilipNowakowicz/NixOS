@@ -27,6 +27,11 @@
     AQ_DRM_DEVICES              = "/dev/dri/card1"; # TODO: verify (Intel is usually card1 with PRIME)
   };
 
+  services.openssh = {
+    enable = true;
+    openFirewall = false;
+  };
+
   services.logind.settings = {
     Login.HandleLidSwitch = "suspend";
     # Optional: keep running on AC power
@@ -36,9 +41,7 @@
   sops = {
     defaultSopsFile = ./secrets/secrets.yaml;
     defaultSopsFormat = "yaml";
-    # Uses ~/.ssh/id_ed25519 for now; replace with host key after openssh generates it:
-    #   ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub → update .sops.yaml + sops updatekeys
-    age.sshKeyPaths = [ "/home/user/.ssh/id_ed25519" ];
+    age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     secrets.user_password.neededForUsers = true;
   };
 
