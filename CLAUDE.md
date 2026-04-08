@@ -8,9 +8,8 @@ approaches proactively. Explain why, not just what.
 
 ## Environment
 
-- **Dev machine:** Arch Linux
-- **Target:** NixOS VM via `ssh nixvm` (~/.ssh/config alias on Arch)
-- **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nixd`, `statix`, `deadnix`
+- **Dev machine:** NixOS (main)
+- **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nixd`, `statix`, `deadnix`, `sops`, `ssh-to-age`
 - **Deploy (VM):** `deploy .#vm`
 - **Deploy (main):** `sudo nixos-rebuild switch --flake .#main` (alias: `rebuild`)
 - **Hot-reload:** `ssh nixvm 'hyprctl reload'`
@@ -59,6 +58,12 @@ The VM uses impermanence. A fresh install is required whenever the disk layout (
 
 ---
 
+## Agents
+- Claude Code — all .nix changes, deployments, secrets
+- Gemini CLI — documentation only (.md files), consistency checks, README updates
+
+---
+
 ## Secrets (sops-nix)
 
 Secrets are managed with sops-nix and age encryption.
@@ -68,51 +73,30 @@ Secrets are managed with sops-nix and age encryption.
 - **VM host key:** converted from the SSH host key using:
   `ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub`
   The resulting age pubkey goes into `.sops.yaml` under `&vm_host`
+- **Main host key:** same process, goes into .sops.yaml under `&main_host`
+- **Homeserver host key:** same process, add after first deploy under `&homeserver_host`
 - **`.sops.yaml`:** repo root, defines key groups per path regex
 - **Secrets file:** `hosts/vm/secrets/secrets.yaml` — encrypted, edit with `sops hosts/vm/secrets/secrets.yaml`
 - The VM's `/etc/ssh/ssh_host_ed25519_key` is persisted via impermanence so the host key (and thus the age decryption key) survives reboots
 
----
+## Goals
 
-## Current Focus
+### In Progress
+- Homeserver deployment — waiting on hardware
+  - Replace hardware-configuration.nix stub with real hardware config
+  - Add homeserver host age key to .sops.yaml after first deploy: ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub
+  - Wire Tailscale authKeyFile to real auth key via: sops hosts/homeserver/secrets/secrets.yaml
+  - First boot: temporarily set SIGNUPS_ALLOWED = true, create Vaultwarden account, set back to false, rebuild
+  - Re-encrypt homeserver secrets to include host key: sops updatekeys hosts/homeserver/secrets/secrets.yaml
 
+### Pending
+- Lanzaboote (low priority, main hardware only)
+- Waybar redesign (deferred)
+- eww floating widgets (deferred)
 
 ---
 
 ## Stack
-
-| Layer | Tool |
-|---|---|
-| Window manager | Hyprland |
-| Bar | Waybar |
-| Terminal | Kitty |
-| Editor | Neovim |
-| Shell | Zsh |
-| Prompt | Starship |
-| Launcher | Rofi |
-| Notifications | Mako |
-| Screen lock | Hyprlock |
-| Wallpaper | swaybg |
-| Clipboard | wl-clipboard |
-| System monitor | Btop |
-
----
-
-## Goals
-
-### Homeserver
-- Deploy onto old laptop via nixos-anywhere (replace hardware-configuration.nix stub)
-- Add sops-nix + impermanence to homeserver config
-- Bring up Tailscale
-- Bring up Syncthing
-- Bring up Vaultwarden
-
-### UI (Deferred)
-- Waybar redesign (thinner bar, pill modules, weather)
-- eww floating widgets (clock, weather, Spotify, WiFi, Bluetooth, brightness)
-
-### Low Priority
-- Lanzaboote (main hardware only)
 ---
 
 ## Preferences
@@ -122,6 +106,6 @@ Secrets are managed with sops-nix and age encryption.
 - Prefer home-manager for user-level config over system-level
 - Keep things declarative — avoid imperative workarounds
 - Flag anything that might cause issues on rebuild
-- Run `nix flake check` and `nix build '.#nixosConfigurations.vm.config.system.build.toplevel' --no-link` after changes to `.nix` files — skip for documentation or dotfile/config edits
+- Validate only what you changed: if vm config changed build vm, if main changed build main, if homeserver changed build homeserver, if shared profiles changed build all three
 - When commiting do not add co-authorship
 - Never push commits
