@@ -167,7 +167,7 @@
     useGlobalPkgs = true;
     useUserPackages = true;
     users.user = {
-      imports = [ ../../home/users/user/home.nix ];
+      imports = [ ../../home/users/user/home-server.nix ];
     };
   };
 }

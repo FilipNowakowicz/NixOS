@@ -31,9 +31,14 @@
     };
 
     impermanence.url = "github:nix-community/impermanence";
+
+    lanzaboote = {
+      url = "github:nix-community/lanzaboote";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = inputs@{ self, nixpkgs, home-manager, deploy-rs, nixos-anywhere, sops-nix, impermanence, ... }:
+  outputs = inputs@{ self, nixpkgs, home-manager, deploy-rs, disko, nixos-anywhere, sops-nix, impermanence, lanzaboote, ... }:
     let
       system = "x86_64-linux";
 

@@ -1,7 +1,9 @@
-{ config, pkgs, inputs, ... }:
+{ config, pkgs, lib, inputs, ... }:
 {
   imports = [
     inputs.disko.nixosModules.disko
+    inputs.lanzaboote.nixosModules.lanzaboote
+    inputs.impermanence.nixosModules.impermanence
     ./disko.nix
     ./hardware-configuration.nix
     ../../modules/nixos/profiles/base.nix
@@ -11,6 +13,38 @@
   ];
 
   system.stateVersion = "24.11";
+
+  # ── Lanzaboote Secure Boot ──────────────────────────────────────────────────
+  boot.lanzaboote = {
+    enable = true;
+    pkiBundle = "/persist/etc/secureboot";
+  };
+  boot.loader.systemd-boot.enable = lib.mkForce false;
+
+  environment.systemPackages = with pkgs; [
+    sbctl
+  ];
+
+  # ── Impermanence ─────────────────────────────────────────────────────────────
+  fileSystems."/persist".neededForBoot = true;
+
+  environment.persistence."/persist" = {
+    hideMounts = true;
+    directories = [
+      "/var/log"
+      "/var/lib/nixos"
+      "/var/lib/systemd/coredump"
+      "/var/lib/bluetooth"
+      "/var/lib/tailscale"
+      "/var/lib/mullvad-vpn"
+      "/etc/NetworkManager/system-connections"
+    ];
+    files = [
+      "/etc/machine-id"
+      "/etc/ssh/ssh_host_ed25519_key"
+      "/etc/ssh/ssh_host_ed25519_key.pub"
+    ];
+  };
 
   networking = {
     hostName = "NixOS";

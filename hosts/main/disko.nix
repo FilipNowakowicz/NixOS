@@ -1,33 +1,56 @@
-# Placeholder disk layout for the main machine — /dev/nvme0n1.
-# Before running disko-install, shrink the NixOS root partition manually
-# in a live environment to leave unallocated space for a dual-boot OS.
-# Then adjust the root partition size below to match.
 {
-  disko.devices.disk.main = {
-    type   = "disk";
-    device = "/dev/nvme0n1";
-    content = {
-      type = "gpt";
-      partitions = {
-        ESP = {
-          size    = "512M";
-          type    = "EF00";
-          content = {
-            type       = "filesystem";
-            format     = "vfat";
-            mountpoint = "/boot";
-            extraArgs  = [ "-n" "main-boot" ];
+  disko.devices = {
+    disk.main = {
+      type = "disk";
+      device = "/dev/nvme0n1";
+      content = {
+        type = "gpt";
+        partitions = {
+          ESP = {
+            size = "512M";
+            type = "EF00";
+            content = {
+              type = "filesystem";
+              format = "vfat";
+              mountpoint = "/boot";
+              extraArgs = [ "-n" "main-boot" ];
+            };
+          };
+          luks = {
+            size = "100%";
+            content = {
+              type = "luks";
+              name = "cryptroot";
+              settings = {
+                keyFile = "/tmp/disko-luks-key";
+              };
+              content = {
+                type = "lvm_pv";
+                vg = "vg";
+              };
+            };
           };
         };
+      };
+    };
+
+    lvm_vg.vg = {
+      type = "lvm_vg";
+      lvs = {
         root = {
-          # Adjust size to leave room for a dual-boot OS when the time comes.
-          # Use "100%" to claim all remaining space on a NixOS-only install.
-          size    = "100%";
+          size = "100G";
           content = {
-            type       = "filesystem";
-            format     = "ext4";
+            type = "filesystem";
+            format = "ext4";
             mountpoint = "/";
-            extraArgs  = [ "-L" "main-root" ];
+          };
+        };
+        persist = {
+          size = "100%FREE";
+          content = {
+            type = "filesystem";
+            format = "ext4";
+            mountpoint = "/persist";
           };
         };
       };
