@@ -11,13 +11,11 @@
     ./hardware-configuration.nix
     ../../modules/nixos/profiles/base.nix
     ../../modules/nixos/profiles/security.nix
+    ../../modules/nixos/profiles/user.nix
+    ../../modules/nixos/profiles/server.nix
   ];
 
   system.stateVersion = "24.11";
-
-  nix.settings.trusted-users = [ "root" "user" ];
-
-  zramSwap.enable = true;
 
   networking = {
     hostName = "homeserver";
@@ -160,10 +158,6 @@
 
   users.users.user = {
     home = "/home/user";
-    isNormalUser = true;
-    description = "Primary user";
-    extraGroups = [ "wheel" "networkmanager" ];
-    shell = pkgs.zsh;
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC31z32AcISdGR5ng15HNHmOPPmzPkX+KRQzr98Xhlze"
     ];

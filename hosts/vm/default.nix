@@ -8,20 +8,11 @@
     ../../modules/nixos/profiles/base.nix
     ../../modules/nixos/profiles/desktop.nix
     ../../modules/nixos/profiles/security.nix
+    ../../modules/nixos/profiles/user.nix
+    ../../modules/nixos/profiles/server.nix
   ];
 
   system.stateVersion = "24.11";
-
-  nix.settings.trusted-users = [ "root" "user" ];
-
-  zramSwap.enable = true;
-
-  security.sudo.extraRules = [
-    {
-      users   = [ "user" ];
-      commands = [ { command = "ALL"; options = [ "NOPASSWD" ]; } ];
-    }
-  ];
 
   networking = {
     hostName = "vm";
@@ -53,10 +44,7 @@
 
   users.users.user = {
     home = "/home/user";
-    isNormalUser = true;
-    description = "Primary user";
-    extraGroups = [ "wheel" "networkmanager" "video" ];
-    shell = pkgs.zsh;
+    extraGroups = [ "video" ];
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC31z32AcISdGR5ng15HNHmOPPmzPkX+KRQzr98Xhlze"
     ];

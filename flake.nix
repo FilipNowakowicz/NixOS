@@ -58,62 +58,19 @@
       apps.${system} = {
         launch-vm = {
           type = "app";
-          program = toString (pkgs.writeShellScript "launch-vm" ''
-            qemu-system-x86_64 -enable-kvm -machine q35 -cpu host -smp 4 -m 8G \
-              -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/x64/OVMF_CODE.4m.fd \
-              -drive if=pflash,format=raw,file=/vmstore/images/nixos-test-vars.fd \
-              -drive file=/vmstore/images/nixos-test.qcow2,if=virtio \
-              -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-              -device virtio-net-pci,netdev=net0 \
-              -daemonize -display none
-          '');
+          program = toString (pkgs.writeShellScript "launch-vm" (builtins.readFile ./scripts/launch-vm.sh));
         };
         launch-vm-iso = {
           type = "app";
-          program = toString (pkgs.writeShellScript "launch-vm-iso" ''
-            if [ -z "$1" ]; then
-              echo "Usage: nix run '.#launch-vm-iso' -- path/to/installer.iso"
-              exit 1
-            fi
-            qemu-system-x86_64 -enable-kvm -machine q35 -cpu host -smp 4 -m 8G \
-              -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/x64/OVMF_CODE.4m.fd \
-              -drive if=pflash,format=raw,file=/vmstore/images/nixos-test-vars.fd \
-              -drive file=/vmstore/images/nixos-test.qcow2,if=virtio \
-              -cdrom "$1" \
-              -boot order=d \
-              -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-              -device virtio-net-pci,netdev=net0 \
-              -daemonize -display none
-          '');
+          program = toString (pkgs.writeShellScript "launch-vm-iso" (builtins.readFile ./scripts/launch-vm-iso.sh));
         };
         reinstall-vm = {
           type = "app";
           program = toString (pkgs.writeShellScript "reinstall-vm" ''
-            set -euo pipefail
-
-            # Clear stale SSH host key for the VM
-            ssh-keygen -R '[localhost]:2222'
-
-            # Temp dir for injected host keys; cleaned up on exit
-            tmpdir=$(mktemp -d)
-            trap "rm -rf $tmpdir" EXIT
-
-            mkdir -p "$tmpdir/etc/ssh"
-
-            # Decrypt host keys from sops-encrypted secrets
-            sops --decrypt hosts/vm/secrets/ssh_host_ed25519_key.enc \
-              > "$tmpdir/etc/ssh/ssh_host_ed25519_key"
-            sops --decrypt hosts/vm/secrets/ssh_host_ed25519_key.pub.enc \
-              > "$tmpdir/etc/ssh/ssh_host_ed25519_key.pub"
-
-            chmod 600 "$tmpdir/etc/ssh/ssh_host_ed25519_key"
-
-            # Install — inject host keys so the age identity is stable from first boot
-            nixos-anywhere \
-              --flake '.#vm' \
-              --extra-files "$tmpdir" \
-              --no-substitute-on-destination \
-              root@nixvm
+            export SSH_KEYGEN_BIN="${pkgs.openssh}/bin/ssh-keygen"
+            export SOPS_BIN="${pkgs.sops}/bin/sops"
+            export NIXOS_ANYWHERE_BIN="${nixos-anywhere.packages.${system}.nixos-anywhere}/bin/nixos-anywhere"
+            exec ${pkgs.bash}/bin/bash ${./scripts/reinstall-vm.sh}
           '');
         };
       };

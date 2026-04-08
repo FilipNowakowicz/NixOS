@@ -7,6 +7,7 @@
     ../../modules/nixos/profiles/base.nix
     ../../modules/nixos/profiles/desktop.nix
     ../../modules/nixos/profiles/security.nix
+    ../../modules/nixos/profiles/user.nix
   ];
 
   system.stateVersion = "24.11";
@@ -53,10 +54,7 @@
   };
 
   users.users.user = {
-    isNormalUser = true;
-    description = "Primary user";
-    extraGroups = [ "wheel" "networkmanager" "video" ];
-    shell = pkgs.zsh;
+    extraGroups = [ "video" ];
     hashedPasswordFile = config.sops.secrets.user_password.path;
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJVv8FZjCgmWqmkSLYv0uMySdxpzJUMtoXAwXDonTM7k user@main"

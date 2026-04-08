@@ -1,0 +1,59 @@
+@import "colors.rasi";
+
+configuration {
+    modi:                "drun,run";
+    show-icons:          true;
+    display-drun:        "";
+    drun-display-format: "{name}";
+}
+
+* {
+    background-color: transparent;
+    text-color:       @fg;
+}
+
+window {
+    background-color: @bg;
+    border:           2px solid;
+    border-color:     @accent;
+    border-radius:    12px;
+    width:            30%;
+}
+
+inputbar {
+    background-color: @bg-alt;
+    border-radius:    8px;
+    margin:           8px;
+    padding:          8px 12px;
+    children:         [prompt, entry];
+}
+
+prompt {
+    text-color: @accent;
+    margin:     0 8px 0 0;
+}
+
+entry {
+    placeholder:       "Search…";
+    placeholder-color: @bg-alt;
+}
+
+listview {
+    padding: 4px 8px 8px;
+    spacing: 2px;
+}
+
+element {
+    padding:       8px 12px;
+    border-radius: 8px;
+}
+
+element selected {
+    background-color: @bg-alt;
+    text-color:       @accent;
+}
+
+element-icon {
+    size:   20px;
+    margin: 0 8px 0 0;
+}

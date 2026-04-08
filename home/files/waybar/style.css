@@ -1,0 +1,89 @@
+@import "colors.css";
+
+* {
+    font-family: "Inter", "JetBrainsMono Nerd Font", sans-serif;
+    font-size: 12px;
+    min-height: 0;
+}
+
+window#waybar {
+    background: transparent;
+    color: var(--text);
+}
+
+/* ── Pill base ────────────────────────────────────────── */
+
+#workspaces,
+#clock,
+#custom-weather,
+#network,
+#bluetooth,
+#pulseaudio,
+#battery,
+#tray {
+    background: rgba(28, 26, 24, 0.75);
+    border-radius: 12px;
+    margin: 6px 3px;
+    border: 1px solid rgba(196, 110, 26, 0.25);
+}
+
+/* ── Workspaces ───────────────────────────────────────── */
+
+#workspaces {
+    padding: 0 4px;
+}
+
+#workspaces button {
+    padding:    0 5px;
+    color:      var(--text);
+    background: transparent;
+    font-size:  10px;
+    transition: color 150ms ease;
+    box-shadow: none;
+}
+
+#workspaces button.empty {
+    color: rgba(240, 208, 160, 0.25);
+}
+
+#workspaces button.active {
+    color: var(--amber);
+}
+
+#workspaces button:hover {
+    color:      var(--text);
+    background: transparent;
+    box-shadow: none;
+}
+
+/* ── Clock ────────────────────────────────────────────── */
+
+#clock {
+    padding:     0 18px;
+    font-size:   13px;
+    font-weight: 500;
+}
+
+/* ── Weather ──────────────────────────────────────────── */
+
+#custom-weather {
+    padding: 0 14px;
+}
+
+/* ── Right modules ────────────────────────────────────── */
+
+#network,
+#bluetooth,
+#pulseaudio,
+#battery {
+    padding: 0 12px;
+}
+
+#tray {
+    padding: 0 8px;
+}
+
+/* ── Status ───────────────────────────────────────────── */
+
+#battery.warning  { color: var(--orange); }
+#battery.critical { color: var(--amber);  }
