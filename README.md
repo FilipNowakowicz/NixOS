@@ -12,7 +12,7 @@ The repository separates hardware, host identity, system profiles, and user conf
 - Each host is built from reusable profiles plus a small host-specific definition.
 - Theme colours live in `home/theme/colors.nix` and are consumed by generated configs (Hyprland, Waybar, Kitty, Rofi).
 - Disk layouts are declared with disko and applied via nixos-anywhere on fresh installs.
-- The VM uses impermanence: root is ephemeral, persistent state lives on `/persist`.
+- The VM and homeserver use impermanence: root is ephemeral, persistent state lives on `/persist`.
 - Secrets are managed with sops-nix and age encryption.
 
 ---
@@ -21,130 +21,128 @@ The repository separates hardware, host identity, system profiles, and user conf
 
 ```
 .
-├── flake.nix                          # Entry point: hosts, home-manager, deploy-rs, disko, VM apps
+├── flake.nix                          # Entry point: hosts, shells, deploy-rs, disko, VM apps
 ├── flake.lock
 ├── .sops.yaml                         # age key groups for sops secret encryption
 ├── hosts
-│   ├── main
-│   │   ├── default.nix                # Primary machine config
-│   │   ├── disko.nix                  # Declarative disk layout (/dev/nvme0n1)
-│   │   └── hardware-configuration.nix
-│   ├── vm
-│   │   ├── default.nix                # QEMU/KVM VM config (impermanence, sops)
-│   │   ├── disko.nix                  # /boot (512M) + / (8G) + /persist (remaining)
-│   │   ├── hardware-configuration.nix
-│   │   └── secrets
-│   │       └── secrets.yaml           # sops-encrypted secrets
-│   └── installer
-│       └── default.nix                # Minimal NixOS ISO for fresh installs
+│   ├── main                           # Primary workstation
+│   ├── homeserver                     # Headless server (Tailscale, Vaultwarden, Syncthing)
+│   ├── vm                             # QEMU/KVM test VM
+│   └── installer                      # Minimal NixOS ISO for fresh installs
 ├── modules
-│   └── nixos
-│       └── profiles
-│           ├── base.nix               # Nix settings, locale, zsh, essentials
-│           ├── desktop.nix            # Hyprland, pipewire, portals, fonts
-│           └── security.nix           # Firewall, sshd, sysctl hardening
+│   └── nixos/profiles
+│       ├── base.nix                   # Nix settings, locale, zsh, essentials
+│       ├── desktop.nix                # Hyprland, pipewire, portals, fonts
+│       └── security.nix               # Firewall, sshd, sysctl hardening
 └── home
     ├── profiles
     │   ├── base.nix                   # CLI tools, zsh, git, starship, fzf, zoxide
     │   └── desktop.nix                # GUI packages, GTK, cursor, mako, waybar
-    ├── theme
-    │   ├── colors.nix                 # Gruvbox-warm palette (single source of truth)
-    │   └── wallpapers
-    │       └── wallpaper1.png
-    ├── users
-    │   └── user
-    │       └── home.nix               # User entry point: git, zsh aliases, dotfile wiring
-    └── files
-        ├── hypr
-        │   └── hyprland.conf          # Static Hyprland config (colors sourced at runtime)
-        ├── kitty
-        │   └── kitty.conf             # Terminal: font, opacity (theme generated from colors.nix)
-        └── nvim                       # Neovim: Lazy.nvim, LSP, DAP, treesitter
-            ├── init.lua
-            └── lua/config/
+    ├── theme/colors.nix               # Gruvbox-warm palette (single source of truth)
+    ├── users/user/home.nix            # User entry point: git, zsh aliases, dotfile wiring
+    └── files                          # Dotfiles (Hyprland, Kitty, Neovim)
 ```
 
 ---
 
 ## Hosts
 
-| Host | Description | Deploy |
-|------|-------------|--------|
-| `main` | Primary workstation | `sudo nixos-rebuild switch --flake .#main` (alias: `rebuild`) |
-| `vm`   | QEMU/KVM test VM    | `deploy .#vm` (from dev shell) |
+| Host | Description |
+|------|-------------|
+| `main` | Primary workstation, running a full desktop environment. |
+| `homeserver` | Headless server for self-hosted services. |
+| `vm` | Ephemeral QEMU/KVM test VM for development and testing. |
+| `installer` | Minimal ISO configuration used to bootstrap new installations. |
 
-### Fresh VM install
+### Deployment
 
-The VM uses impermanence — root is wiped on every reboot, state is persisted to `/persist`.
-A fresh install is required whenever the disk layout changes.
+| Host | Command | Notes |
+|---|---|---|
+| `main` | `sudo nixos-rebuild switch --flake .#main` | Run locally on the machine. |
+| `homeserver` | `deploy .#homeserver` | Run from the `nix develop` shell on the dev machine. |
+| `vm` | `deploy .#vm` | Run from the `nix develop` shell on the dev machine. |
 
-```bash
-# 1. Create disk image (once)
-qemu-img create -f qcow2 /vmstore/images/nixos-test.qcow2 40G
 
-# 2. Copy OVMF vars (once — must be writable for UEFI state)
-cp /usr/share/OVMF/x64/OVMF_VARS.4m.fd /vmstore/images/nixos-test-vars.fd
+## Services (Homeserver)
 
-# 3. Build the installer ISO
-nix build '.#packages.x86_64-linux.installer-iso'
+The `homeserver` is configured to run the following services:
 
-# 4. Boot the ISO in the VM
-nix run '.#launch-vm-iso' -- result/iso/*.iso
-
-# 5. From the Arch host dev shell, reinstall
-nix develop
-nix run '.#reinstall-vm'
-# - Clears the stale SSH host key from ~/.ssh/known_hosts
-# - Decrypts the VM's SSH host keys from sops secrets and injects them so
-#   the age identity is stable from first boot (required for sops decryption)
-# - Runs nixos-anywhere with --no-substitute-on-destination (copies store
-#   paths locally instead of downloading from cache.nixos.org)
-# - Partitions /dev/vda via disko, installs NixOS, reboots
-
-# 6. After reboot, launch normally
-nix run '.#launch-vm'
-
-# 7. Deploy updates
-deploy .#vm
-```
+| Service | Purpose | Access |
+|---|---|---|
+| **Tailscale** | Zero-config VPN for secure remote access. | Connect from any Tailscale client. |
+| **Vaultwarden** | Self-hosted Bitwarden-compatible password manager. | `https://homeserver` (via Tailscale) |
+| **Syncthing** | Continuous, peer-to-peer file synchronization. | `http://homeserver:8384` (via Tailscale) |
 
 ---
 
-## Secrets
+## Secrets (sops-nix)
 
 Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) and [age](https://age-encryption.org) encryption.
 
+### How it works
+
+- `.sops.yaml` defines rules for which age public keys can decrypt which secret files.
+- Keys are grouped by name (e.g., `&user`, `&vm_host`, `&homeserver_host`).
+- Host keys (`vm_host`, `homeserver_host`) are derived from their respective SSH host public keys using `ssh-to-age`.
+- This allows a host to decrypt its own secrets automatically during activation.
+- The user's personal age key (`user`) can decrypt all secrets.
+
 ### Setup
 
-1. **Generate your age key** on the Arch host (once):
+1. **Generate your personal age key** (once):
    ```bash
    age-keygen -o ~/.config/sops/age/keys.txt
    ```
-   Add the public key to `.sops.yaml` under `&user`.
+   Add the public key to `.sops.yaml` under the `&user` anchor.
 
-2. **Get the VM host age key** after a fresh install:
+2. **Add a host's age key** after its first boot:
+   On the new host, get its SSH public key, convert it to an age key, and add it to `.sops.yaml`.
    ```bash
-   ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub
+   # On the new host (e.g., homeserver)
+   cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age
+
+   # On your dev machine, add the resulting age key to .sops.yaml
+   # under a new anchor (e.g., &homeserver_host) and update the
+   # creation_rules to give it access to its secrets file.
    ```
-   Add the output to `.sops.yaml` under `&vm_host`.
 
 3. **Edit secrets:**
    ```bash
-   sops hosts/vm/secrets/secrets.yaml
+   # Edits a file, decrypting it temporarily
+   sops hosts/homeserver/secrets/secrets.yaml
    ```
-
-### How it works
-
-- `.sops.yaml` defines which age keys can decrypt which secret files.
-- The VM's SSH host key (`/etc/ssh/ssh_host_ed25519_key`) is persisted via impermanence so the age identity survives reboots.
-- sops-nix decrypts secrets at activation time and exposes them as files owned by root (or a specified user).
 
 ---
 
-## Stack
+## Tooling
+
+The flake provides several `devShells` and `apps` for development and maintenance.
+
+| Type | Name | Purpose |
+|------|------|---------|
+| `devShell` | `default` | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, etc. |
+| `devShell` | `security` | Includes common security tools: `nmap`, `gobuster`, `sqlmap`, `hydra`, `john`, etc. |
+| `app` | `reinstall-vm` | Runs `nixos-anywhere` to perform a fresh installation of the VM. |
+| `app` | `launch-vm` | Boots the installed VM with QEMU. |
+| `app` | `launch-vm-iso`| Boots the installer ISO in the VM to begin a fresh install. |
+
+### Fresh VM Install
+
+The test VM uses an ephemeral root filesystem (impermanence), so its state is reset on every boot. A full re-installation is only needed if the underlying disk layout (`hosts/vm/disko.nix`) is changed.
+
+The process involves:
+1.  **One-time setup:** Creating a QEMU disk image and copying UEFI variable storage.
+2.  **Building an installer ISO** using the `installer` host configuration.
+3.  **Booting the ISO** in the VM using the `.#launch-vm-iso` app.
+4.  **Running the installation** from the development shell using the `.#reinstall-vm` app. This app connects to the booted ISO via SSH and uses `nixos-anywhere` to partition the disk and install the `vm` configuration.
+5.  **Launching the final VM** with the `.#launch-vm` app and deploying any subsequent changes with `deploy .#vm`.
+---
+
+## Desktop Stack
 
 | Layer | Tool |
-|-------|------|
+|---|---|
+| Display Manager| greetd (tuigreet) |
 | Window manager | Hyprland |
 | Bar | Waybar |
 | Terminal | Kitty |
@@ -156,27 +154,18 @@ Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) and [age]
 | Screen lock | Hyprlock |
 | Wallpaper | swaybg |
 | Clipboard | wl-clipboard |
-
----
-
-## Tooling
-
-| Tool | Purpose |
-|------|---------|
-| disko | Declarative disk partitioning |
-| deploy-rs | Incremental remote deployment |
-| nixos-anywhere | Fresh installs over SSH |
-| impermanence | Ephemeral root with explicit persistence |
-| sops-nix | Secrets management with age encryption |
-| ssh-to-age | Convert SSH host key to age identity |
-
-Dev shell (`nix develop`) provides: `deploy-rs`, `nixos-anywhere`, `nixd`, `statix`, `deadnix`.
+| System monitor | Btop |
 
 ---
 
 ## Validation
 
 ```bash
+# Check for flake inputs, formatting, and unused variables
 nix flake check
+
+# Build all host configurations to ensure they evaluate correctly
 nix build '.#nixosConfigurations.vm.config.system.build.toplevel' --no-link
+nix build '.#nixosConfigurations.main.config.system.build.toplevel' --no-link
+nix build '.#nixosConfigurations.homeserver.config.system.build.toplevel' --no-link
 ```

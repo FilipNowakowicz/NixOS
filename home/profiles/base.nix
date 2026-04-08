@@ -40,6 +40,7 @@
 
     # ── AI ───────────────────────────────────────────────────────
     claude-code
+    gemini-cli
   ];
 
   home.sessionVariables = {

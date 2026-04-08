@@ -12,7 +12,7 @@
   system.stateVersion = "24.11";
 
   networking = {
-    hostName = "main";
+    hostName = "NixOS";
     networkmanager.enable = true;
   };
 
