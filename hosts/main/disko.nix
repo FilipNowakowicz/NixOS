@@ -21,9 +21,6 @@
             content = {
               type = "luks";
               name = "cryptroot";
-              settings = {
-                keyFile = "/tmp/disko-luks-key";
-              };
               content = {
                 type = "lvm_pv";
                 vg = "vg";
