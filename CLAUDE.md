@@ -78,6 +78,7 @@ Secrets are managed with sops-nix and age encryption.
 - **`.sops.yaml`:** repo root, defines key groups per path regex
 - **Secrets file:** `hosts/vm/secrets/secrets.yaml` — encrypted, edit with `sops hosts/vm/secrets/secrets.yaml`
 - The VM's `/etc/ssh/ssh_host_ed25519_key` is persisted via impermanence so the host key (and thus the age decryption key) survives reboots
+- On main, `/etc/ssh/ssh_host_ed25519_key` is also persisted via impermanence, keeping the sops age identity stable across reboots
 
 ## Goals
 
@@ -90,13 +91,25 @@ Secrets are managed with sops-nix and age encryption.
   - Re-encrypt homeserver secrets to include host key: sops updatekeys hosts/homeserver/secrets/secrets.yaml
 
 ### Pending
-- Lanzaboote (low priority, main hardware only)
 - Waybar redesign (deferred)
 - eww floating widgets (deferred)
 
 ---
 
 ## Stack
+
+- **NixOS** — declarative Linux distribution
+- **Home Manager** — declarative dotfiles and user environment
+- **Hyprland** — dynamic tiling Wayland compositor
+- **Lanzaboote** — Secure Boot for NixOS (main only)
+- **LUKS + LVM** — encrypted disk with logical volumes (main only)
+- **sops-nix** — secrets management with age encryption
+- **impermanence** — ephemeral root filesystem with selective persistence
+- **disko** — declarative disk partitioning
+- **nixos-anywhere** — remote NixOS installation
+- **deploy-rs** — NixOS deployment tool
+- **Tailscale** — mesh VPN for secure remote access
+
 ---
 
 ## Preferences
