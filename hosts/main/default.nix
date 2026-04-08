@@ -34,6 +34,11 @@
 
   services.mullvad-vpn.enable = true;
 
+  services.tailscale = {
+    enable = true;
+    openFirewall = true;
+  };
+
   services.logind.settings = {
     Login.HandleLidSwitch = "suspend";
     # Optional: keep running on AC power

@@ -129,15 +129,43 @@
 
       formatter.${system} = pkgs.nixfmt;
 
-      devShells.${system}.default = pkgs.mkShell {
-        packages = (with pkgs; [ nixd statix deadnix sops ssh-to-age ])
-          ++ [
-            deploy-rs.packages.${system}.deploy-rs
-            nixos-anywhere.packages.${system}.nixos-anywhere
+      devShells.${system} = {
+        default = pkgs.mkShell {
+          packages = (with pkgs; [ nixd statix deadnix sops ssh-to-age ])
+            ++ [
+              deploy-rs.packages.${system}.deploy-rs
+              nixos-anywhere.packages.${system}.nixos-anywhere
+            ];
+          shellHook = ''
+            exec ${pkgs.zsh}/bin/zsh
+          '';
+        };
+
+        security = pkgs.mkShell {
+          packages = with pkgs; [
+            nmap
+            whois
+            dnsutils        # provides dig
+            sqlmap
+            gobuster
+            ffuf
+            hydra
+            john
+            hashcat
+            netcat-gnu
+            wireshark-cli
           ];
-        shellHook = ''
-          exec ${pkgs.zsh}/bin/zsh
-        '';
+          shellHook = ''
+	    echo "Security tools ready"
+	    echo ""
+	    echo "Available tools:"
+	    echo "  Network:   nmap, whois, dig, netcat"
+	    echo "  Web:       sqlmap, gobuster, ffuf"
+	    echo "  Password:  hydra, john, hashcat"
+	    echo "  Analysis:  wireshark-cli (tshark)"
+	    exec ${pkgs.zsh}/bin/zsh
+          '';
+        };
       };
 
       nixosConfigurations = {

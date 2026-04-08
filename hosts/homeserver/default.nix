@@ -2,7 +2,7 @@
 # hardware-configuration.nix must be replaced with real hardware config generated
 # on the target machine via: nixos-generate-config
 # or during a fresh install via: nixos-anywhere --generate-hardware-config ...
-{ pkgs, inputs, ... }:
+{ config, pkgs, inputs, ... }:
 {
   imports = [
     inputs.disko.nixosModules.disko
@@ -31,12 +31,10 @@
   };
 
   # Tailscale VPN for secure remote access
-  # Auth key should be provisioned via sops on first deploy (not hardcoded)
-  # Initial auth: ssh homeserver 'sudo tailscale up --auth-key <key>'
-  # Or store tailscale_auth_key in secrets.yaml and use it in a systemd service
   services.tailscale = {
     enable = true;
     openFirewall = true;  # Opens UDP port 41641
+    authKeyFile = config.sops.secrets.tailscale_auth_key.path;
   };
 
   # Vaultwarden password manager (Bitwarden-compatible server)
@@ -135,6 +133,7 @@
     defaultSopsFormat = "yaml";
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     secrets.user_password = {};
+    secrets.tailscale_auth_key = {};
   };
 
   fileSystems."/persist".neededForBoot = true;

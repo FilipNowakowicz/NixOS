@@ -60,7 +60,7 @@
 
   programs.starship = {
     enable = true;
-    enableZshIntegration = true;
+    enableZshIntegration = false;
     settings = {
       add_newline = false;
       format = "$directory$nix_shell$character";
@@ -142,6 +142,8 @@
 
       # Accept autosuggestion with Ctrl+Space
       (( ''${+widgets[autosuggest-accept]} )) && bindkey '^ ' autosuggest-accept
+      # Starship init
+      eval "$(starship init zsh)"
     '';
   };
 

@@ -56,11 +56,6 @@ in
       buds             = "bluetoothctl connect DC:69:E2:CF:9A:BD";
       headset          = "bluetoothctl connect 40:58:99:3D:C8:D3";
       whatsapp         = "wasistlos &";
-      tailscale-on     = ''sudo systemctl start tailscaled && sudo tailscale up && echo "Tailscale connected"'';
-      tailscale-off    = ''sudo systemctl stop tailscaled && echo "Tailscale stopped"'';
-      tailscale-status = "tailscale status";
-      ollama3          = "ollama run llama3.1:8b";
-      ollamamath       = "ollama run wizard-math:7b";
     };
 
     initContent = ''
