@@ -5,7 +5,9 @@
       "Bash(nix eval:*)",
       "Bash(rofi:*)",
       "Bash(sudo nixos-rebuild switch:*)",
-      "Bash(nixos-rebuild build:*)"
+      "Bash(nixos-rebuild build:*)",
+      "Bash(nix:*)",
+      "WebSearch"
     ]
   }
 }

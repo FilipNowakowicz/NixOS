@@ -20,6 +20,9 @@
   };
   boot.loader.systemd-boot.enable = lib.mkForce false;
 
+  # ── Systemd in initrd (required for TPM2 LUKS unlock) ───────────────────────
+  boot.initrd.systemd.enable = true;
+
   environment.systemPackages = with pkgs; [
     sbctl
   ];

@@ -36,19 +36,11 @@
       type = "lvm_vg";
       lvs = {
         root = {
-          size = "100G";
-          content = {
-            type = "filesystem";
-            format = "ext4";
-            mountpoint = "/";
-          };
-        };
-        persist = {
           size = "100%FREE";
           content = {
             type = "filesystem";
             format = "ext4";
-            mountpoint = "/persist";
+            mountpoint = "/";
           };
         };
       };
