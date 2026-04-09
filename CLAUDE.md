@@ -91,6 +91,7 @@ Secrets are managed with sops-nix and age encryption.
   - Re-encrypt homeserver secrets to include host key: sops updatekeys hosts/homeserver/secrets/secrets.yaml
 
 ### Pending
+- Rofi launcher redesign — improve visual appearance and styling
 - Waybar redesign (deferred)
 - eww floating widgets (deferred)
 

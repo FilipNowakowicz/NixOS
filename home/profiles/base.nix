@@ -41,6 +41,10 @@
     # ── AI ───────────────────────────────────────────────────────
     claude-code
     gemini-cli
+
+    # ── GitHub / Steam ───────────────────────────────────────────
+    gh
+    steam-run
   ];
 
   home.sessionVariables = {

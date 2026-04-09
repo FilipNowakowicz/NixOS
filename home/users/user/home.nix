@@ -24,6 +24,16 @@ in
     "${config.home.homeDirectory}/.npm-global/bin"
   ];
 
+  # XDG MIME apps
+  xdg.mimeApps = {
+    enable = true;
+    defaultApplications = {
+      "text/html" = "firefox.desktop";
+      "x-scheme-handler/http" = "firefox.desktop";
+      "x-scheme-handler/https" = "firefox.desktop";
+    };
+  };
+
   # Zsh — user-specific aliases and shell functions
   # Base options, plugins, and vi-mode are set in home/profiles/base.nix
   programs.zsh = {
@@ -56,6 +66,7 @@ in
       buds             = "bluetoothctl connect DC:69:E2:CF:9A:BD";
       headset          = "bluetoothctl connect 40:58:99:3D:C8:D3";
       whatsapp         = "wasistlos &";
+      copilot          = "steam-run gh copilot";
     };
 
     initContent = ''
@@ -175,6 +186,62 @@ in
   xdg.configFile."hypr/hyprlock-colors.conf".source = ../../files/hypr/hyprlock-colors.conf;
 
   # ── Rofi ─────────────────────────────────────────────────────────────────────
-  xdg.configFile."rofi/config.rasi".source = ../../files/rofi/config.rasi;
-  xdg.configFile."rofi/colors.rasi".source = ../../files/rofi/colors.rasi;
+  programs.rofi = {
+    enable = true;
+    extraConfig = {
+      modi = "drun,run";
+      show-icons = true;
+      display-drun = "";
+      drun-display-format = "{name}";
+    };
+    theme = let
+      bg = "#1c1a18";
+      bg-alt = "#4a3728";
+      fg = "#f0d0a0";
+      accent = "#e8890c";
+    in {
+      "*" = {
+        background-color = "transparent";
+        text-color = fg;
+      };
+      window = {
+        background-color = bg;
+        border = "2px solid";
+        border-color = accent;
+        border-radius = 12;
+        width = "30%";
+      };
+      inputbar = {
+        background-color = bg-alt;
+        border-radius = 8;
+        margin = 8;
+        padding = "8px 12px";
+        children = [ "prompt" "entry" ];
+      };
+      prompt = {
+        text-color = accent;
+        margin = "0 8px 0 0";
+      };
+      entry = {
+        placeholder = "Search…";
+        placeholder-color = bg-alt;
+      };
+      listview = {
+        padding = "4px 8px 8px";
+        spacing = 2;
+      };
+      element = {
+        padding = "8px 12px";
+        border-radius = 8;
+      };
+      "element selected" = {
+        background-color = bg-alt;
+        text-color = accent;
+      };
+      element-icon = {
+        size = 20;
+        margin = "0 8px 0 0";
+      };
+    };
+  };
 }

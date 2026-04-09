@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(nix build:*)"
+      "Bash(nix build:*)",
+      "Bash(nix eval:*)",
+      "Bash(rofi:*)",
+      "Bash(sudo nixos-rebuild switch:*)",
+      "Bash(nixos-rebuild build:*)"
     ]
   }
 }

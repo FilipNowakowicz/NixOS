@@ -21,6 +21,7 @@
             content = {
               type = "luks";
               name = "cryptroot";
+              settings.crypttabExtraOpts = [ "tpm2-device=auto" ];
               content = {
                 type = "lvm_pv";
                 vg = "vg";

@@ -4,9 +4,6 @@
     # ── Terminal ─────────────────────────────────────────────
     kitty
 
-    # ── Launcher ─────────────────────────────────────────────
-    rofi
-
     # ── Wayland utilities ────────────────────────────────────
     wl-clipboard
     grim          # screenshot
