@@ -16,7 +16,7 @@
   # ── Lanzaboote Secure Boot ──────────────────────────────────────────────────
   boot.lanzaboote = {
     enable = true;
-    pkiBundle = "/persist/etc/secureboot";
+    pkiBundle = "/etc/secureboot";
   };
   boot.loader.systemd-boot.enable = lib.mkForce false;
 
