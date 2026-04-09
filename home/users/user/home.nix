@@ -1,6 +1,117 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 let
-  colors = import ../../theme/active.nix;
+  # Import active theme for fallback/default
+  activeTheme = import ../../theme/active.nix;
+
+  # Auto-discover all theme files
+  themeDir = ../../theme/themes;
+  themeFiles = builtins.readDir themeDir;
+
+  # Load and validate each theme
+  allThemes = lib.mapAttrs' (name: _:
+    let
+      themePath = themeDir + "/${name}";
+      theme = import themePath;
+      themeName = lib.removeSuffix ".nix" name;
+    in
+      lib.nameValuePair themeName (theme // { name = themeName; })
+  ) (lib.filterAttrs (n: v: v == "regular" && lib.hasSuffix ".nix" n) themeFiles);
+
+  # Filter: only enabled themes with existing wallpapers
+  validThemes = lib.filterAttrs (_: theme:
+    let
+      enabled = theme.enabled or true;
+      wallpaperExists = builtins.pathExists theme.wallpaper;
+    in
+      enabled && wallpaperExists
+  ) allThemes;
+
+  # Helper to generate theme config text
+  mkThemeConfig = themeName: theme: {
+    # Kitty theme
+    "themes/${themeName}/kitty-theme.conf".text = ''
+      # vim:ft=kitty
+      ## name: ${themeName}
+
+      foreground           #${theme.colors.text}
+      background           #${theme.colors.bg}
+      selection_foreground #${theme.colors.text}
+      selection_background #${theme.colors.brown}
+
+      cursor            #${theme.colors.amber}
+      cursor_text_color #${theme.colors.bg}
+
+      url_color #${theme.colors.amber}
+
+      active_border_color   #${theme.colors.amber}
+      inactive_border_color #${theme.colors.brown}
+      bell_border_color     #${theme.colors.orange}
+
+      wayland_titlebar_color #${theme.colors.bg}
+
+      active_tab_foreground   #${theme.colors.text}
+      active_tab_background   #${theme.colors.bg}
+      inactive_tab_foreground #${theme.colors.brown}
+      inactive_tab_background #${theme.colors.bg}
+      tab_bar_background      #${theme.colors.bg}
+
+      # 16 colors — extended palette
+      color0  #${theme.colors.bg}
+      color8  #${theme.colors.brown}
+      color1  #cc241d
+      color9  #fb4934
+      color2  #98971a
+      color10 #b8bb26
+      color3  #${theme.colors.amber}
+      color11 #fabd2f
+      color4  #458588
+      color12 #83a598
+      color5  #b16286
+      color13 #d3869b
+      color6  #689d6a
+      color14 #8ec07c
+      color7  #${theme.colors.text}
+      color15 #fbf1c7
+    '';
+
+    # Hyprland colors
+    "themes/${themeName}/hypr-colors.conf".text = ''
+      $col_active   = rgb(${theme.colors.amber})
+      $col_inactive = rgb(${theme.colors.brown})
+      $col_shadow   = rgba(${theme.colors.bg}cc)
+    '';
+
+    # Hyprlock colors
+    "themes/${themeName}/hyprlock-colors.conf".text = ''
+      $text   = rgb(${theme.colors.text})
+      $bg     = rgb(${theme.colors.bg})
+      $amber  = rgb(${theme.colors.amber})
+      $orange = rgb(${theme.colors.orange})
+    '';
+
+    # Waybar colors
+    "themes/${themeName}/waybar-colors.css".text = ''
+      @define-color bg #${theme.colors.bg};
+      @define-color brown #${theme.colors.brown};
+      @define-color orange #${theme.colors.orange};
+      @define-color amber #${theme.colors.amber};
+      @define-color text #${theme.colors.text};
+    '';
+
+    # Wallpaper symlink
+    "themes/${themeName}/wallpaper".source = theme.wallpaper;
+  };
+
+  # Generate configs for all valid themes
+  themeConfigs = lib.foldl (acc: themeName:
+    acc // (mkThemeConfig themeName validThemes.${themeName})
+  ) {} (builtins.attrNames validThemes);
+
+  # Active theme name for initial current symlink
+  activeThemeName = activeTheme.name or "desert-dusk";
+
+  # Use active theme colors for compatibility
+  colors = activeTheme.colors;
 in
 {
   home.username = "user";
@@ -88,80 +199,190 @@ in
     '';
   };
 
-  # ── Wallpaper ──────────────────────────────────────────────────────────
-  home.file.".local/share/wallpapers/wallpaper1.png".source =
-    ../../theme/wallpapers/wallpaper1.png;
+  # ── Themes & Config Files ──────────────────────────────────────────────
+  # Generate all theme configs + application configs
+  xdg.configFile = themeConfigs // {
+    # Neovim
+    "nvim".source = ../../files/nvim;
 
-  # ── Neovim ─────────────────────────────────────────────────────────────
-  xdg.configFile."nvim".source = ../../files/nvim;
+    # Kitty - use active theme colors directly
+    "kitty/kitty.conf".source = ../../files/kitty/kitty.conf;
+    "kitty/current-theme.conf".text = ''
+      # vim:ft=kitty
+      ## name: ${activeThemeName}
 
-  # ── Kitty ──────────────────────────────────────────────────────────────
-  # Per-file so current-theme.conf can be generated from colors.nix
-  xdg.configFile."kitty/kitty.conf".source = ../../files/kitty/kitty.conf;
-  xdg.configFile."kitty/current-theme.conf".text = ''
-    # vim:ft=kitty
-    ## name: Gruvbox Warm
+      foreground           #${colors.text}
+      background           #${colors.bg}
+      selection_foreground #${colors.text}
+      selection_background #${colors.brown}
 
-    foreground           #${colors.text}
-    background           #${colors.bg}
-    selection_foreground #${colors.text}
-    selection_background #${colors.brown}
+      cursor            #${colors.amber}
+      cursor_text_color #${colors.bg}
 
-    cursor            #${colors.amber}
-    cursor_text_color #${colors.bg}
+      url_color #${colors.amber}
 
-    url_color #${colors.amber}
+      active_border_color   #${colors.amber}
+      inactive_border_color #${colors.brown}
+      bell_border_color     #${colors.orange}
 
-    active_border_color   #${colors.amber}
-    inactive_border_color #${colors.brown}
-    bell_border_color     #${colors.orange}
+      wayland_titlebar_color #${colors.bg}
 
-    wayland_titlebar_color #${colors.bg}
+      active_tab_foreground   #${colors.text}
+      active_tab_background   #${colors.bg}
+      inactive_tab_foreground #${colors.brown}
+      inactive_tab_background #${colors.bg}
+      tab_bar_background      #${colors.bg}
 
-    active_tab_foreground   #${colors.text}
-    active_tab_background   #${colors.bg}
-    inactive_tab_foreground #${colors.brown}
-    inactive_tab_background #${colors.bg}
-    tab_bar_background      #${colors.bg}
+      # 16 colors — extended palette
+      color0  #${colors.bg}
+      color8  #${colors.brown}
+      color1  #cc241d
+      color9  #fb4934
+      color2  #98971a
+      color10 #b8bb26
+      color3  #${colors.amber}
+      color11 #fabd2f
+      color4  #458588
+      color12 #83a598
+      color5  #b16286
+      color13 #d3869b
+      color6  #689d6a
+      color14 #8ec07c
+      color7  #${colors.text}
+      color15 #fbf1c7
+    '';
 
-    # 16 colors — gruvbox-warm extended palette
-    color0  #${colors.bg}
-    color8  #${colors.brown}
-    color1  #cc241d
-    color9  #fb4934
-    color2  #98971a
-    color10 #b8bb26
-    color3  #${colors.amber}
-    color11 #fabd2f
-    color4  #458588
-    color12 #83a598
-    color5  #b16286
-    color13 #d3869b
-    color6  #689d6a
-    color14 #8ec07c
-    color7  #${colors.text}
-    color15 #fbf1c7
-  '';
+    # Hyprland - use active theme colors directly
+    "hypr/hyprland.conf".source = ../../files/hypr/hyprland.conf;
+    "hypr/colors.conf".text = ''
+      $col_active   = rgb(${colors.amber})
+      $col_inactive = rgb(${colors.brown})
+      $col_shadow   = rgba(${colors.bg}cc)
+    '';
 
-  # ── Hyprland ───────────────────────────────────────────────────────────
-  xdg.configFile."hypr/hyprland.conf".source = ../../files/hypr/hyprland.conf;
-  xdg.configFile."hypr/colors.conf".text = ''
-    $col_active   = rgb(${colors.amber})
-    $col_inactive = rgb(${colors.brown})
-  '';
+    # Hyprlock - use active theme colors directly
+    "hypr/hyprlock.conf".source = ../../files/hypr/hyprlock.conf;
+    "hypr/hyprlock-colors.conf".text = ''
+      $text   = rgb(${colors.text})
+      $bg     = rgb(${colors.bg})
+      $amber  = rgb(${colors.amber})
+      $orange = rgb(${colors.orange})
+    '';
 
-  # ── Waybar ─────────────────────────────────────────────────────────────
-  home.file.".local/bin/waybar-weather" = {
-    executable = true;
-    text = ''
-      #!/usr/bin/env bash
-      result=$(curl -sf --max-time 5 "wttr.in/Warsaw?format=%c+%t")
-      [ -n "$result" ] && echo "$result" || echo "? --"
+    # Waybar - use active theme colors directly
+    "waybar/config".source = ../../files/waybar/config;
+    "waybar/style.css".source = ../../files/waybar/style.css;
+    "waybar/colors.css".text = ''
+      @define-color bg #${colors.bg};
+      @define-color brown #${colors.brown};
+      @define-color orange #${colors.orange};
+      @define-color amber #${colors.amber};
+      @define-color text #${colors.text};
     '';
   };
 
-  xdg.configFile."waybar/config".source = ../../files/waybar/config;
-  xdg.configFile."waybar/style.css".source = ../../files/waybar/style.css;
+  # ── Wallpaper & Scripts ────────────────────────────────────────────────
+  home.file = {
+    ".local/share/wallpapers/current.png".source = activeTheme.wallpaper;
+
+    ".local/bin/waybar-weather" = {
+      executable = true;
+      text = ''
+        #!/usr/bin/env bash
+        result=$(curl -sf --max-time 5 "wttr.in/Warsaw?format=%c+%t")
+        [ -n "$result" ] && echo "$result" || echo "? --"
+      '';
+    };
+
+    ".local/bin/theme-switch" = {
+    executable = true;
+    text = ''
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      THEME="''${1:-}"
+      THEMES_DIR="$HOME/.config/themes"
+      ACTIVE_FILE="$HOME/nix/home/theme/active.nix"
+
+      # Get current theme from active.nix
+      if [[ -f "$ACTIVE_FILE" ]]; then
+          CURRENT_THEME=$(grep -oP 'themes/\K[^.]+' "$ACTIVE_FILE" 2>/dev/null || echo "unknown")
+      else
+          CURRENT_THEME="unknown"
+      fi
+
+      # List available themes if no argument
+      if [[ -z "$THEME" ]]; then
+          echo "Available themes:"
+          for dir in "$THEMES_DIR"/*; do
+              [[ -d "$dir" ]] && basename "$dir"
+          done | sort
+          echo ""
+          echo "Current theme: $CURRENT_THEME"
+          echo ""
+          echo "Usage: theme-switch <theme-name>"
+          exit 0
+      fi
+
+      # Validate theme exists
+      if [[ ! -d "$THEMES_DIR/$THEME" ]]; then
+          echo "Error: Theme not found: $THEME"
+          echo "Available themes:"
+          for dir in "$THEMES_DIR"/*; do
+              [[ -d "$dir" ]] && basename "$dir"
+          done | sort
+          exit 1
+      fi
+
+      # Check if already active
+      if [[ "$CURRENT_THEME" == "$THEME" ]]; then
+          echo "Theme '$THEME' is already active"
+          exit 0
+      fi
+
+      # Update active.nix
+      ACTIVE_FILE="$HOME/nix/home/theme/active.nix"
+      if [[ ! -f "$ACTIVE_FILE" ]]; then
+          echo "Error: $ACTIVE_FILE not found"
+          exit 1
+      fi
+
+      echo "import ./themes/$THEME.nix" > "$ACTIVE_FILE"
+      echo "Updated active.nix to $THEME"
+
+      # Rebuild home-manager (faster than full system rebuild)
+      echo "Rebuilding home-manager configuration..."
+      if ${pkgs.home-manager}/bin/home-manager switch --flake "$HOME/nix#user"; then
+          # Reload services after successful rebuild
+          ${pkgs.hyprland}/bin/hyprctl reload >/dev/null 2>&1 || true
+
+          # Restart waybar to pick up new CSS
+          ${pkgs.procps}/bin/pkill waybar || true
+          sleep 0.3
+          ${pkgs.waybar}/bin/waybar &
+
+          ${pkgs.procps}/bin/pkill swaybg || true
+          sleep 0.2
+          ${pkgs.swaybg}/bin/swaybg -m fill -i "$HOME/.local/share/wallpapers/current.png" &
+
+          for socket in /tmp/kitty-*/kitty-*; do
+              [[ -S "$socket" ]] && ${pkgs.kitty}/bin/kitty @ --to "unix:$socket" load-config 2>/dev/null || true
+          done
+
+          # Kill any orphaned mako processes before restarting
+          ${pkgs.procps}/bin/pkill mako || true
+          sleep 0.5
+          ${pkgs.systemd}/bin/systemctl --user restart mako.service 2>/dev/null || true
+
+          ${pkgs.libnotify}/bin/notify-send "Theme changed" "Switched to: $THEME" || true
+          echo "✓ Theme switched to $THEME"
+      else
+          echo "Error: home-manager rebuild failed"
+          exit 1
+      fi
+    '';
+  };
+  };
 
   # ── Mako ───────────────────────────────────────────────────────────────
   services.mako = {
@@ -175,74 +396,11 @@ in
       border-size      = 2;
       anchor           = "top-right";
       margin           = "12";
-      padding          = "10 14";
+      padding          = "10,14";
       width            = 300;
       default-timeout  = 5000;
       max-visible      = 5;
     };
   };
 
-  # ── Hyprlock ───────────────────────────────────────────────────────────
-  xdg.configFile."hypr/hyprlock.conf".source = ../../files/hypr/hyprlock.conf;
-  xdg.configFile."hypr/hyprlock-colors.conf".source = ../../files/hypr/hyprlock-colors.conf;
-
-  # ── Rofi ───────────────────────────────────────────────────────────────
-  programs.rofi = {
-    enable = true;
-    extraConfig = {
-      modi = "drun,run";
-      show-icons = true;
-      display-drun = "";
-      drun-display-format = "{name}";
-    };
-    theme = let
-      bg = "#1c1a18";
-      bg-alt = "#4a3728";
-      fg = "#f0d0a0";
-      accent = "#e8890c";
-    in {
-      "*" = {
-        background-color = "transparent";
-        text-color = fg;
-      };
-      window = {
-        background-color = bg;
-        border = "2px solid";
-        border-color = accent;
-        border-radius = 12;
-        width = "30%";
-      };
-      inputbar = {
-        background-color = bg-alt;
-        border-radius = 8;
-        margin = 8;
-        padding = "8px 12px";
-        children = [ "prompt" "entry" ];
-      };
-      prompt = {
-        text-color = accent;
-        margin = "0 8px 0 0";
-      };
-      entry = {
-        placeholder = "Search…";
-        placeholder-color = bg-alt;
-      };
-      listview = {
-        padding = "4px 8px 8px";
-        spacing = 2;
-      };
-      element = {
-        padding = "8px 12px";
-        border-radius = 8;
-      };
-      "element selected" = {
-        background-color = bg-alt;
-        text-color = accent;
-      };
-      element-icon = {
-        size = 20;
-        margin = "0 8px 0 0";
-      };
-    };
-  };
 }

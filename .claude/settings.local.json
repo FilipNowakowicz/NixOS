@@ -7,7 +7,24 @@
       "Bash(sudo nixos-rebuild switch:*)",
       "Bash(nixos-rebuild build:*)",
       "Bash(nix:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(hyprctl reload:*)",
+      "Bash(hyprctl --help:*)",
+      "Bash(kitty:*)",
+      "Bash(pgrep:*)",
+      "Bash(killall:*)",
+      "Bash(readlink:*)",
+      "Bash(systemctl:*)",
+      "Bash(pkill:*)",
+      "Bash(for socket in /tmp/kitty-*/kitty-*)",
+      "Bash(do)",
+      "Bash(if [[ -S \"$socket\" ]])",
+      "Bash(then)",
+      "Bash(echo:*)",
+      "Bash(fi)",
+      "Bash(done)"
     ]
   }
 }

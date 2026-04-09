@@ -1,3 +1,5 @@
+@import "colors.css";
+
 * {
     font-family: "Inter", "JetBrainsMono Nerd Font", sans-serif;
     font-size: 12px;
@@ -6,7 +8,7 @@
 
 window#waybar {
     background: transparent;
-    color: #f0d0a0;
+    color: @text;
 }
 
 /* ── Pill base ────────────────────────────────────────── */
@@ -19,10 +21,10 @@ window#waybar {
 #pulseaudio,
 #battery,
 #tray {
-    background: rgba(28, 26, 24, 0.75);
+    background: alpha(@bg, 0.75);
     border-radius: 12px;
     margin: 6px 3px;
-    border: 1px solid rgba(196, 110, 26, 0.25);
+    border: 1px solid alpha(@orange, 0.25);
 }
 
 /* ── Workspaces ───────────────────────────────────────── */
@@ -33,7 +35,7 @@ window#waybar {
 
 #workspaces button {
     padding:    0 5px;
-    color:      #f0d0a0;
+    color:      @text;
     background: transparent;
     font-size:  10px;
     transition: color 150ms ease;
@@ -41,15 +43,15 @@ window#waybar {
 }
 
 #workspaces button.empty {
-    color: rgba(240, 208, 160, 0.25);
+    color: alpha(@text, 0.25);
 }
 
 #workspaces button.active {
-    color: #e8890c;
+    color: @amber;
 }
 
 #workspaces button:hover {
-    color:      #f0d0a0;
+    color:      @text;
     background: transparent;
     box-shadow: none;
 }
@@ -83,5 +85,5 @@ window#waybar {
 
 /* ── Status ───────────────────────────────────────────── */
 
-#battery.warning  { color: #c46e1a; }
-#battery.critical { color: #e8890c;  }
+#battery.warning  { color: @orange; }
+#battery.critical { color: @amber;  }

@@ -1,1 +1,1 @@
-import ./colors/gruvbox-warm.nix
+import ./themes/mono-mesh.nix
