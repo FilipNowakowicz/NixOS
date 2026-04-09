@@ -29,6 +29,9 @@
     networkmanager.enable = true;
   };
 
+  hardware.bluetooth.enable = true;
+  services.blueman.enable = true;
+
   # ── NVIDIA / Wayland env vars ────────────────────────────────────────────────
   environment.sessionVariables = {
     NIXOS_OZONE_WL              = "1";           # Electron apps: use Wayland backend

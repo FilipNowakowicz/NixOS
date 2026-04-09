@@ -150,7 +150,6 @@ in
 
   xdg.configFile."waybar/config".source = ../../files/waybar/config;
   xdg.configFile."waybar/style.css".source = ../../files/waybar/style.css;
-  xdg.configFile."waybar/colors.css".source = ../../files/waybar/colors.css;
 
   # ── Mako ─────────────────────────────────────────────────────────────────────
   services.mako = {
