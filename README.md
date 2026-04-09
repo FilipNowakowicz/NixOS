@@ -31,29 +31,44 @@ The current architecture is:
 
 ```
 .
-├── flake.nix                          # Entry point: hosts, shells, deploy-rs, disko, VM apps
-├── .sops.yaml                         # age key groups for sops secret encryption
+├── flake.nix                          # Flake entry point
+├── .sops.yaml                         # SOPS configuration for secret management
 ├── hosts
-│   ├── main                           # Primary workstation (standard install)
-│   ├── homeserver                     # Headless server (Tailscale, Vaultwarden, Syncthing)
-│   ├── vm                             # QEMU/KVM test VM (impermanent)
-│   └── installer                      # Minimal NixOS ISO for fresh installs
+│   ├── main/                          # Primary workstation
+│   │   ├── default.nix                # Host configuration
+│   │   ├── disko.nix                  # Declarative disk partitioning
+│   │   └── hardware-configuration.nix # Hardware-specific settings
+│   ├── homeserver/                    # Headless server
+│   │   ├── default.nix
+│   │   └── disko.nix
+│   ├── vm/                            # QEMU/KVM test virtual machine
+│   │   ├── default.nix
+│   │   └── disko.nix
+│   └── installer/                     # Minimal NixOS ISO for fresh installs
+│       └── default.nix
 ├── modules
-│   └── nixos/profiles
-│       ├── base.nix                   # Nix settings, locale, zsh, essentials
-│       ├── desktop.nix                # Hyprland, pipewire, portals, fonts
-│       ├── security.nix               # Firewall, sshd, sysctl hardening
-│       └── server.nix                 # Server-specific settings (zram, sudo)
+│   └── nixos/
+│       └── profiles/                  # System-level profiles
+│           ├── base.nix               # Base system settings (Nix, locale)
+│           ├── desktop.nix            # Desktop environment (Hyprland, PipeWire)
+│           ├── security.nix           # Security hardening (Firewall, SSH)
+│           └── server.nix             # Server-specific settings
 └── home
-    ├── profiles
-    │   ├── base.nix                   # CLI tools, zsh, git, starship, fzf, zoxide
-    │   └── desktop.nix                # GUI packages, GTK, cursor, mako, waybar
-    ├── theme
-    │   ├── active.nix                 # (→) Symlink to the active theme file
-    │   └── themes/
-    │       └── mono-mesh.nix          # Theme definition file
-    ├── users/user/home.nix            # User entry point: git, zsh aliases, dotfile wiring
-    └── files                          # Dotfiles (Hyprland, Kitty, Neovim)
+    ├── profiles/                      # User-level profiles (home-manager)
+    │   ├── base.nix                   # Base user packages (CLI tools, Zsh)
+    │   └── desktop.nix                # Desktop user packages (GUI apps, GTK)
+    ├── theme/
+    │   ├── active.nix                 # (→) Active theme pointer
+    │   ├── themes/                    # Theme definitions
+    │   └── wallpapers/                # Wallpaper images
+    ├── users/
+    │   └── user/
+    │       ├── home.nix               # Main user configuration
+    │       └── home-server.nix        # User config specific to the server
+    └── files/                         # Static dotfiles (Neovim, Hyprland, etc.)
+        ├── kitty/
+        ├── nvim/
+        └── waybar/
 ```
 
 ---
