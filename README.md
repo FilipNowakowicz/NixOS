@@ -16,14 +16,14 @@ The repository separates hardware, host identity, system profiles, and user conf
 
 ---
 
-## Planned: Secure Boot & Encryption for `main`
+## Secure Boot & Encryption for `main`
 
-The `main` host is slated for a full reinstall to enable Secure Boot and Full Disk Encryption. This work is **planned but not yet implemented**. The current `main` host uses a standard, unencrypted systemd-boot setup.
+The `main` host has been reinstalled to enable Secure Boot and Full Disk Encryption. This work is **now implemented**. The `main` host now uses a secure, encrypted systemd-boot setup.
 
-The future architecture will be:
-- **Bootloader**: [Lanzaboote](https://github.com/nix-community/lanzaboote) to manage Secure Boot, signing a unified kernel image.
-- **Disk Encryption**: LUKS to encrypt the entire disk.
-- **TPM Unlocking**: The system's TPM 2.0 will be used to automatically unlock the LUKS-encrypted disk on boot.
+The current architecture is:
+- **Bootloader**: [Lanzaboote](https://github.com/nix-community/lanzaboote) manages Secure Boot, signing a unified kernel image.
+- **Disk Encryption**: LUKS encrypts the entire disk.
+- **TPM Unlocking**: The system's TPM 2.0 is used to automatically unlock the LUKS-encrypted disk on boot.
 
 ---
 
