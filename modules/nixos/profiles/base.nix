@@ -1,5 +1,6 @@
 { pkgs, ... }:
 {
+  # ── Nix ────────────────────────────────────────────────────────────────
   nixpkgs.config.allowUnfree = true;
   nix = {
     settings = {
@@ -14,15 +15,16 @@
     };
   };
 
+  # ── Localization ───────────────────────────────────────────────────────
   time.timeZone = "Europe/Warsaw";
   i18n.defaultLocale = "en_GB.UTF-8";
+  console.keyMap = "dvorak";
 
+  # ── Shell ──────────────────────────────────────────────────────────────
   programs.zsh.enable = true;
   users.defaultUserShell = pkgs.zsh;
 
-  console.keyMap = "dvorak";
-
-  # OS Essential Packages
+  # ── System Packages ────────────────────────────────────────────────────
   environment.systemPackages = with pkgs; [
     curl
     gnupg

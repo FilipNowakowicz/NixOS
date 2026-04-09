@@ -1,12 +1,13 @@
 { pkgs, ... }:
 {
-  # Hyprland compositor (enables Wayland session, polkit, etc.)
+  # ── Compositor & Wayland ───────────────────────────────────────────────
   programs.hyprland.enable = true;
+  programs.dconf.enable = true;
 
-  # Input (no xserver)
+  # ── Input ──────────────────────────────────────────────────────────────
   services.libinput.enable = true;
 
-  # Audio
+  # ── Audio ──────────────────────────────────────────────────────────────
   services.pipewire = {
     enable = true;
     alsa.enable       = true;
@@ -15,7 +16,7 @@
   };
   services.pulseaudio.enable = false;
 
-  # XDG portals (Hyprland + GTK fallback)
+  # ── XDG Portals ────────────────────────────────────────────────────────
   xdg.portal = {
     enable = true;
     extraPortals = with pkgs; [
@@ -25,9 +26,7 @@
     config.common.default = "*";
   };
 
-  programs.dconf.enable = true;
-
-  # Display manager
+  # ── Display Manager ────────────────────────────────────────────────────
   services.greetd = {
     enable = true;
     settings = {
@@ -38,6 +37,7 @@
     };
   };
 
+  # ── System Packages ────────────────────────────────────────────────────
   environment.systemPackages = with pkgs; [
     gnome-keyring
     networkmanagerapplet
@@ -45,6 +45,7 @@
     gnome-themes-extra
   ];
 
+  # ── Fonts ──────────────────────────────────────────────────────────────
   fonts = {
     enableDefaultPackages = true;
     fontDir.enable = true;

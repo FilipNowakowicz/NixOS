@@ -2,8 +2,9 @@
 {
   programs.home-manager.enable = true;
 
+  # ── Packages ───────────────────────────────────────────────────────────
   home.packages = with pkgs; [
-    # ── Core CLI ─────────────────────────────────────────────
+    # Core CLI
     bat
     btop
     curl
@@ -18,7 +19,7 @@
     which
     zip
 
-    # ── Editor / Dev ─────────────────────────────────────────
+    # Editor / Dev
     neovim-unwrapped
     lazygit
     nodejs
@@ -29,24 +30,25 @@
     gcc
     tree-sitter
 
-    # ── Neovim helpers ───────────────────────────────────────
+    # Neovim helpers
     glow        # :Glow markdown preview
 
-    # ── Utilities ────────────────────────────────────────────
+    # Utilities
     yazi
     taskwarrior3
     timewarrior
     yt-dlp
 
-    # ── AI ───────────────────────────────────────────────────────
+    # AI
     claude-code
     gemini-cli
 
-    # ── GitHub / Steam ───────────────────────────────────────────
+    # GitHub / Steam
     gh
     steam-run
   ];
 
+  # ── Environment Variables ──────────────────────────────────────────────
   home.sessionVariables = {
     EDITOR   = "nvim";
     VISUAL   = "nvim";
@@ -54,6 +56,7 @@
     PAGER    = "less -R";
   };
 
+  # ── Git ────────────────────────────────────────────────────────────────
   programs.git = {
     enable = true;
     settings = {
@@ -63,6 +66,7 @@
     };
   };
 
+  # ── Starship Prompt ────────────────────────────────────────────────────
   programs.starship = {
     enable = true;
     enableZshIntegration = false;
@@ -87,6 +91,7 @@
     };
   };
 
+  # ── Keychain ───────────────────────────────────────────────────────────
   programs.keychain = {
     enable = true;
     enableZshIntegration = true;
@@ -94,16 +99,19 @@
     extraFlags = [ "--quiet" ];
   };
 
+  # ── FZF ────────────────────────────────────────────────────────────────
   programs.fzf = {
     enable = true;
     enableZshIntegration = true;
   };
 
+  # ── Zoxide ─────────────────────────────────────────────────────────────
   programs.zoxide = {
     enable = true;
     enableZshIntegration = true;
   };
 
+  # ── Zsh ────────────────────────────────────────────────────────────────
   programs.zsh = {
     enable   = true;
     dotDir   = "${config.xdg.configHome}/zsh";
@@ -152,6 +160,7 @@
     '';
   };
 
+  # ── XDG User Dirs ──────────────────────────────────────────────────────
   xdg.userDirs = {
     enable = true;
     createDirectories = true;

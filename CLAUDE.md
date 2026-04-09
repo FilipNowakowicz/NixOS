@@ -103,10 +103,10 @@ Secrets are managed with sops-nix and age encryption.
     deploy again
 
 ### Pending
-
 - Waybar redesign (deferred)
 - eww floating widgets (deferred)
 - Rofi launcher redesign
+- Theme swapping
 
 ---
 

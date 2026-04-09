@@ -60,6 +60,7 @@
       };
     in
     {
+      # ── Apps ───────────────────────────────────────────────────────────────
       apps.${system} = {
         launch-vm = {
           type = "app";
@@ -80,6 +81,7 @@
         };
       };
 
+      # ── Packages ───────────────────────────────────────────────────────────
       packages.${system} = {
         installer-iso =
           (nixpkgs.lib.nixosSystem {
@@ -89,8 +91,10 @@
           }).config.system.build.isoImage;
       };
 
+      # ── Formatter ──────────────────────────────────────────────────────────
       formatter.${system} = pkgs.nixfmt;
 
+      # ── Shells ─────────────────────────────────────────────────────────────
       devShells.${system} = {
         default = pkgs.mkShell {
           packages = (with pkgs; [ nixd statix deadnix sops ssh-to-age ])
@@ -130,13 +134,14 @@
         };
       };
 
+      # ── NixOS Configurations ─────────────────────────────────────────────
       nixosConfigurations = {
         main       = mkNixos "main";
         vm         = mkNixos "vm";
         homeserver = mkNixos "homeserver";
       };
 
-      # ── deploy-rs ──────────────────────────────────────────────────────────────
+      # ── Deploy-RS ──────────────────────────────────────────────────────────
       deploy.nodes = {
         vm = {
           hostname      = "nixvm";     # uses ~/.ssh/config alias → localhost:2222
@@ -162,6 +167,7 @@
 
       checks.${system} = deploy-rs.lib.${system}.deployChecks self.deploy;
 
+      # ── Home Manager Configurations ────────────────────────────────────────
       homeConfigurations = {
         user = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
@@ -172,6 +178,7 @@
         };
       };
 
+      # ── Modules ────────────────────────────────────────────────────────────
       nixosModules = {
         profiles-base    = import ./modules/nixos/profiles/base.nix;
         profiles-desktop = import ./modules/nixos/profiles/desktop.nix;

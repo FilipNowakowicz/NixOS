@@ -30,6 +30,7 @@
     };
   };
 
+  # ── Services ───────────────────────────────────────────────────────────
   # Override the mkDefault false from security.nix — SSH is required on a headless server
   services.openssh = {
     enable = true;
@@ -82,7 +83,8 @@
     };
   };
 
-  # Nginx reverse proxy for Vaultwarden
+  # ── Nginx ──────────────────────────────────────────────────────────────
+  # Reverse proxy for Vaultwarden
   services.nginx = {
     enable = true;
     recommendedProxySettings = true;
@@ -137,6 +139,7 @@
     requires = [ "nginx-cert.service" ];
   };
 
+  # ── Sops ───────────────────────────────────────────────────────────────
   # sops-nix secrets management
   # Currently encrypted only to user age key. After first deploy, the SSH host key
   # will be extracted, converted to age (ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub),
@@ -149,6 +152,7 @@
     secrets.tailscale_auth_key = {};
   };
 
+  # ── Impermanence ───────────────────────────────────────────────────────
   fileSystems."/persist".neededForBoot = true;
 
   environment.persistence."/persist" = {
@@ -170,6 +174,7 @@
     ];
   };
 
+  # ── User ───────────────────────────────────────────────────────────────
   users.users.user = {
     home = "/home/user";
     openssh.authorizedKeys.keys = [
@@ -177,6 +182,7 @@
     ];
   };
 
+  # ── Home Manager ───────────────────────────────────────────────────────
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;

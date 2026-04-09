@@ -14,25 +14,20 @@
 
   system.stateVersion = "24.11";
 
+  # ── Networking ─────────────────────────────────────────────────────────
   networking = {
     hostName = "vm";
     networkmanager.enable = true;
   };
 
-  # Passwordless sudo for VM only
-  security.sudo.extraRules = [
-    {
-      users   = [ "user" ];
-      commands = [ { command = "ALL"; options = [ "NOPASSWD" ]; } ];
-    }
-  ];
-
+  # ── SSH ────────────────────────────────────────────────────────────────
   # Enable SSH for remote deployment via `ssh nixvm`
   services.openssh = {
     enable = true;
     openFirewall = true;
   };
 
+  # ── Impermanence ───────────────────────────────────────────────────────
   fileSystems."/persist".neededForBoot = true;
 
   environment.persistence."/persist" = {
@@ -50,6 +45,7 @@
     ];
   };
 
+  # ── User ───────────────────────────────────────────────────────────────
   users.users.user = {
     home = "/home/user";
     extraGroups = [ "video" ];
@@ -58,6 +54,7 @@
     ];
   };
 
+  # ── Sops ───────────────────────────────────────────────────────────────
   sops = {
     defaultSopsFile = ./secrets/secrets.yaml;
     defaultSopsFormat = "yaml";
@@ -65,6 +62,7 @@
     secrets.example_secret = {};
   };
 
+  # ── Home Manager ───────────────────────────────────────────────────────
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;

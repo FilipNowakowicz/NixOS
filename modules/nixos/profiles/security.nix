@@ -1,7 +1,9 @@
 { lib, ... }:
 {
+  # ── Firewall ───────────────────────────────────────────────────────────
   networking.firewall.enable = true;
 
+  # ── SSH ────────────────────────────────────────────────────────────────
   services.openssh = {
     enable = lib.mkDefault false;
     settings = {
@@ -11,6 +13,7 @@
     };
   };
 
+  # ── Kernel Hardening ───────────────────────────────────────────────────
   boot.kernel.sysctl = {
     "kernel.unprivileged_bpf_disabled"       = 1;
     "net.ipv4.icmp_echo_ignore_broadcasts"   = 1;

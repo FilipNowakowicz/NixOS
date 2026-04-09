@@ -12,19 +12,20 @@ in
     ../../profiles/desktop.nix
   ];
 
+  # ── Git ────────────────────────────────────────────────────────────────
   programs.git = {
     enable = true;
     settings.user.name = "Filip Nowakowicz";
     settings.user.email = "filip.nowakowicz@gmail.com";
   };
 
-  # PATH additions
+  # ── PATH ───────────────────────────────────────────────────────────────
   home.sessionPath = [
     "${config.home.homeDirectory}/.local/bin"
     "${config.home.homeDirectory}/.npm-global/bin"
   ];
 
-  # XDG MIME apps
+  # ── XDG MIME Apps ──────────────────────────────────────────────────────
   xdg.mimeApps = {
     enable = true;
     defaultApplications = {
@@ -34,22 +35,22 @@ in
     };
   };
 
-  # Zsh — user-specific aliases and shell functions
+  # ── Zsh ────────────────────────────────────────────────────────────────
   # Base options, plugins, and vi-mode are set in home/profiles/base.nix
   programs.zsh = {
     shellAliases = {
-      # ── Files ──────────────────────────────────────────────
+      # Files
       ll   = "ls -lh --color=auto";
       la   = "ls -A";
       l    = "ls -CF";
       cp   = "cp -i";
       mv   = "mv -i";
-      # ── Navigation ─────────────────────────────────────────
+      # Navigation
       ".."   = "cd ..";
       "..."  = "cd ../..";
       "...." = "cd ../../..";
       d      = "dirs -v";
-      # ── Git ────────────────────────────────────────────────
+      # Git
       g    = "git";
       ga   = "git add";
       gd   = "git diff";
@@ -60,7 +61,7 @@ in
       gp   = "git push";
       gl   = "git pull";
       glog = "git log --oneline --graph --decorate";
-      # ── System ─────────────────────────────────────────────
+      # System
       rebuild          = "sudo nixos-rebuild switch --flake '.#main'";
       battery          = "acpi -b";
       buds             = "bluetoothctl connect DC:69:E2:CF:9A:BD";
@@ -87,14 +88,14 @@ in
     '';
   };
 
-  # Wallpaper
+  # ── Wallpaper ──────────────────────────────────────────────────────────
   home.file.".local/share/wallpapers/wallpaper1.png".source =
     ../../theme/wallpapers/wallpaper1.png;
 
-  # ── Neovim ───────────────────────────────────────────────────────────────────
+  # ── Neovim ─────────────────────────────────────────────────────────────
   xdg.configFile."nvim".source = ../../files/nvim;
 
-  # ── Kitty ────────────────────────────────────────────────────────────────────
+  # ── Kitty ──────────────────────────────────────────────────────────────
   # Per-file so current-theme.conf can be generated from colors.nix
   xdg.configFile."kitty/kitty.conf".source = ../../files/kitty/kitty.conf;
   xdg.configFile."kitty/current-theme.conf".text = ''
@@ -142,14 +143,14 @@ in
     color15 #fbf1c7
   '';
 
-  # ── Hyprland ─────────────────────────────────────────────────────────────────
+  # ── Hyprland ───────────────────────────────────────────────────────────
   xdg.configFile."hypr/hyprland.conf".source = ../../files/hypr/hyprland.conf;
   xdg.configFile."hypr/colors.conf".text = ''
     $col_active   = rgb(${colors.amber})
     $col_inactive = rgb(${colors.brown})
   '';
 
-  # ── Waybar ───────────────────────────────────────────────────────────────────
+  # ── Waybar ─────────────────────────────────────────────────────────────
   home.file.".local/bin/waybar-weather" = {
     executable = true;
     text = ''
@@ -162,7 +163,7 @@ in
   xdg.configFile."waybar/config".source = ../../files/waybar/config;
   xdg.configFile."waybar/style.css".source = ../../files/waybar/style.css;
 
-  # ── Mako ─────────────────────────────────────────────────────────────────────
+  # ── Mako ───────────────────────────────────────────────────────────────
   services.mako = {
     enable = true;
     settings = {
@@ -181,13 +182,19 @@ in
     };
   };
 
-  # ── Hyprlock ─────────────────────────────────────────────────────────────────
+  # ── Hyprlock ───────────────────────────────────────────────────────────
   xdg.configFile."hypr/hyprlock.conf".source = ../../files/hypr/hyprlock.conf;
   xdg.configFile."hypr/hyprlock-colors.conf".source = ../../files/hypr/hyprlock-colors.conf;
 
-  # ── Rofi ─────────────────────────────────────────────────────────────────────
+  # ── Rofi ───────────────────────────────────────────────────────────────
   programs.rofi = {
     enable = true;
+    extraConfig = {
+      modi = "drun,run";
+      show-icons = true;
+      display-drun = "";
+      drun-display-format = "{name}";
+    };
     theme = let
       bg = "#1c1a18";
       bg-alt = "#4a3728";
