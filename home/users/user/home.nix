@@ -188,12 +188,6 @@ in
   # ── Rofi ─────────────────────────────────────────────────────────────────────
   programs.rofi = {
     enable = true;
-    extraConfig = {
-      modi = "drun,run";
-      show-icons = true;
-      display-drun = "";
-      drun-display-format = "{name}";
-    };
     theme = let
       bg = "#1c1a18";
       bg-alt = "#4a3728";

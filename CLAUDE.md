@@ -59,6 +59,7 @@ The VM uses impermanence. A fresh install is required whenever the disk layout (
 ---
 
 ## Agents
+
 - Claude Code — all .nix changes, deployments, secrets
 - Gemini CLI — documentation only (.md files), consistency checks, README updates
 
@@ -68,32 +69,44 @@ The VM uses impermanence. A fresh install is required whenever the disk layout (
 
 Secrets are managed with sops-nix and age encryption.
 
-- **Age key (Arch host):** `~/.config/sops/age/keys.txt`
+- **Age key (main host):** `~/.config/sops/age/keys.txt`
   Generate with: `age-keygen -o ~/.config/sops/age/keys.txt`
 - **VM host key:** converted from the SSH host key using:
   `ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub`
   The resulting age pubkey goes into `.sops.yaml` under `&vm_host`
-- **Main host key:** same process, goes into .sops.yaml under `&main_host`
+- **Main host key:** same process, goes into `.sops.yaml` under `&main_host`
 - **Homeserver host key:** same process, add after first deploy under `&homeserver_host`
 - **`.sops.yaml`:** repo root, defines key groups per path regex
 - **Secrets file:** `hosts/vm/secrets/secrets.yaml` — encrypted, edit with `sops hosts/vm/secrets/secrets.yaml`
 - The VM's `/etc/ssh/ssh_host_ed25519_key` is persisted via impermanence so the host key (and thus the age decryption key) survives reboots
 - On main, `/etc/ssh/ssh_host_ed25519_key` is also persisted via impermanence, keeping the sops age identity stable across reboots
 
+---
+
 ## Goals
 
 ### In Progress
+
 - Homeserver deployment — waiting on hardware
-  - Replace hardware-configuration.nix stub with real hardware config
-  - Add homeserver host age key to .sops.yaml after first deploy: ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub
-  - Wire Tailscale authKeyFile to real auth key via: sops hosts/homeserver/secrets/secrets.yaml
-  - First boot: temporarily set SIGNUPS_ALLOWED = true, create Vaultwarden account, set back to false, rebuild
-  - Re-encrypt homeserver secrets to include host key: sops updatekeys hosts/homeserver/secrets/secrets.yaml
+  - Replace `hardware-configuration.nix` stub with real hardware config
+  - Wire Tailscale auth key: run `sops hosts/homeserver/secrets/secrets.yaml`
+    and set `tailscale_auth_key` to a key generated from the Tailscale admin
+    console (Settings → Keys → Generate auth key, reusable + ephemeral)
+  - Deploy for the first time: `deploy .#homeserver`
+  - Add homeserver host age key to `.sops.yaml` after first deploy:
+    `ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub`
+    Add the result under `&homeserver_host` in `.sops.yaml`
+  - Re-encrypt secrets to include host key:
+    `sops updatekeys hosts/homeserver/secrets/secrets.yaml`
+  - Vaultwarden first user: temporarily set `SIGNUPS_ALLOWED = true`, deploy,
+    create account at `https://homeserver` (via Tailscale), set back to `false`,
+    deploy again
 
 ### Pending
-- Rofi launcher redesign — improve visual appearance and styling
+
 - Waybar redesign (deferred)
 - eww floating widgets (deferred)
+- Rofi launcher redesign
 
 ---
 
@@ -113,6 +126,17 @@ Secrets are managed with sops-nix and age encryption.
 
 ---
 
+## Security Preferences
+
+- **Passwordless sudo is for VMs and dev machines only.** `server.nix` grants
+  full `NOPASSWD` sudo — only import it on hosts where that is intentional.
+  The homeserver currently imports it; reconsider before treating it as
+  production.
+- **Scope secrets appropriately.** Each host should only be able to decrypt
+  the secrets it needs, as defined in `.sops.yaml`.
+
+---
+
 ## Preferences
 
 - Incremental changes — don't refactor everything at once
@@ -121,5 +145,5 @@ Secrets are managed with sops-nix and age encryption.
 - Keep things declarative — avoid imperative workarounds
 - Flag anything that might cause issues on rebuild
 - Validate only what you changed: if vm config changed build vm, if main changed build main, if homeserver changed build homeserver, if shared profiles changed build all three
-- When commiting do not add co-authorship
+- When committing do not add co-authorship
 - Never push commits

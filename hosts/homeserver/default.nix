@@ -19,7 +19,15 @@
 
   networking = {
     hostName = "homeserver";
-    networkmanager.enable = true;
+    useNetworkd = true;
+  };
+
+  systemd.network = {
+    enable = true;
+    networks."10-lan" = {
+      matchConfig.Name = "en*";
+      networkConfig.DHCP = "yes";
+    };
   };
 
   # Override the mkDefault false from security.nix — SSH is required on a headless server
@@ -106,6 +114,7 @@
   systemd.services.nginx-cert = {
     wantedBy = [ "multi-user.target" ];
     before = [ "nginx.service" ];
+    after = [ "network.target" ];
     script = ''
       mkdir -p /var/lib/nginx
       if [ ! -f /var/lib/nginx/cert.pem ]; then
@@ -120,6 +129,12 @@
       Type = "oneshot";
       RemainAfterExit = true;
     };
+  };
+
+  # Ensure nginx waits for certificate generation
+  systemd.services.nginx = {
+    after = [ "nginx-cert.service" ];
+    requires = [ "nginx-cert.service" ];
   };
 
   # sops-nix secrets management
@@ -147,7 +162,6 @@
       "/var/lib/vaultwarden"  # Persist Vaultwarden database and config
       "/var/lib/nginx"  # Persist nginx self-signed certs
       "/var/lib/acme"  # Persist ACME/Let's Encrypt certs (for future use)
-      "/etc/NetworkManager/system-connections"
     ];
     files = [
       "/etc/machine-id"

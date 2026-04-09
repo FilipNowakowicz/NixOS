@@ -9,27 +9,21 @@ The repository separates hardware, host identity, system profiles, and user conf
 
 - **Reproducible & Declarative**: NixOS defines the entire system state, services, and hardware. Home Manager manages the user environment and dotfiles.
 - **Multi-Host**: Built from reusable profiles to support a primary workstation (`main`), a headless `homeserver`, and a `vm`.
-- **Secure Boot**: Uses [Lanzaboote](https://github.com/nix-community/lanzaboote) to build, sign, and manage EFI bundles for a secure boot chain.
-- **Full Disk Encryption**: Employs LUKS to encrypt the entire disk. The layout is managed declaratively with [disko](https://github.com/nix-community/disko).
-- **TPM Unlocking**: The main host (`main`) is configured to use the system's TPM to automatically unlock the LUKS-encrypted disk on boot.
-- **Impermanent Root**: All hosts use an ephemeral root filesystem created with [impermanence](https://github.com/nix-community/impermanence). System state is reset on boot, with persistent data explicitly stored on a `/persist` volume.
 - **Secrets Management**: Handled by [sops-nix](https://github.com/Mic92/sops-nix) with age encryption, with secrets decrypted at boot by the host itself.
+- **Impermanent Root**: The `vm` and `homeserver` use an ephemeral root filesystem created with [impermanence](https://github.com/nix-community/impermanence). System state is reset on boot, with persistent data explicitly stored on a `/persist` volume.
+- **Declarative Disks**: Disk layouts for all hosts are managed declaratively with [disko](https://github.com/nix-community/disko).
 - **Runtime Theming**: A runtime-swappable color system allows changing themes without a full NixOS rebuild.
 
 ---
 
-## Security Architecture
+## Planned: Secure Boot & Encryption for `main`
 
-This configuration aims for a robust security posture by layering several modern technologies.
+The `main` host is slated for a full reinstall to enable Secure Boot and Full Disk Encryption. This work is **planned but not yet implemented**. The current `main` host uses a standard, unencrypted systemd-boot setup.
 
-| Component | Technology | Purpose |
-|---|---|---|
-| **Bootloader** | [Lanzaboote](https://github.com/nix-community/lanzaboote) | Manages Secure Boot, ensuring that only trusted, signed EFI binaries can be executed at boot. It signs the kernel, initrd, and kernel command line into a single unified kernel image. |
-| **Disk Encryption** | LUKS | Encrypts the entire disk, protecting data at rest. The `main` host uses TPM to automatically unlock the drive. The homeserver and VMs do not use LUKS encryption. |
-| **Disk Layout** | [Disko](https://github.com/nix-community/disko) + LVM | Declaratively partitions the encrypted LUKS container into logical volumes for `/`, `/boot`, and `/persist`, ensuring a clean and reproducible layout. |
-| **Ephemeral Filesystem**| [Impermanence](https://github.com/nix-community/impermanence) | The root filesystem (`/`) is ephemeral and is reset to a known-good state on every reboot. All persistent state must be explicitly saved to the `/persist` partition. This prevents state drift and ensures the system remains clean. |
-| **Secrets** | [sops-nix](https://github.com/Mic92/sops-nix) + age | Secrets are encrypted using age public keys and committed to the repository. The host's own SSH key is used to derive an age key, allowing it to automatically decrypt its own secrets during boot. |
-| **TPM** | System TPM 2.0 | Used on the `main` host as a key protector for the LUKS volume, allowing for automatic, secure unlocking of the disk without needing to enter a password on every boot. |
+The future architecture will be:
+- **Bootloader**: [Lanzaboote](https://github.com/nix-community/lanzaboote) to manage Secure Boot, signing a unified kernel image.
+- **Disk Encryption**: LUKS to encrypt the entire disk.
+- **TPM Unlocking**: The system's TPM 2.0 will be used to automatically unlock the LUKS-encrypted disk on boot.
 
 ---
 
@@ -38,18 +32,18 @@ This configuration aims for a robust security posture by layering several modern
 ```
 .
 ├── flake.nix                          # Entry point: hosts, shells, deploy-rs, disko, VM apps
-├── flake.lock
 ├── .sops.yaml                         # age key groups for sops secret encryption
 ├── hosts
-│   ├── main                           # Primary workstation
+│   ├── main                           # Primary workstation (standard install)
 │   ├── homeserver                     # Headless server (Tailscale, Vaultwarden, Syncthing)
-│   ├── vm                             # QEMU/KVM test VM
+│   ├── vm                             # QEMU/KVM test VM (impermanent)
 │   └── installer                      # Minimal NixOS ISO for fresh installs
 ├── modules
 │   └── nixos/profiles
 │       ├── base.nix                   # Nix settings, locale, zsh, essentials
 │       ├── desktop.nix                # Hyprland, pipewire, portals, fonts
-│       └── security.nix               # Firewall, sshd, sysctl hardening
+│       ├── security.nix               # Firewall, sshd, sysctl hardening
+│       └── server.nix                 # Server-specific settings (zram, sudo)
 └── home
     ├── profiles
     │   ├── base.nix                   # CLI tools, zsh, git, starship, fzf, zoxide
@@ -66,7 +60,7 @@ This configuration aims for a robust security posture by layering several modern
 
 ## Theming
 
-The color system is designed to be **runtime-swappable**. Most GUI applications (Waybar, Rofi, Hyprlock) source static color files instead of using colors generated by Nix. This enables changing the theme on-the-fly without requiring a full `nixos-rebuild`.
+The color system is designed to be **runtime-swappable**. Most GUI applications (Waybar, Rofi, Kitty, Mako, Hyprland) source colors generated by Nix from a central theme file. This enables changing the theme on-the-fly with a single rebuild.
 
 ### How to Switch Themes
 
@@ -74,7 +68,7 @@ The color system is designed to be **runtime-swappable**. Most GUI applications 
 2.  **Update `home/theme/active.nix`** to import your new theme file.
 3.  **Run `nixos-rebuild switch`** (or `deploy`).
 
-This single rebuild generates the new static color files. After this, the applications will use the new theme colors the next time they are launched.
+This single rebuild generates the new static color files and updates the necessary application configurations.
 
 ---
 
@@ -82,8 +76,8 @@ This single rebuild generates the new static color files. After this, the applic
 
 | Host | Description |
 |------|-------------|
-| `main` | Primary workstation, running a full desktop environment with Secure Boot and TPM-unlocked FDE. |
-| `homeserver` | Headless server for self-hosted services with an ephemeral root filesystem. |
+| `main` | Primary workstation, running a full desktop environment. |
+| `homeserver` | Headless server for self-hosted services with an ephemeral root filesystem. (Not yet deployed) |
 | `vm` | Ephemeral QEMU/KVM test VM for development and testing. |
 | `installer` | Minimal ISO configuration used to bootstrap new installations. |
 
@@ -92,13 +86,13 @@ This single rebuild generates the new static color files. After this, the applic
 | Host | Command | Notes |
 |---|---|---|
 | `main` | `sudo nixos-rebuild switch --flake .#main` | Run locally on the machine. |
-| `homeserver` | `deploy .#homeserver` | Run from the `nix develop` shell on the dev machine. |
+| `homeserver` | `deploy .#homeserver` | Run from the `nix develop` shell. (Blocked on hardware) |
 | `vm` | `deploy .#vm` | Run from the `nix develop` shell on the dev machine. |
 
 
 ## Services (Homeserver)
 
-The `homeserver` is configured to run the following services:
+The `homeserver` is configured to run the following services, accessible via Tailscale:
 
 | Service | Purpose | Access |
 |---|---|---|
@@ -115,7 +109,7 @@ Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) and [age]
 ### How it works
 
 - `.sops.yaml` defines rules for which age public keys can decrypt which secret files.
-- Keys are grouped by name (e.g., `&user`, `&vm_host`, `&homeserver_host`).
+- Keys are grouped by name (e.g., `&user`, `&vm_host`, `&main_host`).
 - Host keys are derived from their respective SSH host public keys using `ssh-to-age`.
 - This allows a host to decrypt its own secrets automatically during activation. The host's SSH key is persisted via `impermanence` to ensure the age key remains stable across reboots.
 - The user's personal age key (`user`) can decrypt all secrets.
@@ -154,40 +148,10 @@ The flake provides several `devShells` and `apps` for development and maintenanc
 | Type | Name | Purpose |
 |------|------|---------|
 | `devShell` | `default` | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, etc. |
-| `devShell` | `security` | Includes common security tools: `nmap`, `gobuster`, `sqlmap`, `hydra`, `john`, etc. |
+| `devShell` | `security`| Includes common security tools: `nmap`, `gobuster`, `sqlmap`, `hydra`, `john`, etc. |
 | `app` | `reinstall-vm` | Runs `nixos-anywhere` to perform a fresh installation of the VM. |
 | `app` | `launch-vm` | Boots the installed VM with QEMU. |
 | `app` | `launch-vm-iso`| Boots the installer ISO in the VM to begin a fresh install. |
-
-### Fresh VM Install
-
-The test VM uses an ephemeral root filesystem (impermanence), so its state is reset on every boot. A full re-installation is only needed if the underlying disk layout (`hosts/vm/disko.nix`) is changed.
-
-The process involves:
-1.  **One-time setup:** Creating a QEMU disk image and copying UEFI variable storage.
-2.  **Building an installer ISO** using the `installer` host configuration.
-3.  **Booting the ISO** in the VM using the `.#launch-vm-iso` app.
-4.  **Running the installation** from the development shell using the `.#reinstall-vm` app. This app connects to the booted ISO via SSH and uses `nixos-anywhere` to partition the disk and install the `vm` configuration.
-5.  **Launching the final VM** with the `.#launch-vm` app and deploying any subsequent changes with `deploy .#vm`.
----
-
-## Desktop Stack
-
-| Layer | Tool |
-|---|---|
-| Display Manager| greetd (tuigreet) |
-| Window manager | Hyprland |
-| Bar | Waybar |
-| Terminal | Kitty |
-| Editor | Neovim |
-| Shell | Zsh |
-| Prompt | Starship |
-| Launcher | Rofi |
-| Notifications | Mako |
-| Screen lock | Hyprlock |
-| Wallpaper | swaybg |
-| Clipboard | wl-clipboard |
-| System monitor | Btop |
 
 ---
 

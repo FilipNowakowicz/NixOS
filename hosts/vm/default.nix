@@ -19,6 +19,14 @@
     networkmanager.enable = true;
   };
 
+  # Passwordless sudo for VM only
+  security.sudo.extraRules = [
+    {
+      users   = [ "user" ];
+      commands = [ { command = "ALL"; options = [ "NOPASSWD" ]; } ];
+    }
+  ];
+
   # Enable SSH for remote deployment via `ssh nixvm`
   services.openssh = {
     enable = true;
