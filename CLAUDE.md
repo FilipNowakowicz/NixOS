@@ -53,6 +53,7 @@ The VM uses impermanence. A fresh install is required whenever the disk layout (
 - `hosts/installer/` — minimal NixOS ISO config for fresh installs
 - `modules/nixos/profiles/` — system profiles (base, desktop, security)
 - `home/profiles/` — home-manager profiles (base, desktop)
+- `home/theme/` — runtime-swappable themes
 - `home/files/` — dotfiles managed via home-manager
 - `home/users/user/` — user home-manager entry point
 
@@ -105,8 +106,6 @@ Secrets are managed with sops-nix and age encryption.
 ### Pending
 - Waybar redesign (deferred)
 - eww floating widgets (deferred)
-- Rofi launcher redesign
-- Theme swapping
 
 ---
 
