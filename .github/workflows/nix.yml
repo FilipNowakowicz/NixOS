@@ -29,3 +29,12 @@ jobs:
 
       - name: Eval homeserver host
         run: nix eval .#nixosConfigurations.homeserver.config.system.build.toplevel --show-trace
+
+      - name: Static analysis (statix)
+        run: nix run nixpkgs#statix -- check .
+
+      - name: Dead code (deadnix)
+        run: nix run nixpkgs#deadnix -- --fail .
+
+      - name: Format check (nixfmt)
+        run: nix fmt -- --check .
