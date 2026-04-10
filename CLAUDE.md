@@ -54,10 +54,10 @@ The VM uses impermanence. A fresh install is required whenever the disk layout (
 - `modules/nixos/hardware/` — hardware drivers and graphics (NVIDIA PRIME)
 - `modules/nixos/profiles/` — system profiles (base, desktop, security)
 - `home/profiles/` — home-manager profiles (base, desktop)
-- `home/theme/` — runtime-swappable themes and generator logic
-- `home/files/` — dotfiles and standalone scripts
+- `home/theme/` — runtime-swappable themes and Home Manager module
+- `home/files/` — dotfiles and standalone scripts (NIX_REPO injected)
 - `home/users/user/` — user home-manager entry point
-- `home/users/user/home.nix` — main user config, imports generator.nix and scripts
+- `home/users/user/home.nix` — main user config, imports theme module and scripts
 
 ---
 
