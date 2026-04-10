@@ -1,6 +1,6 @@
 set -euo pipefail
 
-THEME="''${1:-}"
+THEME="${1:-}"
 THEMES_DIR="$HOME/.config/themes"
 ACTIVE_FILE="$NIX_REPO/home/theme/active.nix"
 

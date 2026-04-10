@@ -13,7 +13,7 @@ in
     ../../theme/module.nix
   ];
 
-  themes.active = "mono-mesh";
+  themes.active = (import ../../theme/active.nix).name;
 
   gtk.gtk4.theme = null;
 
@@ -117,8 +117,8 @@ in
         esac
       }
       _theme_switch_completion() {
-        local themes=($HOME/.config/themes/*/)
-        themes=("''${themes[@]##*/}")
+        local -a themes
+        themes=($HOME/.config/themes/*(/N:t))
         _describe 'themes' themes
       }
       compdef _theme_switch_completion theme-switch
