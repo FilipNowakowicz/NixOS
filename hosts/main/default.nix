@@ -5,6 +5,7 @@
     inputs.lanzaboote.nixosModules.lanzaboote
     ./disko.nix
     ./hardware-configuration.nix
+    ../../modules/nixos/hardware/nvidia-prime.nix
     ../../modules/nixos/profiles/base.nix
     ../../modules/nixos/profiles/desktop.nix
     ../../modules/nixos/profiles/security.nix
@@ -36,18 +37,6 @@
 
   hardware.bluetooth.enable = true;
   services.blueman.enable = true;
-
-  # ── Intel iGPU / Wayland env vars ───────────────────────────────────────────
-  # Pins the session to the Intel iGPU. NVIDIA is available on-demand via nvidia-offload.
-  environment.sessionVariables = {
-    NIXOS_OZONE_WL              = "1";           # Electron apps: use Wayland backend
-    LIBVA_DRIVER_NAME           = "iHD";         # VA-API → Intel Media Driver
-    __GLX_VENDOR_LIBRARY_NAME   = "mesa";        # GLX → Mesa (Intel) by default
-    # Pins Hyprland's primary GPU to the Intel iGPU so it doesn't accidentally
-    # pick the NVIDIA card.  Verify after install:
-    #   ls -la /dev/dri/by-path/ | grep 'pci-0000:00:02'
-    AQ_DRM_DEVICES              = "/dev/dri/by-path/pci-0000:00:02.0-card";
-  };
 
   services.openssh = {
     enable = true;
