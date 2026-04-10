@@ -44,6 +44,7 @@
     # Pins Hyprland's primary GPU to the Intel iGPU so it doesn't accidentally
     # pick the NVIDIA card.  Verify after install:
     #   ls -la /dev/dri/by-path/ | grep 'pci-0000:00:02'
-    AQ_DRM_DEVICES              = "/dev/dri/by-path/pci-0000:00:02.0-card";
+    # AQ_DRM_DEVICES              = "/dev/dri/by-path/pci-0000:00:02.0-card";
+    AQ_DRM_DEVICES = "/dev/dri/card1";
   };
 }
