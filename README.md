@@ -184,6 +184,22 @@ The flake provides several `devShells` and `apps` for development and maintenanc
 
 ---
 
+## Code Quality
+
+### Formatting
+
+All Nix files are formatted with `nixfmt` for consistency:
+
+```bash
+# Format all .nix files in-place
+nixfmt **/*.nix
+
+# Check formatting without modifying
+nixfmt --check **/*.nix
+```
+
+---
+
 ## Validation
 
 ```bash

@@ -34,4 +34,4 @@ jobs:
         run: nix run nixpkgs#deadnix -- --fail .
 
       - name: Format check (nixfmt)
-        run: nix fmt -- --check .
+        run: nixfmt --check **/*.nix
