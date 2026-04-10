@@ -191,11 +191,11 @@ The flake provides several `devShells` and `apps` for development and maintenanc
 All Nix files are formatted with `nixfmt` for consistency:
 
 ```bash
-# Format all .nix files in-place
-nixfmt **/*.nix
+# Format all Nix files in the repo
+nix run 'nixpkgs#nixfmt-tree' -- .
 
 # Check formatting without modifying
-nixfmt --check **/*.nix
+nix run 'nixpkgs#nixfmt-tree' -- --fail-on-change .
 ```
 
 ---
