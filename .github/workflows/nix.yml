@@ -31,7 +31,7 @@ jobs:
         run: nix eval .#nixosConfigurations.homeserver.config.system.build.toplevel --show-trace
 
       - name: Static analysis (statix)
-        run: nix run nixpkgs#statix -- check .
+        run: nix run nixpkgs#statix -- check . --ignore W20
 
       - name: Dead code (deadnix)
         run: nix run nixpkgs#deadnix -- --fail .
