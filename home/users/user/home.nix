@@ -89,7 +89,7 @@ in
       gl   = "git pull";
       glog = "git log --oneline --graph --decorate";
       # System
-      rebuild          = "nh os switch /home/user/nix#main";
+      rebuild          = "nh os switch -H main /home/user/nix";
       battery          = "acpi -b";
       buds             = "bluetoothctl connect DC:69:E2:CF:9A:BD";
       headset          = "bluetoothctl connect 40:58:99:3D:C8:D3";
