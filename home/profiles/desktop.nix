@@ -11,6 +11,8 @@
     waybar
     swaybg
     hyprlock
+    brightnessctl
+    cliphist
 
     # ── Desktop UX ───────────────────────────────────────────
     pavucontrol
@@ -21,6 +23,7 @@
     keepassxc
     mpv
     wasistlos
+    spotify
 
     # ── Visuals / Toys ───────────────────────────────────────
     cava

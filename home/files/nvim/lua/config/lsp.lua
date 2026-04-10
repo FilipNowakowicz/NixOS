@@ -54,7 +54,12 @@ vim.lsp.config("basedpyright", {
   },
 })
 
-vim.lsp.enable({ "clangd", "basedpyright" })
+-- nixd
+vim.lsp.config("nixd", {
+  capabilities = capabilities,
+})
+
+vim.lsp.enable({ "clangd", "basedpyright", "nixd" })
 
 -- LTeX
 local java_opts = "-Djdk.xml.totalEntitySizeLimit=0 --enable-native-access=ALL-UNNAMED"

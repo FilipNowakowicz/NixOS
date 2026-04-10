@@ -27,7 +27,6 @@
   # ── System Packages ────────────────────────────────────────────────────
   environment.systemPackages = with pkgs; [
     curl
-    gnupg
     pciutils
     rsync
     usbutils

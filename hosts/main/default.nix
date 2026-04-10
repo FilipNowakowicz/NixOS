@@ -23,6 +23,8 @@
   # ── Systemd in initrd (required for TPM2 LUKS unlock) ───────────────────────
   boot.initrd.systemd.enable = true;
 
+  zramSwap.enable = true;
+
   environment.systemPackages = with pkgs; [
     sbctl
   ];
@@ -43,12 +45,12 @@
     # Pins Hyprland's primary GPU to the Intel iGPU so it doesn't accidentally
     # pick the NVIDIA card.  Verify after install:
     #   ls -la /dev/dri/by-path/ | grep 'pci-0000:00:02'
-    AQ_DRM_DEVICES              = "/dev/dri/card1"; # TODO: verify (Intel is usually card1 with PRIME)
+    AQ_DRM_DEVICES              = "/dev/dri/by-path/pci-0000:00:02.0-card";
   };
 
   services.openssh = {
     enable = true;
-    openFirewall = false;
+    openFirewall = false;  # Intentionally not exposed — accessible via Tailscale only
   };
 
   services.mullvad-vpn.enable = true;
@@ -57,6 +59,14 @@
     enable = true;
     openFirewall = true;
   };
+
+  services.fwupd.enable = true;  # Firmware update daemon for hardware devices
+
+  # ── Thermal & Power Management ───────────────────────────────────────────────
+  # thermald prevents CPU thermal throttling using Intel DPTF tables
+  # power-profiles-daemon exposes performance/balanced/power-saver profiles
+  services.thermald.enable = true;
+  services.power-profiles-daemon.enable = true;
 
   services.logind.settings = {
     Login.HandleLidSwitch = "suspend";

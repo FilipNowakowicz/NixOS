@@ -29,15 +29,16 @@
     gnumake
     gcc
     tree-sitter
+    nixd
 
     # Neovim helpers
     glow        # :Glow markdown preview
 
     # Utilities
     yazi
-    taskwarrior3
-    timewarrior
     yt-dlp
+    nix-output-monitor
+    nh
 
     # AI
     claude-code

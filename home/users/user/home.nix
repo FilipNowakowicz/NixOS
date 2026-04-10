@@ -116,18 +116,21 @@ in
 {
   home.username = "user";
   home.homeDirectory = "/home/user";
-  home.stateVersion = "26.05";
+  home.stateVersion = "24.11";
 
   imports = [
     ../../profiles/base.nix
     ../../profiles/desktop.nix
   ];
 
+  gtk.gtk4.theme = null;
+
   # ── Git ────────────────────────────────────────────────────────────────
   programs.git = {
     enable = true;
     settings.user.name = "Filip Nowakowicz";
     settings.user.email = "filip.nowakowicz@gmail.com";
+    signing.format = null;
   };
 
   # ── PATH ───────────────────────────────────────────────────────────────
@@ -145,6 +148,8 @@ in
       "x-scheme-handler/https" = "firefox.desktop";
     };
   };
+
+  xdg.userDirs.setSessionVariables = false;
 
   # ── Zsh ────────────────────────────────────────────────────────────────
   # Base options, plugins, and vi-mode are set in home/profiles/base.nix
@@ -173,7 +178,7 @@ in
       gl   = "git pull";
       glog = "git log --oneline --graph --decorate";
       # System
-      rebuild          = "sudo nixos-rebuild switch --flake '.#main'";
+      rebuild          = "nh os switch /home/user/nix";
       battery          = "acpi -b";
       buds             = "bluetoothctl connect DC:69:E2:CF:9A:BD";
       headset          = "bluetoothctl connect 40:58:99:3D:C8:D3";
@@ -392,22 +397,19 @@ in
     '';
     };
 
-    ".local/bin/power-menu" = {
+    ".local/bin/clipboard-pick" = {
       executable = true;
       text = ''
         #!/usr/bin/env bash
-        
-        action=$(printf "Lock\nLogout\nSuspend\nReboot\nShutdown" | ${pkgs.fzf}/bin/fzf --prompt="Power: " --reverse -0 -1)
-        
-        case "$action" in
-          Lock)     ${pkgs.hyprland}/bin/hyprctl dispatch exec hyprlock ;;
-          Logout)   ${pkgs.hyprland}/bin/hyprctl dispatch exit ;;
-          Suspend)  ${pkgs.systemd}/bin/systemctl suspend ;;
-          Reboot)   ${pkgs.systemd}/bin/systemctl reboot ;;
-          Shutdown) ${pkgs.systemd}/bin/systemctl poweroff ;;
-        esac
+        cliphist list | fzf --prompt="Clipboard: " --reverse | cliphist decode | wl-copy
       '';
     };
+
+  };
+
+  # ── Cliphist ────────────────────────────────────────────────────────────
+  services.cliphist = {
+    enable = true;
   };
 
   # ── Mako ───────────────────────────────────────────────────────────────
