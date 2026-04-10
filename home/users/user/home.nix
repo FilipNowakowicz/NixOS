@@ -116,7 +116,7 @@ in
 {
   home.username = "user";
   home.homeDirectory = "/home/user";
-  home.stateVersion = "24.11";
+  home.stateVersion = "26.05";
 
   imports = [
     ../../profiles/base.nix
@@ -196,6 +196,15 @@ in
           *) echo "extract: unsupported format: $1" >&2; return 2 ;;
         esac
       }
+      _theme_switch_completion() {
+        local themes=($HOME/.config/themes/*/)
+        themes=("''${themes[@]##*/}")
+        _describe 'themes' themes
+      }
+      compdef _theme_switch_completion theme-switch
+
+      bindkey "''${terminfo[kcuu1]}" history-beginning-search-backward
+      bindkey "''${terminfo[kcud1]}" history-beginning-search-forward
     '';
   };
 
@@ -381,7 +390,24 @@ in
           exit 1
       fi
     '';
-  };
+    };
+
+    ".local/bin/power-menu" = {
+      executable = true;
+      text = ''
+        #!/usr/bin/env bash
+        
+        action=$(printf "Lock\nLogout\nSuspend\nReboot\nShutdown" | ${pkgs.fzf}/bin/fzf --prompt="Power: " --reverse -0 -1)
+        
+        case "$action" in
+          Lock)     ${pkgs.hyprland}/bin/hyprctl dispatch exec hyprlock ;;
+          Logout)   ${pkgs.hyprland}/bin/hyprctl dispatch exit ;;
+          Suspend)  ${pkgs.systemd}/bin/systemctl suspend ;;
+          Reboot)   ${pkgs.systemd}/bin/systemctl reboot ;;
+          Shutdown) ${pkgs.systemd}/bin/systemctl poweroff ;;
+        esac
+      '';
+    };
   };
 
   # ── Mako ───────────────────────────────────────────────────────────────
