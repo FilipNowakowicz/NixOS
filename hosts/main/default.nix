@@ -30,7 +30,7 @@
   ];
 
   networking = {
-    hostName = "NixOS";
+    hostName = "main";
     networkmanager.enable = true;
   };
 
