@@ -10,22 +10,24 @@ let
   themeFiles = builtins.readDir themesDir;
 
   # Load and validate each theme
-  allThemes = lib.mapAttrs' (name: _:
+  allThemes = lib.mapAttrs' (
+    name: _:
     let
       themePath = themesDir + "/${name}";
       theme = import themePath;
       themeName = lib.removeSuffix ".nix" name;
     in
-      lib.nameValuePair themeName (theme // { name = themeName; })
+    lib.nameValuePair themeName (theme // { name = themeName; })
   ) (lib.filterAttrs (n: v: v == "regular" && lib.hasSuffix ".nix" n) themeFiles);
 
   # Filter: only enabled themes with existing wallpapers
-  validThemes = lib.filterAttrs (_: theme:
+  validThemes = lib.filterAttrs (
+    _: theme:
     let
       enabled = theme.enabled or true;
       wallpaperExists = builtins.pathExists theme.wallpaper;
     in
-      enabled && wallpaperExists
+    enabled && wallpaperExists
   ) allThemes;
 
   # Get the active theme
@@ -108,9 +110,9 @@ let
   };
 
   # Generate configs for all valid themes
-  themeConfigs = lib.foldl (acc: themeName:
-    acc // (mkThemeConfig themeName validThemes.${themeName})
-  ) {} (builtins.attrNames validThemes);
+  themeConfigs = lib.foldl (
+    acc: themeName: acc // (mkThemeConfig themeName validThemes.${themeName})
+  ) { } (builtins.attrNames validThemes);
 
 in
 {

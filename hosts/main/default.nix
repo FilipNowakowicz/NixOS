@@ -1,4 +1,10 @@
-{ config, pkgs, lib, inputs, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  inputs,
+  ...
+}:
 {
   imports = [
     inputs.disko.nixosModules.disko
@@ -44,7 +50,7 @@
 
     openssh = {
       enable = true;
-      openFirewall = false;  # Intentionally not exposed — accessible via Tailscale only
+      openFirewall = false; # Intentionally not exposed — accessible via Tailscale only
     };
 
     mullvad-vpn.enable = true;
@@ -54,7 +60,7 @@
       openFirewall = true;
     };
 
-    fwupd.enable = true;  # Firmware update daemon for hardware devices
+    fwupd.enable = true; # Firmware update daemon for hardware devices
 
     # ── Thermal & Power Management ──────────────────────────────────────────────
     # thermald prevents CPU thermal throttling using Intel DPTF tables

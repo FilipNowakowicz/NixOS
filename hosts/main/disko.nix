@@ -13,7 +13,10 @@
               type = "filesystem";
               format = "vfat";
               mountpoint = "/boot";
-              extraArgs = [ "-n" "main-boot" ];
+              extraArgs = [
+                "-n"
+                "main-boot"
+              ];
             };
           };
           luks = {

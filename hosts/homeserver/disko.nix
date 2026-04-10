@@ -2,37 +2,46 @@
 # Apply with nixos-anywhere or: disko --mode format hosts/homeserver/disko.nix
 {
   disko.devices.disk.main = {
-    type   = "disk";
+    type = "disk";
     device = "/dev/sda";
     content = {
       type = "gpt";
       partitions = {
         ESP = {
-          size    = "512M";
-          type    = "EF00";
+          size = "512M";
+          type = "EF00";
           content = {
-            type       = "filesystem";
-            format     = "vfat";
+            type = "filesystem";
+            format = "vfat";
             mountpoint = "/boot";
-            extraArgs  = [ "-n" "main-boot" ];
+            extraArgs = [
+              "-n"
+              "main-boot"
+            ];
           };
         };
         root = {
-          size    = "12G";
+          size = "12G";
           content = {
-            type       = "filesystem";
-            format     = "ext4";
+            type = "filesystem";
+            format = "ext4";
             mountpoint = "/";
-            extraArgs  = [ "-L" "main-root" ];
+            extraArgs = [
+              "-L"
+              "main-root"
+            ];
           };
         };
         persist = {
-          size    = "100%";
+          size = "100%";
           content = {
-            type       = "filesystem";
-            format     = "ext4";
+            type = "filesystem";
+            format = "ext4";
             mountpoint = "/persist";
-            extraArgs  = [ "-L" "persist" ];
+            extraArgs = [
+              "-L"
+              "persist"
+            ];
           };
         };
       };

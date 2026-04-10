@@ -2,7 +2,7 @@
 {
   # ── Graphics ────────────────────────────────────────────────────────────────
   # NVIDIA GPU with Intel iGPU PRIME offload
-  # 
+  #
   # Hyprland renders on the Intel iGPU by default. The NVIDIA GPU is available
   # on demand via `nvidia-offload <cmd>`.
 
@@ -13,11 +13,11 @@
   services.xserver.videoDrivers = [ "nvidia" ];
 
   hardware.nvidia = {
-    modesetting.enable     = true;   # required for Wayland / Hyprland
-    powerManagement.enable = true;   # suspend/resume reliability on laptops
-    open                   = false;  # use proprietary kernel module
-    nvidiaSettings         = true;
-    package                = config.boot.kernelPackages.nvidiaPackages.stable;
+    modesetting.enable = true; # required for Wayland / Hyprland
+    powerManagement.enable = true; # suspend/resume reliability on laptops
+    open = false; # use proprietary kernel module
+    nvidiaSettings = true;
+    package = config.boot.kernelPackages.nvidiaPackages.stable;
 
     # PRIME offload — Hyprland renders on the Intel iGPU by default.
     # The NVIDIA GPU is available on demand via `nvidia-offload <cmd>`.
@@ -27,10 +27,10 @@
     # Format expected by NixOS: "PCI:<bus>:<slot>:<function>" (decimal)
     prime = {
       offload = {
-        enable           = true;
-        enableOffloadCmd = true;  # adds `nvidia-offload` wrapper to $PATH
+        enable = true;
+        enableOffloadCmd = true; # adds `nvidia-offload` wrapper to $PATH
       };
-      intelBusId  = "PCI:0:2:0";
+      intelBusId = "PCI:0:2:0";
       nvidiaBusId = "PCI:1:0:0";
     };
   };
@@ -38,9 +38,9 @@
   # ── Intel iGPU / Wayland env vars ──────────────────────────────────────────
   # Pins the session to the Intel iGPU. NVIDIA is available on-demand via nvidia-offload.
   environment.sessionVariables = {
-    NIXOS_OZONE_WL              = "1";           # Electron apps: use Wayland backend
-    LIBVA_DRIVER_NAME           = "iHD";         # VA-API → Intel Media Driver
-    __GLX_VENDOR_LIBRARY_NAME   = "mesa";        # GLX → Mesa (Intel) by default
+    NIXOS_OZONE_WL = "1"; # Electron apps: use Wayland backend
+    LIBVA_DRIVER_NAME = "iHD"; # VA-API → Intel Media Driver
+    __GLX_VENDOR_LIBRARY_NAME = "mesa"; # GLX → Mesa (Intel) by default
     # Pins Hyprland's primary GPU to the Intel iGPU so it doesn't accidentally
     # pick the NVIDIA card.  Verify after install:
     #   ls -la /dev/dri/by-path/ | grep 'pci-0000:00:02'

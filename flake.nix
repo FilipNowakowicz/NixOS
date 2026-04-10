@@ -38,7 +38,16 @@
     };
   };
 
-  outputs = inputs@{ self, nixpkgs, home-manager, deploy-rs, nixos-anywhere, sops-nix, ... }:
+  outputs =
+    inputs@{
+      self,
+      nixpkgs,
+      home-manager,
+      deploy-rs,
+      nixos-anywhere,
+      sops-nix,
+      ...
+    }:
     let
       system = "x86_64-linux";
 
@@ -47,17 +56,19 @@
         config.allowUnfree = true;
       };
 
-      mkNixos = host: nixpkgs.lib.nixosSystem {
-        inherit system;
+      mkNixos =
+        host:
+        nixpkgs.lib.nixosSystem {
+          inherit system;
 
-        specialArgs = { inherit inputs; };
+          specialArgs = { inherit inputs; };
 
-        modules = [
-          ./hosts/${host}/default.nix
-          home-manager.nixosModules.home-manager
-          sops-nix.nixosModules.sops
-        ];
-      };
+          modules = [
+            ./hosts/${host}/default.nix
+            home-manager.nixosModules.home-manager
+            sops-nix.nixosModules.sops
+          ];
+        };
     in
     {
       # ── Apps ────────────────────────────────────────────────────────────────
@@ -68,16 +79,20 @@
         };
         launch-vm-iso = {
           type = "app";
-          program = toString (pkgs.writeShellScript "launch-vm-iso" (builtins.readFile ./scripts/launch-vm-iso.sh));
+          program = toString (
+            pkgs.writeShellScript "launch-vm-iso" (builtins.readFile ./scripts/launch-vm-iso.sh)
+          );
         };
         reinstall-vm = {
           type = "app";
-          program = toString (pkgs.writeShellScript "reinstall-vm" ''
-            export SSH_KEYGEN_BIN="${pkgs.openssh}/bin/ssh-keygen"
-            export SOPS_BIN="${pkgs.sops}/bin/sops"
-            export NIXOS_ANYWHERE_BIN="${nixos-anywhere.packages.${system}.nixos-anywhere}/bin/nixos-anywhere"
-            exec ${pkgs.bash}/bin/bash ${./scripts/reinstall-vm.sh}
-          '');
+          program = toString (
+            pkgs.writeShellScript "reinstall-vm" ''
+              export SSH_KEYGEN_BIN="${pkgs.openssh}/bin/ssh-keygen"
+              export SOPS_BIN="${pkgs.sops}/bin/sops"
+              export NIXOS_ANYWHERE_BIN="${nixos-anywhere.packages.${system}.nixos-anywhere}/bin/nixos-anywhere"
+              exec ${pkgs.bash}/bin/bash ${./scripts/reinstall-vm.sh}
+            ''
+          );
         };
       };
 
@@ -97,7 +112,14 @@
       # ── Shells ──────────────────────────────────────────────────────────────
       devShells.${system} = {
         default = pkgs.mkShell {
-          packages = (with pkgs; [ nixd statix deadnix sops ssh-to-age ])
+          packages =
+            (with pkgs; [
+              nixd
+              statix
+              deadnix
+              sops
+              ssh-to-age
+            ])
             ++ [
               deploy-rs.packages.${system}.deploy-rs
               nixos-anywhere.packages.${system}.nixos-anywhere
@@ -111,7 +133,7 @@
           packages = with pkgs; [
             nmap
             whois
-            dnsutils        # provides dig
+            dnsutils # provides dig
             sqlmap
             gobuster
             ffuf
@@ -122,42 +144,42 @@
             wireshark-cli
           ];
           shellHook = ''
-	    echo "Security tools ready"
-	    echo ""
-	    echo "Available tools:"
-	    echo "  Network:   nmap, whois, dig, netcat"
-	    echo "  Web:       sqlmap, gobuster, ffuf"
-	    echo "  Password:  hydra, john, hashcat"
-	    echo "  Analysis:  wireshark-cli (tshark)"
-	    exec ${pkgs.zsh}/bin/zsh
+            	    echo "Security tools ready"
+            	    echo ""
+            	    echo "Available tools:"
+            	    echo "  Network:   nmap, whois, dig, netcat"
+            	    echo "  Web:       sqlmap, gobuster, ffuf"
+            	    echo "  Password:  hydra, john, hashcat"
+            	    echo "  Analysis:  wireshark-cli (tshark)"
+            	    exec ${pkgs.zsh}/bin/zsh
           '';
         };
       };
 
       # ── NixOS Configurations ────────────────────────────────────────────────
       nixosConfigurations = {
-        main       = mkNixos "main";
-        vm         = mkNixos "vm";
+        main = mkNixos "main";
+        vm = mkNixos "vm";
         homeserver = mkNixos "homeserver";
       };
 
       # ── Deploy-RS ───────────────────────────────────────────────────────────
       deploy.nodes = {
         vm = {
-          hostname      = "nixvm";     # uses ~/.ssh/config alias → localhost:2222
-          sshUser       = "user";
-          magicRollback = false;       # VM is local; rollback machinery not needed
-          autoRollback  = false;
+          hostname = "nixvm"; # uses ~/.ssh/config alias → localhost:2222
+          sshUser = "user";
+          magicRollback = false; # VM is local; rollback machinery not needed
+          autoRollback = false;
           profiles.system = {
             user = "root";
             path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.vm;
           };
         };
         homeserver = {
-          hostname      = "homeserver";
-          sshUser       = "user";
+          hostname = "homeserver";
+          sshUser = "user";
           magicRollback = false;
-          autoRollback  = false;
+          autoRollback = false;
           profiles.system = {
             user = "root";
             path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.homeserver;
@@ -180,13 +202,13 @@
 
       # ── Modules ─────────────────────────────────────────────────────────────
       nixosModules = {
-        profiles-base    = import ./modules/nixos/profiles/base.nix;
+        profiles-base = import ./modules/nixos/profiles/base.nix;
         profiles-desktop = import ./modules/nixos/profiles/desktop.nix;
         profiles-security = import ./modules/nixos/profiles/security.nix;
       };
 
       homeModules = {
-        profiles-base    = import ./home/profiles/base.nix;
+        profiles-base = import ./home/profiles/base.nix;
         profiles-desktop = import ./home/profiles/desktop.nix;
       };
     };

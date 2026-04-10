@@ -6,8 +6,8 @@
 
     # ── Wayland utilities ────────────────────────────────────────────────────
     wl-clipboard
-    grim          # screenshot
-    slurp         # region select (used with grim)
+    grim # screenshot
+    slurp # region select (used with grim)
     waybar
     swaybg
     hyprlock
@@ -40,9 +40,9 @@
   # Cursor
   home.pointerCursor = {
     gtk.enable = true;
-    name    = "Bibata-Modern-Classic";
+    name = "Bibata-Modern-Classic";
     package = pkgs.bibata-cursors;
-    size    = 24;
+    size = 24;
   };
 
 }

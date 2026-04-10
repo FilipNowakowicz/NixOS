@@ -1,6 +1,8 @@
-_:
-{
+_: {
   zramSwap.enable = true;
 
-  nix.settings.trusted-users = [ "root" "user" ];
+  nix.settings.trusted-users = [
+    "root"
+    "user"
+  ];
 }

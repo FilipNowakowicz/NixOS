@@ -30,7 +30,7 @@
     nixd
 
     # Neovim helpers
-    glow        # :Glow markdown preview
+    glow # :Glow markdown preview
 
     # Utilities
     yazi
@@ -49,10 +49,10 @@
 
   # ── Environment Variables ──────────────────────────────────────────────────
   home.sessionVariables = {
-    EDITOR   = "nvim";
-    VISUAL   = "nvim";
+    EDITOR = "nvim";
+    VISUAL = "nvim";
     MANPAGER = "nvim +Man!";
-    PAGER    = "less -R";
+    PAGER = "less -R";
   };
 
   # ── Git ────────────────────────────────────────────────────────────────────
@@ -60,8 +60,8 @@
     enable = true;
     settings = {
       init.defaultBranch = "main";
-      pull.ff            = "only";
-      core.editor        = "nvim";
+      pull.ff = "only";
+      core.editor = "nvim";
     };
   };
 
@@ -74,18 +74,18 @@
       format = "$directory$nix_shell$character";
       directory = {
         truncation_length = 2;
-        truncate_to_repo  = false;
-        format            = "$path ";
-        style             = "";
+        truncate_to_repo = false;
+        format = "$path ";
+        style = "";
       };
       nix_shell = {
-	format = "[\\($symbol\\)]($style) ";
-	symbol = "nix";
-	style  = "fg:#83a598";
+        format = "[\\($symbol\\)]($style) ";
+        symbol = "nix";
+        style = "fg:#83a598";
       };
       character = {
         success_symbol = "[%]()";
-        error_symbol   = "[%](red)";
+        error_symbol = "[%](red)";
       };
     };
   };
@@ -94,7 +94,7 @@
   programs.keychain = {
     enable = true;
     enableZshIntegration = true;
-    keys       = [ "id_ed25519" ];
+    keys = [ "id_ed25519" ];
     extraFlags = [ "--quiet" ];
   };
 
@@ -112,18 +112,18 @@
 
   # ── Zsh ────────────────────────────────────────────────────────────────────
   programs.zsh = {
-    enable   = true;
-    dotDir   = "${config.xdg.configHome}/zsh";
-    autosuggestion.enable     = true;
+    enable = true;
+    dotDir = "${config.xdg.configHome}/zsh";
+    autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
-    enableCompletion          = true;
+    enableCompletion = true;
 
     history = {
-      size          = 10000;
-      save          = 10000;
+      size = 10000;
+      save = 10000;
       ignoreAllDups = true;
-      share         = true;
-      append        = true;
+      share = true;
+      append = true;
     };
 
     initContent = ''
@@ -163,13 +163,13 @@
   xdg.userDirs = {
     enable = true;
     createDirectories = true;
-    download    = "${config.home.homeDirectory}/downloads";
-    desktop     = null;
-    documents   = null;
-    music       = null;
-    pictures    = null;
+    download = "${config.home.homeDirectory}/downloads";
+    desktop = null;
+    documents = null;
+    music = null;
+    pictures = null;
     publicShare = null;
-    templates   = null;
-    videos      = null;
+    templates = null;
+    videos = null;
   };
 }

@@ -2,7 +2,12 @@
 # hardware-configuration.nix must be replaced with real hardware config generated
 # on the target machine via: nixos-generate-config
 # or during a fresh install via: nixos-anywhere --generate-hardware-config ...
-{ config, pkgs, inputs, ... }:
+{
+  config,
+  pkgs,
+  inputs,
+  ...
+}:
 {
   imports = [
     inputs.disko.nixosModules.disko
@@ -43,7 +48,7 @@
     # Tailscale VPN for secure remote access
     tailscale = {
       enable = true;
-      openFirewall = true;  # Opens UDP port 41641
+      openFirewall = true; # Opens UDP port 41641
       authKeyFile = config.sops.secrets.tailscale_auth_key.path;
     };
 
@@ -72,14 +77,14 @@
     syncthing = {
       enable = true;
       user = "user";
-      dataDir = "/var/lib/syncthing";  # Sync folder base directory
-      configDir = "/var/lib/syncthing/.config/syncthing";  # Config and database
-      openDefaultPorts = true;  # Opens TCP 22000, UDP 22000, TCP 21027, UDP 21027
-      overrideDevices = true;  # Allow declarative device configuration
-      overrideFolders = true;  # Allow declarative folder configuration
+      dataDir = "/var/lib/syncthing"; # Sync folder base directory
+      configDir = "/var/lib/syncthing/.config/syncthing"; # Config and database
+      openDefaultPorts = true; # Opens TCP 22000, UDP 22000, TCP 21027, UDP 21027
+      overrideDevices = true; # Allow declarative device configuration
+      overrideFolders = true; # Allow declarative folder configuration
       settings = {
         options = {
-          urAccepted = -1;  # Disable usage reporting
+          urAccepted = -1; # Disable usage reporting
         };
       };
     };
@@ -150,8 +155,8 @@
     defaultSopsFile = ./secrets/secrets.yaml;
     defaultSopsFormat = "yaml";
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
-    secrets.user_password = {};
-    secrets.tailscale_auth_key = {};
+    secrets.user_password = { };
+    secrets.tailscale_auth_key = { };
   };
 
   # ── Impermanence ────────────────────────────────────────────────────────────
@@ -163,11 +168,11 @@
       "/var/log"
       "/var/lib/nixos"
       "/var/lib/systemd/coredump"
-      "/var/lib/tailscale"  # Persist Tailscale auth state across reboots
-      "/var/lib/syncthing"  # Persist Syncthing config, database, and synced files
-      "/var/lib/vaultwarden"  # Persist Vaultwarden database and config
-      "/var/lib/nginx"  # Persist nginx self-signed certs
-      "/var/lib/acme"  # Persist ACME/Let's Encrypt certs (for future use)
+      "/var/lib/tailscale" # Persist Tailscale auth state across reboots
+      "/var/lib/syncthing" # Persist Syncthing config, database, and synced files
+      "/var/lib/vaultwarden" # Persist Vaultwarden database and config
+      "/var/lib/nginx" # Persist nginx self-signed certs
+      "/var/lib/acme" # Persist ACME/Let's Encrypt certs (for future use)
     ];
     files = [
       "/etc/machine-id"

@@ -35,10 +35,21 @@ in
   home.packages = with pkgs; [
     (writeShellApplication {
       name = "theme-switch";
-      runtimeInputs = with pkgs; [ home-manager hyprland waybar swaybg kitty procps systemd libnotify fzf ];
+      runtimeInputs = with pkgs; [
+        home-manager
+        hyprland
+        waybar
+        swaybg
+        kitty
+        procps
+        systemd
+        libnotify
+        fzf
+      ];
       text = ''
         NIX_REPO="${nixRepo}"
-      '' + builtins.readFile ../../files/scripts/theme-switch.sh;
+      ''
+      + builtins.readFile ../../files/scripts/theme-switch.sh;
     })
 
     (writeShellApplication {
@@ -49,7 +60,11 @@ in
 
     (writeShellApplication {
       name = "clipboard-pick";
-      runtimeInputs = with pkgs; [ cliphist fzf wl-clipboard ];
+      runtimeInputs = with pkgs; [
+        cliphist
+        fzf
+        wl-clipboard
+      ];
       text = builtins.readFile ../../files/scripts/clipboard-pick.sh;
     })
   ];
@@ -71,34 +86,34 @@ in
   programs.zsh = {
     shellAliases = {
       # Files
-      ll   = "ls -lh --color=auto";
-      la   = "ls -A";
-      l    = "ls -CF";
-      cp   = "cp -i";
-      mv   = "mv -i";
+      ll = "ls -lh --color=auto";
+      la = "ls -A";
+      l = "ls -CF";
+      cp = "cp -i";
+      mv = "mv -i";
       # Navigation
-      ".."   = "cd ..";
-      "..."  = "cd ../..";
+      ".." = "cd ..";
+      "..." = "cd ../..";
       "...." = "cd ../../..";
-      d      = "dirs -v";
+      d = "dirs -v";
       # Git
-      g    = "git";
-      ga   = "git add";
-      gd   = "git diff";
-      gco  = "git checkout";
-      gb   = "git branch";
-      gc   = "git commit -m";
-      gca  = "git commit -am";
-      gp   = "git push";
-      gl   = "git pull";
+      g = "git";
+      ga = "git add";
+      gd = "git diff";
+      gco = "git checkout";
+      gb = "git branch";
+      gc = "git commit -m";
+      gca = "git commit -am";
+      gp = "git push";
+      gl = "git pull";
       glog = "git log --oneline --graph --decorate";
       # System
-      rebuild          = "nh os switch --hostname main ${nixRepo}";
-      battery          = "acpi -b";
-      buds             = "bluetoothctl connect DC:69:E2:CF:9A:BD";
-      headset          = "bluetoothctl connect 40:58:99:3D:C8:D3";
-      whatsapp         = "wasistlos &";
-      copilot          = "steam-run gh copilot";
+      rebuild = "nh os switch --hostname main ${nixRepo}";
+      battery = "acpi -b";
+      buds = "bluetoothctl connect DC:69:E2:CF:9A:BD";
+      headset = "bluetoothctl connect 40:58:99:3D:C8:D3";
+      whatsapp = "wasistlos &";
+      copilot = "steam-run gh copilot";
     };
 
     initContent = ''
@@ -156,18 +171,18 @@ in
   services.mako = {
     enable = true;
     settings = {
-      font             = "JetBrainsMono Nerd Font 11";
+      font = "JetBrainsMono Nerd Font 11";
       background-color = "#${config.themes._activeThemeColors.bg}";
-      text-color       = "#${config.themes._activeThemeColors.text}";
-      border-color     = "#${config.themes._activeThemeColors.orange}";
-      border-radius    = 8;
-      border-size      = 2;
-      anchor           = "top-right";
-      margin           = "12";
-      padding          = "10,14";
-      width            = 300;
-      default-timeout  = 5000;
-      max-visible      = 5;
+      text-color = "#${config.themes._activeThemeColors.text}";
+      border-color = "#${config.themes._activeThemeColors.orange}";
+      border-radius = 8;
+      border-size = 2;
+      anchor = "top-right";
+      margin = "12";
+      padding = "10,14";
+      width = 300;
+      default-timeout = 5000;
+      max-visible = 5;
     };
   };
 

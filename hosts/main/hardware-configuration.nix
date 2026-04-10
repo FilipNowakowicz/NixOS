@@ -6,9 +6,19 @@
 
   boot = {
     initrd.availableKernelModules = [
-      "xhci_pci" "ahci" "nvme" "usb_storage" "sd_mod" "tpm_tis" "tpm_crb"
+      "xhci_pci"
+      "ahci"
+      "nvme"
+      "usb_storage"
+      "sd_mod"
+      "tpm_tis"
+      "tpm_crb"
     ];
-    kernelModules = [ "kvm-intel" "tpm_tis" "tpm_crb" ];
+    kernelModules = [
+      "kvm-intel"
+      "tpm_tis"
+      "tpm_crb"
+    ];
     extraModulePackages = [ ];
   };
 
