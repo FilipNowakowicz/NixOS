@@ -32,76 +32,78 @@
 
   # ── Services ────────────────────────────────────────────────────────────────
   # Override the mkDefault false from security.nix — SSH is required on a headless server
-  services.openssh = {
-    enable = true;
-    openFirewall = true;
-  };
-
-  # Tailscale VPN for secure remote access
-  services.tailscale = {
-    enable = true;
-    openFirewall = true;  # Opens UDP port 41641
-    authKeyFile = config.sops.secrets.tailscale_auth_key.path;
-  };
-
-  # Vaultwarden password manager (Bitwarden-compatible server)
-  # Accessible via HTTPS reverse proxy at https://homeserver/
-  services.vaultwarden = {
-    enable = true;
-    config = {
-      # Bind to localhost only — nginx reverse proxy handles external access
-      ROCKET_ADDRESS = "127.0.0.1";
-      ROCKET_PORT = 8222;
-
-      # Set to true initially to create your first account, then set to false and redeploy
-      SIGNUPS_ALLOWED = false;
-
-      # Use local SQLite database (default, no additional config needed)
-      # Database will be at /var/lib/vaultwarden/db.sqlite3
-
-      # Domain used for link generation and API responses — must match how clients access the server
-      DOMAIN = "https://homeserver";
+  services = {
+    openssh = {
+      enable = true;
+      openFirewall = true;
     };
-  };
 
-  # Syncthing file synchronization
-  # Web UI accessible at http://homeserver:8384/
-  services.syncthing = {
-    enable = true;
-    user = "user";
-    dataDir = "/var/lib/syncthing";  # Sync folder base directory
-    configDir = "/var/lib/syncthing/.config/syncthing";  # Config and database
-    openDefaultPorts = true;  # Opens TCP 22000, UDP 22000, TCP 21027, UDP 21027
-    overrideDevices = true;  # Allow declarative device configuration
-    overrideFolders = true;  # Allow declarative folder configuration
-    settings = {
-      options = {
-        urAccepted = -1;  # Disable usage reporting
+    # Tailscale VPN for secure remote access
+    tailscale = {
+      enable = true;
+      openFirewall = true;  # Opens UDP port 41641
+      authKeyFile = config.sops.secrets.tailscale_auth_key.path;
+    };
+
+    # Vaultwarden password manager (Bitwarden-compatible server)
+    # Accessible via HTTPS reverse proxy at https://homeserver/
+    vaultwarden = {
+      enable = true;
+      config = {
+        # Bind to localhost only — nginx reverse proxy handles external access
+        ROCKET_ADDRESS = "127.0.0.1";
+        ROCKET_PORT = 8222;
+
+        # Set to true initially to create your first account, then set to false and redeploy
+        SIGNUPS_ALLOWED = false;
+
+        # Use local SQLite database (default, no additional config needed)
+        # Database will be at /var/lib/vaultwarden/db.sqlite3
+
+        # Domain used for link generation and API responses — must match how clients access the server
+        DOMAIN = "https://homeserver";
       };
     };
-  };
 
-  # ── Nginx ───────────────────────────────────────────────────────────────────
-  # Reverse proxy for Vaultwarden
-  services.nginx = {
-    enable = true;
-    recommendedProxySettings = true;
-    recommendedTlsSettings = true;
+    # Syncthing file synchronization
+    # Web UI accessible at http://homeserver:8384/
+    syncthing = {
+      enable = true;
+      user = "user";
+      dataDir = "/var/lib/syncthing";  # Sync folder base directory
+      configDir = "/var/lib/syncthing/.config/syncthing";  # Config and database
+      openDefaultPorts = true;  # Opens TCP 22000, UDP 22000, TCP 21027, UDP 21027
+      overrideDevices = true;  # Allow declarative device configuration
+      overrideFolders = true;  # Allow declarative folder configuration
+      settings = {
+        options = {
+          urAccepted = -1;  # Disable usage reporting
+        };
+      };
+    };
 
-    virtualHosts."homeserver" = {
-      forceSSL = true;
-      # Self-signed certificate for now
-      # TODO: Replace with ACME/Let's Encrypt for production:
-      #   enableACME = true;
-      #   acmeRoot = null;  # Use HTTP-01 challenge
-      # And add: security.acme.acceptTerms = true;
-      #          security.acme.defaults.email = "your@email.com";
-      sslCertificate = "/var/lib/nginx/cert.pem";
-      sslCertificateKey = "/var/lib/nginx/key.pem";
+    # ── Nginx ───────────────────────────────────────────────────────────────────
+    # Reverse proxy for Vaultwarden
+    nginx = {
+      enable = true;
+      recommendedProxySettings = true;
+      recommendedTlsSettings = true;
 
-      locations."/" = {
-        proxyPass = "http://127.0.0.1:8222";
-        proxyWebsockets = true;
+      virtualHosts."homeserver" = {
+        forceSSL = true;
+        # Self-signed certificate for now
+        # TODO: Replace with ACME/Let's Encrypt for production:
+        #   enableACME = true;
+        #   acmeRoot = null;  # Use HTTP-01 challenge
+        # And add: security.acme.acceptTerms = true;
+        #          security.acme.defaults.email = "your@email.com";
+        sslCertificate = "/var/lib/nginx/cert.pem";
+        sslCertificateKey = "/var/lib/nginx/key.pem";
+
+        locations."/" = {
+          proxyPass = "http://127.0.0.1:8222";
+          proxyWebsockets = true;
+        };
       };
     };
   };

@@ -15,14 +15,16 @@
   system.stateVersion = "24.11";
 
   # ── Lanzaboote Secure Boot ──────────────────────────────────────────────────
-  boot.lanzaboote = {
-    enable = true;
-    pkiBundle = "/etc/secureboot";
-  };
-  boot.loader.systemd-boot.enable = lib.mkForce false;
+  boot = {
+    lanzaboote = {
+      enable = true;
+      pkiBundle = "/etc/secureboot";
+    };
+    loader.systemd-boot.enable = lib.mkForce false;
 
-  # ── Systemd in initrd ───────────────────────────────────────────────────────
-  boot.initrd.systemd.enable = true;
+    # ── Systemd in initrd ───────────────────────────────────────────────────────
+    initrd.systemd.enable = true;
+  };
 
   zramSwap.enable = true;
 
@@ -36,32 +38,34 @@
   };
 
   hardware.bluetooth.enable = true;
-  services.blueman.enable = true;
+  services = {
+    blueman.enable = true;
 
-  services.openssh = {
-    enable = true;
-    openFirewall = false;  # Intentionally not exposed — accessible via Tailscale only
-  };
+    openssh = {
+      enable = true;
+      openFirewall = false;  # Intentionally not exposed — accessible via Tailscale only
+    };
 
-  services.mullvad-vpn.enable = true;
+    mullvad-vpn.enable = true;
 
-  services.tailscale = {
-    enable = true;
-    openFirewall = true;
-  };
+    tailscale = {
+      enable = true;
+      openFirewall = true;
+    };
 
-  services.fwupd.enable = true;  # Firmware update daemon for hardware devices
+    fwupd.enable = true;  # Firmware update daemon for hardware devices
 
-  # ── Thermal & Power Management ──────────────────────────────────────────────
-  # thermald prevents CPU thermal throttling using Intel DPTF tables
-  # power-profiles-daemon exposes performance/balanced/power-saver profiles
-  services.thermald.enable = true;
-  services.power-profiles-daemon.enable = true;
+    # ── Thermal & Power Management ──────────────────────────────────────────────
+    # thermald prevents CPU thermal throttling using Intel DPTF tables
+    # power-profiles-daemon exposes performance/balanced/power-saver profiles
+    thermald.enable = true;
+    power-profiles-daemon.enable = true;
 
-  services.logind.settings = {
-    Login.HandleLidSwitch = "suspend";
-    # Optional: keep running on AC power
-    # lidSwitchExternalPower = "ignore";
+    logind.settings = {
+      Login.HandleLidSwitch = "suspend";
+      # Optional: keep running on AC power
+      # lidSwitchExternalPower = "ignore";
+    };
   };
 
   sops = {
