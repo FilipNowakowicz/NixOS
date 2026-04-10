@@ -9,4 +9,7 @@
   imports = [
     ../../profiles/base.nix
   ];
+
+  programs.git.signing.format = null;
+  xdg.userDirs.setSessionVariables = false;
 }
