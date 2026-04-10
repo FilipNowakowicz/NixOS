@@ -9,9 +9,9 @@ approaches proactively. Explain why, not just what.
 ## Environment
 
 - **Dev machine:** NixOS (main)
-- **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nixd`, `statix`, `deadnix`, `sops`, `ssh-to-age`
+- **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nh`, `nixd`, `statix`, `deadnix`, `sops`, `ssh-to-age`
 - **Deploy (VM):** `deploy .#vm`
-- **Deploy (main):** `sudo nixos-rebuild switch --flake .#main` (alias: `rebuild`)
+- **Deploy (main):** `nh os switch --hostname main .` (alias: `rebuild`)
 - **Hot-reload:** `ssh nixvm 'hyprctl reload'`
 - **Launch VM:** `nix run '.#launch-vm'`
 - **Git** is for version control only, not deployment
@@ -48,14 +48,16 @@ The VM uses impermanence. A fresh install is required whenever the disk layout (
 ## Repository Structure
 
 - `flake.nix` — entry point, defines hosts, home-manager, deploy-rs nodes, VM apps
-- `hosts/main/` — real machine config, hardware drivers, disko layout
+- `hosts/main/` — real machine config, disko layout, LUKS/LVM
 - `hosts/vm/` — VM config, virtio drivers, disko layout, impermanence, sops secrets
 - `hosts/installer/` — minimal NixOS ISO config for fresh installs
+- `modules/nixos/hardware/` — hardware drivers and graphics (NVIDIA PRIME)
 - `modules/nixos/profiles/` — system profiles (base, desktop, security)
 - `home/profiles/` — home-manager profiles (base, desktop)
-- `home/theme/` — runtime-swappable themes
-- `home/files/` — dotfiles managed via home-manager
+- `home/theme/` — runtime-swappable themes and generator logic
+- `home/files/` — dotfiles and standalone scripts
 - `home/users/user/` — user home-manager entry point
+- `home/users/user/home.nix` — main user config, imports generator.nix and scripts
 
 ---
 

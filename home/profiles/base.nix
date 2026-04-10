@@ -2,12 +2,11 @@
 {
   programs.home-manager.enable = true;
 
-  # ── Packages ───────────────────────────────────────────────────────────
+  # ── Packages ────────────────────────────────────────────────────────────────
   home.packages = with pkgs; [
     # Core CLI
     bat
     btop
-    curl
     eza
     fd
     jq
@@ -15,7 +14,6 @@
     ripgrep
     tree
     unzip
-    wget
     which
     zip
 
@@ -49,7 +47,7 @@
     steam-run
   ];
 
-  # ── Environment Variables ──────────────────────────────────────────────
+  # ── Environment Variables ──────────────────────────────────────────────────
   home.sessionVariables = {
     EDITOR   = "nvim";
     VISUAL   = "nvim";
@@ -57,7 +55,7 @@
     PAGER    = "less -R";
   };
 
-  # ── Git ────────────────────────────────────────────────────────────────
+  # ── Git ────────────────────────────────────────────────────────────────────
   programs.git = {
     enable = true;
     settings = {
@@ -67,7 +65,7 @@
     };
   };
 
-  # ── Starship Prompt ────────────────────────────────────────────────────
+  # ── Starship Prompt ────────────────────────────────────────────────────────
   programs.starship = {
     enable = true;
     enableZshIntegration = false;
@@ -92,7 +90,7 @@
     };
   };
 
-  # ── Keychain ───────────────────────────────────────────────────────────
+  # ── Keychain ───────────────────────────────────────────────────────────────
   programs.keychain = {
     enable = true;
     enableZshIntegration = true;
@@ -100,19 +98,19 @@
     extraFlags = [ "--quiet" ];
   };
 
-  # ── FZF ────────────────────────────────────────────────────────────────
+  # ── FZF ────────────────────────────────────────────────────────────────────
   programs.fzf = {
     enable = true;
     enableZshIntegration = true;
   };
 
-  # ── Zoxide ─────────────────────────────────────────────────────────────
+  # ── Zoxide ─────────────────────────────────────────────────────────────────
   programs.zoxide = {
     enable = true;
     enableZshIntegration = true;
   };
 
-  # ── Zsh ────────────────────────────────────────────────────────────────
+  # ── Zsh ────────────────────────────────────────────────────────────────────
   programs.zsh = {
     enable   = true;
     dotDir   = "${config.xdg.configHome}/zsh";
@@ -161,7 +159,7 @@
     '';
   };
 
-  # ── XDG User Dirs ──────────────────────────────────────────────────────
+  # ── XDG User Dirs ──────────────────────────────────────────────────────────
   xdg.userDirs = {
     enable = true;
     createDirectories = true;

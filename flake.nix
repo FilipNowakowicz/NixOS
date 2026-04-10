@@ -60,7 +60,7 @@
       };
     in
     {
-      # ── Apps ───────────────────────────────────────────────────────────────
+      # ── Apps ────────────────────────────────────────────────────────────────
       apps.${system} = {
         launch-vm = {
           type = "app";
@@ -81,7 +81,7 @@
         };
       };
 
-      # ── Packages ───────────────────────────────────────────────────────────
+      # ── Packages ────────────────────────────────────────────────────────────
       packages.${system} = {
         installer-iso =
           (nixpkgs.lib.nixosSystem {
@@ -91,10 +91,10 @@
           }).config.system.build.isoImage;
       };
 
-      # ── Formatter ──────────────────────────────────────────────────────────
+      # ── Formatter ───────────────────────────────────────────────────────────
       formatter.${system} = pkgs.nixfmt;
 
-      # ── Shells ─────────────────────────────────────────────────────────────
+      # ── Shells ──────────────────────────────────────────────────────────────
       devShells.${system} = {
         default = pkgs.mkShell {
           packages = (with pkgs; [ nixd statix deadnix sops ssh-to-age ])
@@ -134,14 +134,14 @@
         };
       };
 
-      # ── NixOS Configurations ─────────────────────────────────────────────
+      # ── NixOS Configurations ────────────────────────────────────────────────
       nixosConfigurations = {
         main       = mkNixos "main";
         vm         = mkNixos "vm";
         homeserver = mkNixos "homeserver";
       };
 
-      # ── Deploy-RS ──────────────────────────────────────────────────────────
+      # ── Deploy-RS ───────────────────────────────────────────────────────────
       deploy.nodes = {
         vm = {
           hostname      = "nixvm";     # uses ~/.ssh/config alias → localhost:2222
@@ -167,7 +167,7 @@
 
       checks.${system} = deploy-rs.lib.${system}.deployChecks self.deploy;
 
-      # ── Home Manager Configurations ────────────────────────────────────────
+      # ── Home Manager Configurations ─────────────────────────────────────────
       homeConfigurations = {
         user = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
@@ -178,7 +178,7 @@
         };
       };
 
-      # ── Modules ────────────────────────────────────────────────────────────
+      # ── Modules ─────────────────────────────────────────────────────────────
       nixosModules = {
         profiles-base    = import ./modules/nixos/profiles/base.nix;
         profiles-desktop = import ./modules/nixos/profiles/desktop.nix;

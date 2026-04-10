@@ -1,7 +1,6 @@
 { config, pkgs, lib, ... }:
 let
-  theme = (import ../../theme/generator.nix { inherit pkgs lib; themeDir = ../../theme; });
-  inherit (theme) themeConfigs activeThemeName colors activeTheme;
+  nixRepo = "${config.home.homeDirectory}/nix";
 in
 {
   home.username = "user";
@@ -11,7 +10,10 @@ in
   imports = [
     ../../profiles/base.nix
     ../../profiles/desktop.nix
+    ../../theme/module.nix
   ];
+
+  themes.active = "mono-mesh";
 
   gtk.gtk4.theme = null;
 
@@ -33,8 +35,10 @@ in
   home.packages = with pkgs; [
     (writeShellApplication {
       name = "theme-switch";
-      runtimeInputs = with pkgs; [ home-manager hyprland waybar swaybg kitty procps systemd libnotify ];
-      text = builtins.readFile ../../files/scripts/theme-switch.sh;
+      runtimeInputs = with pkgs; [ home-manager hyprland waybar swaybg kitty procps systemd libnotify fzf ];
+      text = ''
+        NIX_REPO="${nixRepo}"
+      '' + builtins.readFile ../../files/scripts/theme-switch.sh;
     })
 
     (writeShellApplication {
@@ -89,7 +93,7 @@ in
       gl   = "git pull";
       glog = "git log --oneline --graph --decorate";
       # System
-      rebuild          = "nh os switch --hostname main /home/user/nix";
+      rebuild          = "nh os switch --hostname main ${nixRepo}";
       battery          = "acpi -b";
       buds             = "bluetoothctl connect DC:69:E2:CF:9A:BD";
       headset          = "bluetoothctl connect 40:58:99:3D:C8:D3";
@@ -125,90 +129,22 @@ in
   };
 
   # ── Themes & Config Files ──────────────────────────────────────────────
-  # Generate all theme configs + application configs
-  xdg.configFile = themeConfigs // {
+  xdg.configFile = {
     # Neovim
     "nvim".source = ../../files/nvim;
 
-    # Kitty - use active theme colors directly
+    # Kitty
     "kitty/kitty.conf".source = ../../files/kitty/kitty.conf;
-    "kitty/current-theme.conf".text = ''
-      # vim:ft=kitty
-      ## name: ${activeThemeName}
 
-      foreground           #${colors.text}
-      background           #${colors.bg}
-      selection_foreground #${colors.text}
-      selection_background #${colors.brown}
-
-      cursor            #${colors.amber}
-      cursor_text_color #${colors.bg}
-
-      url_color #${colors.amber}
-
-      active_border_color   #${colors.amber}
-      inactive_border_color #${colors.brown}
-      bell_border_color     #${colors.orange}
-
-      wayland_titlebar_color #${colors.bg}
-
-      active_tab_foreground   #${colors.text}
-      active_tab_background   #${colors.bg}
-      inactive_tab_foreground #${colors.brown}
-      inactive_tab_background #${colors.bg}
-      tab_bar_background      #${colors.bg}
-
-      # 16 colors — extended palette
-      color0  #${colors.bg}
-      color8  #${colors.brown}
-      color1  #cc241d
-      color9  #fb4934
-      color2  #98971a
-      color10 #b8bb26
-      color3  #${colors.amber}
-      color11 #fabd2f
-      color4  #458588
-      color12 #83a598
-      color5  #b16286
-      color13 #d3869b
-      color6  #689d6a
-      color14 #8ec07c
-      color7  #${colors.text}
-      color15 #fbf1c7
-    '';
-
-    # Hyprland - use active theme colors directly
+    # Hyprland
     "hypr/hyprland.conf".source = ../../files/hypr/hyprland.conf;
-    "hypr/colors.conf".text = ''
-      $col_active   = rgb(${colors.amber})
-      $col_inactive = rgb(${colors.brown})
-      $col_shadow   = rgba(${colors.bg}cc)
-    '';
 
-    # Hyprlock - use active theme colors directly
+    # Hyprlock
     "hypr/hyprlock.conf".source = ../../files/hypr/hyprlock.conf;
-    "hypr/hyprlock-colors.conf".text = ''
-      $text   = rgb(${colors.text})
-      $bg     = rgb(${colors.bg})
-      $amber  = rgb(${colors.amber})
-      $orange = rgb(${colors.orange})
-    '';
 
-    # Waybar - use active theme colors directly
+    # Waybar
     "waybar/config".source = ../../files/waybar/config;
     "waybar/style.css".source = ../../files/waybar/style.css;
-    "waybar/colors.css".text = ''
-      @define-color bg #${colors.bg};
-      @define-color brown #${colors.brown};
-      @define-color orange #${colors.orange};
-      @define-color amber #${colors.amber};
-      @define-color text #${colors.text};
-    '';
-  };
-
-  # ── Wallpaper & Scripts ────────────────────────────────────────────────
-  home.file = {
-    ".local/share/wallpapers/current.png".source = activeTheme.wallpaper;
   };
 
   # ── Cliphist ────────────────────────────────────────────────────────────
@@ -221,9 +157,9 @@ in
     enable = true;
     settings = {
       font             = "JetBrainsMono Nerd Font 11";
-      background-color = "#${colors.bg}";
-      text-color       = "#${colors.text}";
-      border-color     = "#${colors.orange}";
+      background-color = "#${config.themes._activeThemeColors.bg}";
+      text-color       = "#${config.themes._activeThemeColors.text}";
+      border-color     = "#${config.themes._activeThemeColors.orange}";
       border-radius    = 8;
       border-size      = 2;
       anchor           = "top-right";

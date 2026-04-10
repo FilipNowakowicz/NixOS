@@ -21,7 +21,7 @@
   };
   boot.loader.systemd-boot.enable = lib.mkForce false;
 
-  # ── Systemd in initrd (required for TPM2 LUKS unlock) ───────────────────────
+  # ── Systemd in initrd ───────────────────────────────────────────────────────
   boot.initrd.systemd.enable = true;
 
   zramSwap.enable = true;
@@ -52,7 +52,7 @@
 
   services.fwupd.enable = true;  # Firmware update daemon for hardware devices
 
-  # ── Thermal & Power Management ───────────────────────────────────────────────
+  # ── Thermal & Power Management ──────────────────────────────────────────────
   # thermald prevents CPU thermal throttling using Intel DPTF tables
   # power-profiles-daemon exposes performance/balanced/power-saver profiles
   services.thermald.enable = true;

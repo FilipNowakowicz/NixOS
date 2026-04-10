@@ -1,10 +1,10 @@
 { pkgs, ... }:
 {
   home.packages = with pkgs; [
-    # ── Terminal ─────────────────────────────────────────────
+    # ── Terminal ──────────────────────────────────────────────────────────────
     kitty
 
-    # ── Wayland utilities ────────────────────────────────────
+    # ── Wayland utilities ────────────────────────────────────────────────────
     wl-clipboard
     grim          # screenshot
     slurp         # region select (used with grim)
@@ -14,18 +14,18 @@
     brightnessctl
     cliphist
 
-    # ── Desktop UX ───────────────────────────────────────────
+    # ── Desktop UX ───────────────────────────────────────────────────────────
     pavucontrol
     blueman
 
-    #── Browsers / Apps ──────────────────────────────────────
+    # ── Browsers / Apps ──────────────────────────────────────────────────────
     firefox
     keepassxc
     mpv
     wasistlos
     spotify
 
-    # ── Visuals / Toys ───────────────────────────────────────
+    # ── Visuals / Toys ───────────────────────────────────────────────────────
     cava
     fastfetch
     pipes-rs

@@ -2,7 +2,7 @@ set -euo pipefail
 
 THEME="''${1:-}"
 THEMES_DIR="$HOME/.config/themes"
-ACTIVE_FILE="$HOME/nix/home/theme/active.nix"
+ACTIVE_FILE="$NIX_REPO/home/theme/active.nix"
 
 # Get current theme from active.nix
 if [[ -f "$ACTIVE_FILE" ]]; then
@@ -41,7 +41,6 @@ if [[ "$CURRENT_THEME" == "$THEME" ]]; then
 fi
 
 # Update active.nix
-ACTIVE_FILE="$HOME/nix/home/theme/active.nix"
 if [[ ! -f "$ACTIVE_FILE" ]]; then
     echo "Error: $ACTIVE_FILE not found"
     exit 1
@@ -52,7 +51,7 @@ echo "Updated active.nix to $THEME"
 
 # Rebuild home-manager (faster than full system rebuild)
 echo "Rebuilding home-manager configuration..."
-if home-manager switch --flake "$HOME/nix#user"; then
+if home-manager switch --flake "$NIX_REPO#user"; then
     # Reload services after successful rebuild
     hyprctl reload >/dev/null 2>&1 || true
 

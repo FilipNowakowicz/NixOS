@@ -14,20 +14,20 @@
 
   system.stateVersion = "24.11";
 
-  # ── Networking ─────────────────────────────────────────────────────────
+  # ── Networking ──────────────────────────────────────────────────────────────
   networking = {
     hostName = "vm";
     networkmanager.enable = true;
   };
 
-  # ── SSH ────────────────────────────────────────────────────────────────
+  # ── SSH ─────────────────────────────────────────────────────────────────────
   # Enable SSH for remote deployment via `ssh nixvm`
   services.openssh = {
     enable = true;
     openFirewall = true;
   };
 
-  # ── Impermanence ───────────────────────────────────────────────────────
+  # ── Impermanence ────────────────────────────────────────────────────────────
   fileSystems."/persist".neededForBoot = true;
 
   environment.persistence."/persist" = {
@@ -45,7 +45,7 @@
     ];
   };
 
-  # ── User ───────────────────────────────────────────────────────────────
+  # ── User ────────────────────────────────────────────────────────────────────
   users.users.user = {
     home = "/home/user";
     extraGroups = [ "video" ];
@@ -54,7 +54,7 @@
     ];
   };
 
-  # ── Sops ───────────────────────────────────────────────────────────────
+  # ── Sops ────────────────────────────────────────────────────────────────────
   sops = {
     defaultSopsFile = ./secrets/secrets.yaml;
     defaultSopsFormat = "yaml";
@@ -62,7 +62,7 @@
     secrets.example_secret = {};
   };
 
-  # ── Home Manager ───────────────────────────────────────────────────────
+  # ── Home Manager ────────────────────────────────────────────────────────────
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;

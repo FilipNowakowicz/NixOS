@@ -1,6 +1,6 @@
 { pkgs, ... }:
 {
-  # ── Nix ────────────────────────────────────────────────────────────────
+  # ── Nix ────────────────────────────────────────────────────────────────────
   nixpkgs.config.allowUnfree = true;
   nix = {
     settings = {
@@ -15,16 +15,16 @@
     };
   };
 
-  # ── Localization ───────────────────────────────────────────────────────
+  # ── Localization ───────────────────────────────────────────────────────────
   time.timeZone = "Europe/Warsaw";
   i18n.defaultLocale = "en_GB.UTF-8";
   console.keyMap = "dvorak";
 
-  # ── Shell ──────────────────────────────────────────────────────────────
+  # ── Shell ───────────────────────────────────────────────────────────────────
   programs.zsh.enable = true;
   users.defaultUserShell = pkgs.zsh;
 
-  # ── System Packages ────────────────────────────────────────────────────
+  # ── System Packages ────────────────────────────────────────────────────────
   environment.systemPackages = with pkgs; [
     curl
     pciutils

@@ -1,6 +1,6 @@
 { config, pkgs, lib, ... }:
 {
-  # ── Graphics ─────────────────────────────────────────────────────────────────
+  # ── Graphics ────────────────────────────────────────────────────────────────
   # NVIDIA GPU with Intel iGPU PRIME offload
   # 
   # Hyprland renders on the Intel iGPU by default. The NVIDIA GPU is available
@@ -35,7 +35,7 @@
     };
   };
 
-  # ── Intel iGPU / Wayland env vars ────────────────────────────────────────
+  # ── Intel iGPU / Wayland env vars ──────────────────────────────────────────
   # Pins the session to the Intel iGPU. NVIDIA is available on-demand via nvidia-offload.
   environment.sessionVariables = {
     NIXOS_OZONE_WL              = "1";           # Electron apps: use Wayland backend
