@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, ... }:
 let
   nixRepo = "${config.home.homeDirectory}/nix";
 in

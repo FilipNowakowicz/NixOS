@@ -21,6 +21,7 @@
       pkiBundle = "/etc/secureboot";
     };
     loader.systemd-boot.enable = lib.mkForce false;
+    loader.systemd-boot.configurationLimit = 5;
 
     # ── Systemd in initrd ───────────────────────────────────────────────────────
     initrd.systemd.enable = true;

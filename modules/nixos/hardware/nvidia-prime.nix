@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, ... }:
 {
   # ── Graphics ────────────────────────────────────────────────────────────────
   # NVIDIA GPU with Intel iGPU PRIME offload

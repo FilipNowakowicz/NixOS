@@ -17,6 +17,8 @@
 
   system.stateVersion = "24.11";
 
+  boot.loader.systemd-boot.configurationLimit = 5;
+
   networking = {
     hostName = "homeserver";
     useNetworkd = true;

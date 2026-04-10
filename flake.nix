@@ -38,7 +38,7 @@
     };
   };
 
-  outputs = inputs@{ self, nixpkgs, home-manager, deploy-rs, disko, nixos-anywhere, sops-nix, impermanence, lanzaboote, ... }:
+  outputs = inputs@{ self, nixpkgs, home-manager, deploy-rs, nixos-anywhere, sops-nix, ... }:
     let
       system = "x86_64-linux";
 

@@ -1,4 +1,4 @@
-{ pkgs, inputs, ... }:
+{ inputs, ... }:
 {
   imports = [
     inputs.disko.nixosModules.disko
@@ -13,6 +13,8 @@
   ];
 
   system.stateVersion = "24.11";
+
+  boot.loader.systemd-boot.configurationLimit = 5;
 
   # ── Networking ──────────────────────────────────────────────────────────────
   networking = {
