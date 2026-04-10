@@ -1,117 +1,7 @@
 { config, pkgs, lib, ... }:
 let
-  # Import active theme for fallback/default
-  activeTheme = import ../../theme/active.nix;
-
-  # Auto-discover all theme files
-  themeDir = ../../theme/themes;
-  themeFiles = builtins.readDir themeDir;
-
-  # Load and validate each theme
-  allThemes = lib.mapAttrs' (name: _:
-    let
-      themePath = themeDir + "/${name}";
-      theme = import themePath;
-      themeName = lib.removeSuffix ".nix" name;
-    in
-      lib.nameValuePair themeName (theme // { name = themeName; })
-  ) (lib.filterAttrs (n: v: v == "regular" && lib.hasSuffix ".nix" n) themeFiles);
-
-  # Filter: only enabled themes with existing wallpapers
-  validThemes = lib.filterAttrs (_: theme:
-    let
-      enabled = theme.enabled or true;
-      wallpaperExists = builtins.pathExists theme.wallpaper;
-    in
-      enabled && wallpaperExists
-  ) allThemes;
-
-  # Helper to generate theme config text
-  mkThemeConfig = themeName: theme: {
-    # Kitty theme
-    "themes/${themeName}/kitty-theme.conf".text = ''
-      # vim:ft=kitty
-      ## name: ${themeName}
-
-      foreground           #${theme.colors.text}
-      background           #${theme.colors.bg}
-      selection_foreground #${theme.colors.text}
-      selection_background #${theme.colors.brown}
-
-      cursor            #${theme.colors.amber}
-      cursor_text_color #${theme.colors.bg}
-
-      url_color #${theme.colors.amber}
-
-      active_border_color   #${theme.colors.amber}
-      inactive_border_color #${theme.colors.brown}
-      bell_border_color     #${theme.colors.orange}
-
-      wayland_titlebar_color #${theme.colors.bg}
-
-      active_tab_foreground   #${theme.colors.text}
-      active_tab_background   #${theme.colors.bg}
-      inactive_tab_foreground #${theme.colors.brown}
-      inactive_tab_background #${theme.colors.bg}
-      tab_bar_background      #${theme.colors.bg}
-
-      # 16 colors — extended palette
-      color0  #${theme.colors.bg}
-      color8  #${theme.colors.brown}
-      color1  #cc241d
-      color9  #fb4934
-      color2  #98971a
-      color10 #b8bb26
-      color3  #${theme.colors.amber}
-      color11 #fabd2f
-      color4  #458588
-      color12 #83a598
-      color5  #b16286
-      color13 #d3869b
-      color6  #689d6a
-      color14 #8ec07c
-      color7  #${theme.colors.text}
-      color15 #fbf1c7
-    '';
-
-    # Hyprland colors
-    "themes/${themeName}/hypr-colors.conf".text = ''
-      $col_active   = rgb(${theme.colors.amber})
-      $col_inactive = rgb(${theme.colors.brown})
-      $col_shadow   = rgba(${theme.colors.bg}cc)
-    '';
-
-    # Hyprlock colors
-    "themes/${themeName}/hyprlock-colors.conf".text = ''
-      $text   = rgb(${theme.colors.text})
-      $bg     = rgb(${theme.colors.bg})
-      $amber  = rgb(${theme.colors.amber})
-      $orange = rgb(${theme.colors.orange})
-    '';
-
-    # Waybar colors
-    "themes/${themeName}/waybar-colors.css".text = ''
-      @define-color bg #${theme.colors.bg};
-      @define-color brown #${theme.colors.brown};
-      @define-color orange #${theme.colors.orange};
-      @define-color amber #${theme.colors.amber};
-      @define-color text #${theme.colors.text};
-    '';
-
-    # Wallpaper symlink
-    "themes/${themeName}/wallpaper".source = theme.wallpaper;
-  };
-
-  # Generate configs for all valid themes
-  themeConfigs = lib.foldl (acc: themeName:
-    acc // (mkThemeConfig themeName validThemes.${themeName})
-  ) {} (builtins.attrNames validThemes);
-
-  # Active theme name for initial current symlink
-  activeThemeName = activeTheme.name or "desert-dusk";
-
-  # Use active theme colors for compatibility
-  colors = activeTheme.colors;
+  theme = (import ../../theme/generator.nix { inherit pkgs lib; themeDir = ../../theme; });
+  inherit (theme) themeConfigs activeThemeName colors activeTheme;
 in
 {
   home.username = "user";
@@ -137,6 +27,27 @@ in
   home.sessionPath = [
     "${config.home.homeDirectory}/.local/bin"
     "${config.home.homeDirectory}/.npm-global/bin"
+  ];
+
+  # ── Scripts ────────────────────────────────────────────────────────────
+  home.packages = with pkgs; [
+    (writeShellApplication {
+      name = "theme-switch";
+      runtimeInputs = with pkgs; [ home-manager hyprland waybar swaybg kitty procps systemd libnotify ];
+      text = builtins.readFile ../../files/scripts/theme-switch.sh;
+    })
+
+    (writeShellApplication {
+      name = "waybar-weather";
+      runtimeInputs = with pkgs; [ curl ];
+      text = builtins.readFile ../../files/scripts/waybar-weather.sh;
+    })
+
+    (writeShellApplication {
+      name = "clipboard-pick";
+      runtimeInputs = with pkgs; [ cliphist fzf wl-clipboard ];
+      text = builtins.readFile ../../files/scripts/clipboard-pick.sh;
+    })
   ];
 
   # ── XDG MIME Apps ──────────────────────────────────────────────────────
@@ -298,113 +209,6 @@ in
   # ── Wallpaper & Scripts ────────────────────────────────────────────────
   home.file = {
     ".local/share/wallpapers/current.png".source = activeTheme.wallpaper;
-
-    ".local/bin/waybar-weather" = {
-      executable = true;
-      text = ''
-        #!/usr/bin/env bash
-        result=$(curl -sf --max-time 5 "wttr.in/Warsaw?format=%c+%t")
-        [ -n "$result" ] && echo "$result" || echo "? --"
-      '';
-    };
-
-    ".local/bin/theme-switch" = {
-    executable = true;
-    text = ''
-      #!/usr/bin/env bash
-      set -euo pipefail
-
-      THEME="''${1:-}"
-      THEMES_DIR="$HOME/.config/themes"
-      ACTIVE_FILE="$HOME/nix/home/theme/active.nix"
-
-      # Get current theme from active.nix
-      if [[ -f "$ACTIVE_FILE" ]]; then
-          CURRENT_THEME=$(grep -oP 'themes/\K[^.]+' "$ACTIVE_FILE" 2>/dev/null || echo "unknown")
-      else
-          CURRENT_THEME="unknown"
-      fi
-
-      # List available themes if no argument
-      if [[ -z "$THEME" ]]; then
-          echo "Available themes:"
-          for dir in "$THEMES_DIR"/*; do
-              [[ -d "$dir" ]] && basename "$dir"
-          done | sort
-          echo ""
-          echo "Current theme: $CURRENT_THEME"
-          echo ""
-          echo "Usage: theme-switch <theme-name>"
-          exit 0
-      fi
-
-      # Validate theme exists
-      if [[ ! -d "$THEMES_DIR/$THEME" ]]; then
-          echo "Error: Theme not found: $THEME"
-          echo "Available themes:"
-          for dir in "$THEMES_DIR"/*; do
-              [[ -d "$dir" ]] && basename "$dir"
-          done | sort
-          exit 1
-      fi
-
-      # Check if already active
-      if [[ "$CURRENT_THEME" == "$THEME" ]]; then
-          echo "Theme '$THEME' is already active"
-          exit 0
-      fi
-
-      # Update active.nix
-      ACTIVE_FILE="$HOME/nix/home/theme/active.nix"
-      if [[ ! -f "$ACTIVE_FILE" ]]; then
-          echo "Error: $ACTIVE_FILE not found"
-          exit 1
-      fi
-
-      echo "import ./themes/$THEME.nix" > "$ACTIVE_FILE"
-      echo "Updated active.nix to $THEME"
-
-      # Rebuild home-manager (faster than full system rebuild)
-      echo "Rebuilding home-manager configuration..."
-      if ${pkgs.home-manager}/bin/home-manager switch --flake "$HOME/nix#user"; then
-          # Reload services after successful rebuild
-          ${pkgs.hyprland}/bin/hyprctl reload >/dev/null 2>&1 || true
-
-          # Restart waybar to pick up new CSS
-          ${pkgs.procps}/bin/pkill waybar || true
-          sleep 0.3
-          ${pkgs.waybar}/bin/waybar &
-
-          ${pkgs.procps}/bin/pkill swaybg || true
-          sleep 0.2
-          ${pkgs.swaybg}/bin/swaybg -m fill -i "$HOME/.local/share/wallpapers/current.png" &
-
-          for socket in /tmp/kitty-*/kitty-*; do
-              [[ -S "$socket" ]] && ${pkgs.kitty}/bin/kitty @ --to "unix:$socket" load-config 2>/dev/null || true
-          done
-
-          # Kill any orphaned mako processes before restarting
-          ${pkgs.procps}/bin/pkill mako || true
-          sleep 0.5
-          ${pkgs.systemd}/bin/systemctl --user restart mako.service 2>/dev/null || true
-
-          ${pkgs.libnotify}/bin/notify-send "Theme changed" "Switched to: $THEME" || true
-          echo "✓ Theme switched to $THEME"
-      else
-          echo "Error: home-manager rebuild failed"
-          exit 1
-      fi
-    '';
-    };
-
-    ".local/bin/clipboard-pick" = {
-      executable = true;
-      text = ''
-        #!/usr/bin/env bash
-        cliphist list | fzf --prompt="Clipboard: " --reverse | cliphist decode | wl-copy
-      '';
-    };
-
   };
 
   # ── Cliphist ────────────────────────────────────────────────────────────

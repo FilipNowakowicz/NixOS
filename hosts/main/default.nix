@@ -37,7 +37,8 @@
   hardware.bluetooth.enable = true;
   services.blueman.enable = true;
 
-  # ── NVIDIA / Wayland env vars ────────────────────────────────────────────────
+  # ── Intel iGPU / Wayland env vars ───────────────────────────────────────────
+  # Pins the session to the Intel iGPU. NVIDIA is available on-demand via nvidia-offload.
   environment.sessionVariables = {
     NIXOS_OZONE_WL              = "1";           # Electron apps: use Wayland backend
     LIBVA_DRIVER_NAME           = "iHD";         # VA-API → Intel Media Driver

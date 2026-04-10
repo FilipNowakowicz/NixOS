@@ -53,15 +53,13 @@
       ROCKET_ADDRESS = "127.0.0.1";
       ROCKET_PORT = 8222;
 
-      # Disable new signups after first user registers
-      # Set to false initially to create your account, then change to true
+      # Set to true initially to create your first account, then set to false and redeploy
       SIGNUPS_ALLOWED = false;
 
       # Use local SQLite database (default, no additional config needed)
       # Database will be at /var/lib/vaultwarden/db.sqlite3
 
-      # Domain for web vault and API
-      # Update this to your actual domain when using real certs
+      # Domain used for link generation and API responses — must match how clients access the server
       DOMAIN = "https://homeserver";
     };
   };

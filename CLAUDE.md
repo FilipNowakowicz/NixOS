@@ -80,7 +80,7 @@ Secrets are managed with sops-nix and age encryption.
 - **`.sops.yaml`:** repo root, defines key groups per path regex
 - **Secrets file:** `hosts/vm/secrets/secrets.yaml` — encrypted, edit with `sops hosts/vm/secrets/secrets.yaml`
 - The VM's `/etc/ssh/ssh_host_ed25519_key` is persisted via impermanence so the host key (and thus the age decryption key) survives reboots
-- On main, `/etc/ssh/ssh_host_ed25519_key` is also persisted via impermanence, keeping the sops age identity stable across reboots
+- On main, `/etc/ssh/ssh_host_ed25519_key` is stable as it's part of the standard persistent root filesystem.
 
 ---
 
@@ -127,10 +127,7 @@ Secrets are managed with sops-nix and age encryption.
 
 ## Security Preferences
 
-- **Passwordless sudo is for VMs and dev machines only.** `server.nix` grants
-  full `NOPASSWD` sudo — only import it on hosts where that is intentional.
-  The homeserver currently imports it; reconsider before treating it as
-  production.
+- **Passwordless sudo is for VMs and dev machines only.**
 - **Scope secrets appropriately.** Each host should only be able to decrypt
   the secrets it needs, as defined in `.sops.yaml`.
 
