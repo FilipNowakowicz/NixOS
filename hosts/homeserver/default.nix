@@ -127,7 +127,10 @@ in
   systemd.services.tailscale-cert = {
     description = "Fetch TLS certificate from Tailscale";
     wantedBy = [ "multi-user.target" ];
-    after = [ "tailscaled.service" "network-online.target" ];
+    after = [
+      "tailscaled.service"
+      "network-online.target"
+    ];
     wants = [ "network-online.target" ];
     script = ''
       # Wait for tailscale to be running

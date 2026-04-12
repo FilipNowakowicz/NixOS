@@ -87,7 +87,9 @@
         };
         bootstrap-vm = {
           type = "app";
-          program = toString (pkgs.writeShellScript "bootstrap-vm" (builtins.readFile ./scripts/bootstrap-vm.sh));
+          program = toString (
+            pkgs.writeShellScript "bootstrap-vm" (builtins.readFile ./scripts/bootstrap-vm.sh)
+          );
           meta.description = "Bootstrap a fresh VM install";
         };
         reinstall-vm = {

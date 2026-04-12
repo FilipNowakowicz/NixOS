@@ -98,7 +98,10 @@
     enable = true;
     enableZshIntegration = true;
     keys = [ "id_ed25519" ];
-    extraFlags = [ "--quiet" "--systemd" ];
+    extraFlags = [
+      "--quiet"
+      "--systemd"
+    ];
   };
 
   # ── FZF ────────────────────────────────────────────────────────────────────

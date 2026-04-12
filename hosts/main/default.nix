@@ -34,7 +34,10 @@
 
     # ── IOMMU Protection ────────────────────────────────────────────────────────
     # Blocks Thunderbolt/PCIe DMA attacks by enabling IOMMU isolation
-    kernelParams = [ "intel_iommu=on" "iommu=force" ];
+    kernelParams = [
+      "intel_iommu=on"
+      "iommu=force"
+    ];
   };
 
   zramSwap.enable = true;
