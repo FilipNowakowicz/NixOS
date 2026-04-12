@@ -69,7 +69,11 @@
     power-profiles-daemon.enable = true;
 
     logind.settings = {
-      Login.HandleLidSwitch = "suspend";
+      Login = {
+        HandleLidSwitch = "suspend";
+        IdleAction = "suspend";
+        IdleActionSec = "15min";
+      };
       # Optional: keep running on AC power
       # lidSwitchExternalPower = "ignore";
     };
@@ -85,14 +89,10 @@
   users.users.user = {
     extraGroups = [ "video" ];
     hashedPasswordFile = config.sops.secrets.user_password.path;
-    openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJVv8FZjCgmWqmkSLYv0uMySdxpzJUMtoXAwXDonTM7k user@main"
-    ];
+    openssh.authorizedKeys.keys = (import ../../lib/pubkeys.nix);
   };
 
   home-manager = {
-    useGlobalPkgs = true;
-    useUserPackages = true;
     backupFileExtension = "backup";
     users.user = {
       imports = [

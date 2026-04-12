@@ -184,15 +184,11 @@
   # ── User ────────────────────────────────────────────────────────────────────
   users.users.user = {
     home = "/home/user";
-    openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC31z32AcISdGR5ng15HNHmOPPmzPkX+KRQzr98Xhlze"
-    ];
+    openssh.authorizedKeys.keys = (import ../../lib/pubkeys.nix);
   };
 
   # ── Home Manager ────────────────────────────────────────────────────────────
   home-manager = {
-    useGlobalPkgs = true;
-    useUserPackages = true;
     users.user = {
       imports = [ ../../home/users/user/home-server.nix ];
     };

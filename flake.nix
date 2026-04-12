@@ -83,6 +83,10 @@
             pkgs.writeShellScript "launch-vm-iso" (builtins.readFile ./scripts/launch-vm-iso.sh)
           );
         };
+        bootstrap-vm = {
+          type = "app";
+          program = toString (pkgs.writeShellScript "bootstrap-vm" (builtins.readFile ./scripts/bootstrap-vm.sh));
+        };
         reinstall-vm = {
           type = "app";
           program = toString (

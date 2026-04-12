@@ -9,4 +9,9 @@
     ];
     shell = pkgs.zsh;
   };
+
+  home-manager = {
+    useGlobalPkgs = true;
+    useUserPackages = true;
+  };
 }
