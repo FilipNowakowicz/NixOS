@@ -49,33 +49,31 @@ fi
 echo "import ./themes/$THEME.nix" > "$ACTIVE_FILE"
 echo "Updated active.nix to $THEME"
 
-# Rebuild home-manager (faster than full system rebuild)
-echo "Rebuilding home-manager configuration..."
-if home-manager switch --flake "$NIX_REPO#user"; then
-    # Reload services after successful rebuild
-    hyprctl reload >/dev/null 2>&1 || true
+# Symlink new theme configs into live app paths
+ln -sf "$THEMES_DIR/$THEME/kitty-theme.conf"    "$HOME/.config/kitty/current-theme.conf"
+ln -sf "$THEMES_DIR/$THEME/hypr-colors.conf"    "$HOME/.config/hypr/colors.conf"
+ln -sf "$THEMES_DIR/$THEME/hyprlock-colors.conf" "$HOME/.config/hypr/hyprlock-colors.conf"
+ln -sf "$THEMES_DIR/$THEME/waybar-colors.css"   "$HOME/.config/waybar/colors.css"
+ln -sf "$THEMES_DIR/$THEME/wallpaper"           "$HOME/.local/share/wallpapers/current.png"
 
-    # Restart waybar to pick up new CSS
-    pkill waybar || true
-    sleep 0.3
-    waybar &
+# Reload apps
+hyprctl reload >/dev/null 2>&1 || true
 
-    pkill swaybg || true
-    sleep 0.2
-    swaybg -m fill -i "$HOME/.local/share/wallpapers/current.png" &
+pkill waybar || true
+sleep 0.3
+waybar &
 
-    for socket in /tmp/kitty-*/kitty-*; do
-        [[ -S "$socket" ]] && kitty @ --to "unix:$socket" load-config 2>/dev/null || true
-    done
+pkill swaybg || true
+sleep 0.2
+swaybg -m fill -i "$HOME/.local/share/wallpapers/current.png" &
 
-    # Kill any orphaned mako processes before restarting
-    pkill mako || true
-    sleep 0.5
-    systemctl --user restart mako.service 2>/dev/null || true
+for socket in /tmp/kitty-*/kitty-*; do
+    [[ -S "$socket" ]] && kitty @ --to "unix:$socket" load-config 2>/dev/null || true
+done
 
-    notify-send "Theme changed" "Switched to: $THEME" || true
-    echo "✓ Theme switched to $THEME"
-else
-    echo "Error: home-manager rebuild failed"
-    exit 1
-fi
+pkill mako || true
+sleep 0.5
+systemctl --user restart mako.service 2>/dev/null || true
+
+notify-send "Theme changed" "Switched to: $THEME" || true
+echo "✓ Theme switched to $THEME"

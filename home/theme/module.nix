@@ -131,81 +131,21 @@ in
 
   config = {
     themes._activeThemeColors = activeTheme.colors;
-    xdg.configFile = themeConfigs // {
-      # Kitty - use active theme colors directly
-      "kitty/current-theme.conf".text = ''
-        # vim:ft=kitty
-        ## name: ${activeTheme.name}
+    xdg.configFile = themeConfigs;
 
-        foreground           #${activeTheme.colors.text}
-        background           #${activeTheme.colors.bg}
-        selection_foreground #${activeTheme.colors.text}
-        selection_background #${activeTheme.colors.brown}
-
-        cursor            #${activeTheme.colors.amber}
-        cursor_text_color #${activeTheme.colors.bg}
-
-        url_color #${activeTheme.colors.amber}
-
-        active_border_color   #${activeTheme.colors.amber}
-        inactive_border_color #${activeTheme.colors.brown}
-        bell_border_color     #${activeTheme.colors.orange}
-
-        wayland_titlebar_color #${activeTheme.colors.bg}
-
-        active_tab_foreground   #${activeTheme.colors.text}
-        active_tab_background   #${activeTheme.colors.bg}
-        inactive_tab_foreground #${activeTheme.colors.brown}
-        inactive_tab_background #${activeTheme.colors.bg}
-        tab_bar_background      #${activeTheme.colors.bg}
-
-        # 16 colors — extended palette
-        color0  #${activeTheme.colors.bg}
-        color8  #${activeTheme.colors.brown}
-        color1  #cc241d
-        color9  #fb4934
-        color2  #98971a
-        color10 #b8bb26
-        color3  #${activeTheme.colors.amber}
-        color11 #fabd2f
-        color4  #458588
-        color12 #83a598
-        color5  #b16286
-        color13 #d3869b
-        color6  #689d6a
-        color14 #8ec07c
-        color7  #${activeTheme.colors.text}
-        color15 #fbf1c7
-      '';
-
-      # Hyprland colors
-      "hypr/colors.conf".text = ''
-        $col_active   = rgb(${activeTheme.colors.amber})
-        $col_inactive = rgb(${activeTheme.colors.brown})
-        $col_shadow   = rgba(${activeTheme.colors.bg}cc)
-      '';
-
-      # Hyprlock colors
-      "hypr/hyprlock-colors.conf".text = ''
-        $text   = rgb(${activeTheme.colors.text})
-        $bg     = rgb(${activeTheme.colors.bg})
-        $amber  = rgb(${activeTheme.colors.amber})
-        $orange = rgb(${activeTheme.colors.orange})
-      '';
-
-      # Waybar colors
-      "waybar/colors.css".text = ''
-        @define-color bg #${activeTheme.colors.bg};
-        @define-color brown #${activeTheme.colors.brown};
-        @define-color orange #${activeTheme.colors.orange};
-        @define-color amber #${activeTheme.colors.amber};
-        @define-color text #${activeTheme.colors.text};
-      '';
-    };
-
-    # Set wallpaper for active theme
-    home.file = {
-      ".local/share/wallpapers/current.png".source = activeTheme.wallpaper;
-    };
+    # Symlink active theme configs into live app paths on every rebuild
+    home.activation.linkActiveTheme = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      ln -sf "${config.xdg.configHome}/themes/${activeTheme.name}/kitty-theme.conf" \
+             "${config.xdg.configHome}/kitty/current-theme.conf"
+      ln -sf "${config.xdg.configHome}/themes/${activeTheme.name}/hypr-colors.conf" \
+             "${config.xdg.configHome}/hypr/colors.conf"
+      ln -sf "${config.xdg.configHome}/themes/${activeTheme.name}/hyprlock-colors.conf" \
+             "${config.xdg.configHome}/hypr/hyprlock-colors.conf"
+      ln -sf "${config.xdg.configHome}/themes/${activeTheme.name}/waybar-colors.css" \
+             "${config.xdg.configHome}/waybar/colors.css"
+      mkdir -p "${config.home.homeDirectory}/.local/share/wallpapers"
+      ln -sf "${config.xdg.configHome}/themes/${activeTheme.name}/wallpaper" \
+             "${config.home.homeDirectory}/.local/share/wallpapers/current.png"
+    '';
   };
 }
