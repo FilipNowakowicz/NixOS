@@ -19,6 +19,7 @@
     blueman
 
     # ── Browsers / Apps ──────────────────────────────────────────────────────
+    discord
     firefox
     keepassxc
     mpv
