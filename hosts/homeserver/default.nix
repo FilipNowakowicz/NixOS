@@ -8,6 +8,9 @@
   inputs,
   ...
 }:
+let
+  tailnetFQDN = "homeserver.filip-nowakowicz.ts.net"
+in
 {
   imports = [
     inputs.disko.nixosModules.disko
@@ -68,21 +71,28 @@
         # Database will be at /var/lib/vaultwarden/db.sqlite3
 
         # Domain used for link generation and API responses — must match how clients access the server
-        DOMAIN = "https://homeserver";
+        DOMAIN = "https://${tailnetFQDN}";
       };
     };
 
     # Syncthing file synchronization
-    # Web UI accessible at http://homeserver:8384/
+    # Web UI accessible via SSH tunnel: ssh -L 8384:localhost:8384 homeserver
     syncthing = {
       enable = true;
       user = "user";
       dataDir = "/var/lib/syncthing"; # Sync folder base directory
       configDir = "/var/lib/syncthing/.config/syncthing"; # Config and database
       openDefaultPorts = true; # Opens TCP 22000, UDP 22000, TCP 21027, UDP 21027
-      overrideDevices = true; # Allow declarative device configuration
-      overrideFolders = true; # Allow declarative folder configuration
+      overrideDevices = false; # Use declarative device config only after bootstrap (see below)
+      overrideFolders = false; # Use declarative folder config only after bootstrap (see below)
+      # Bootstrap: after deploy, use syncthing web UI or CLI to add devices/folders.
+      # Get your device ID: syncthing cli show system | grep myID
+      # Once you have device IDs from all peers, add them to lib/syncthing.nix,
+      # set overrideDevices/Folders to true, and redeploy.
       settings = {
+        gui = {
+          address = "127.0.0.1:8384"; # Bind to localhost only
+        };
         options = {
           urAccepted = -1; # Disable usage reporting
         };
@@ -96,16 +106,11 @@
       recommendedProxySettings = true;
       recommendedTlsSettings = true;
 
-      virtualHosts."homeserver" = {
+      virtualHosts.${tailnetFQDN} = {
         forceSSL = true;
-        # Self-signed certificate for now
-        # TODO: Replace with ACME/Let's Encrypt for production:
-        #   enableACME = true;
-        #   acmeRoot = null;  # Use HTTP-01 challenge
-        # And add: security.acme.acceptTerms = true;
-        #          security.acme.defaults.email = "your@email.com";
-        sslCertificate = "/var/lib/nginx/cert.pem";
-        sslCertificateKey = "/var/lib/nginx/key.pem";
+        # Tailscale cert provisioning (automatic renewal)
+        sslCertificate = "/var/lib/tailscale/certs/homeserver.crt";
+        sslCertificateKey = "/var/lib/tailscale/certs/homeserver.key";
 
         locations."/" = {
           proxyPass = "http://127.0.0.1:8222";
@@ -118,21 +123,32 @@
   # Open firewall for HTTPS
   networking.firewall.allowedTCPPorts = [ 443 ];
 
-  # Generate self-signed certificate for nginx
-  # This is a placeholder until ACME is configured
-  systemd.services.nginx-cert = {
+  # Fetch certificate from Tailscale (automatic renewal, no self-signed)
+  systemd.services.tailscale-cert = {
+    description = "Fetch TLS certificate from Tailscale";
     wantedBy = [ "multi-user.target" ];
-    before = [ "nginx.service" ];
-    after = [ "network.target" ];
+    after = [ "tailscaled.service" "network-online.target" ];
+    wants = [ "network-online.target" ];
     script = ''
-      mkdir -p /var/lib/nginx
-      if [ ! -f /var/lib/nginx/cert.pem ]; then
-        ${pkgs.openssl}/bin/openssl req -x509 -nodes -newkey rsa:4096 \
-          -keyout /var/lib/nginx/key.pem \
-          -out /var/lib/nginx/cert.pem \
-          -days 365 -subj "/CN=homeserver"
-        chmod 600 /var/lib/nginx/key.pem
-      fi
+      # Wait for tailscale to be running
+      until ${config.services.tailscale.package}/bin/tailscale status --json 2>/dev/null | \
+        ${pkgs.jq}/bin/jq -e '.BackendState == "Running"' > /dev/null 2>&1; do
+        sleep 5
+      done
+
+      # Get the FQDN and request certificate
+      mkdir -p /var/lib/tailscale/certs
+      ${config.services.tailscale.package}/bin/tailscale cert \
+        --cert-file /var/lib/tailscale/certs/homeserver.crt \
+        --key-file /var/lib/tailscale/certs/homeserver.key \
+        "${tailnetFQDN}"
+
+      # Ensure nginx can read the key
+      chmod 640 /var/lib/tailscale/certs/homeserver.key
+      chown root:nginx /var/lib/tailscale/certs/homeserver.key
+
+      # Reload nginx to apply new cert
+      systemctl reload nginx || true
     '';
     serviceConfig = {
       Type = "oneshot";
@@ -140,22 +156,22 @@
     };
   };
 
-  # Ensure nginx waits for certificate generation
+  # Ensure nginx waits for Tailscale certificate
   systemd.services.nginx = {
-    after = [ "nginx-cert.service" ];
-    requires = [ "nginx-cert.service" ];
+    after = [ "tailscale-cert.service" ];
+    requires = [ "tailscale-cert.service" ];
   };
 
   # ── Sops ────────────────────────────────────────────────────────────────────
   # sops-nix secrets management
-  # Currently encrypted only to user age key. After first deploy, the SSH host key
-  # will be extracted, converted to age (ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub),
-  # added to .sops.yaml as &homeserver_host, and secrets re-encrypted to include it.
+  # SSH host key is pre-generated and injected via nixos-anywhere (see scripts/reinstall-homeserver.sh).
+  # The host key's age identity is added to .sops.yaml as &homeserver_host before deployment,
+  # ensuring the homeserver can decrypt its own secrets (user_password, tailscale_auth_key) from first boot.
   sops = {
     defaultSopsFile = ./secrets/secrets.yaml;
     defaultSopsFormat = "yaml";
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
-    secrets.user_password = { };
+    secrets.user_password.neededForUsers = true;
     secrets.tailscale_auth_key = { };
   };
 
@@ -168,11 +184,9 @@
       "/var/log"
       "/var/lib/nixos"
       "/var/lib/systemd/coredump"
-      "/var/lib/tailscale" # Persist Tailscale auth state across reboots
+      "/var/lib/tailscale" # Persist Tailscale auth state and certs across reboots
       "/var/lib/syncthing" # Persist Syncthing config, database, and synced files
       "/var/lib/vaultwarden" # Persist Vaultwarden database and config
-      "/var/lib/nginx" # Persist nginx self-signed certs
-      "/var/lib/acme" # Persist ACME/Let's Encrypt certs (for future use)
     ];
     files = [
       "/etc/machine-id"
@@ -184,6 +198,7 @@
   # ── User ────────────────────────────────────────────────────────────────────
   users.users.user = {
     home = "/home/user";
+    hashedPasswordFile = config.sops.secrets.user_password.path;
     openssh.authorizedKeys.keys = (import ../../lib/pubkeys.nix);
   };
 

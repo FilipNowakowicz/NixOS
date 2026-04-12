@@ -1,4 +1,4 @@
-{ inputs, ... }:
+{ config, inputs, ... }:
 {
   imports = [
     inputs.disko.nixosModules.disko
@@ -15,6 +15,11 @@
   system.stateVersion = "24.11";
 
   boot.loader.systemd-boot.configurationLimit = 5;
+
+  nix.settings.trusted-users = [
+    "root"
+    "user"
+  ];
 
   # ── Networking ──────────────────────────────────────────────────────────────
   networking = {
@@ -51,6 +56,7 @@
   users.users.user = {
     home = "/home/user";
     extraGroups = [ "video" ];
+    hashedPasswordFile = config.sops.secrets.user_password.path;
     openssh.authorizedKeys.keys = (import ../../lib/pubkeys.nix);
   };
 
@@ -60,6 +66,7 @@
     defaultSopsFormat = "yaml";
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     secrets.example_secret = { };
+    secrets.user_password.neededForUsers = true;
   };
 
   # ── Home Manager ────────────────────────────────────────────────────────────

@@ -98,6 +98,16 @@
             ''
           );
         };
+        reinstall-homeserver = {
+          type = "app";
+          program = toString (
+            pkgs.writeShellScript "reinstall-homeserver" ''
+              export SOPS_BIN="${pkgs.sops}/bin/sops"
+              export NIXOS_ANYWHERE_BIN="${nixos-anywhere.packages.${system}.nixos-anywhere}/bin/nixos-anywhere"
+              exec ${pkgs.bash}/bin/bash ${./scripts/reinstall-homeserver.sh} "$@"
+            ''
+          );
+        };
       };
 
       # ── Packages ────────────────────────────────────────────────────────────

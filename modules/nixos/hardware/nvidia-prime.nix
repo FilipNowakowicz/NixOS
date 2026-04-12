@@ -42,9 +42,9 @@
     LIBVA_DRIVER_NAME = "iHD"; # VA-API → Intel Media Driver
     __GLX_VENDOR_LIBRARY_NAME = "mesa"; # GLX → Mesa (Intel) by default
     # Pins Hyprland's primary GPU to the Intel iGPU so it doesn't accidentally
-    # pick the NVIDIA card.  Verify after install:
+    # pick the NVIDIA card. Using stable by-path instead of /dev/dri/card1.
+    # Verify after install:
     #   ls -la /dev/dri/by-path/ | grep 'pci-0000:00:02'
-    # AQ_DRM_DEVICES              = "/dev/dri/by-path/pci-0000:00:02.0-card";
-    AQ_DRM_DEVICES = "/dev/dri/card1";
+    AQ_DRM_DEVICES = "/dev/dri/by-path/pci-0000:00:02.0-card";
   };
 }
