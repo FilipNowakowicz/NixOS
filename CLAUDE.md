@@ -106,8 +106,9 @@ Secrets are managed with sops-nix and age encryption.
     deploy again
 
 ### Pending
-- Waybar redesign (deferred)
+- Waybar redesign 
 - eww floating widgets (deferred)
+- Sunshine screen mirror
 - Impermanence on main — attempted and reverted. Too much friction on a daily driver. Not planned.
 
 ---
