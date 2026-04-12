@@ -76,16 +76,19 @@
         launch-vm = {
           type = "app";
           program = toString (pkgs.writeShellScript "launch-vm" (builtins.readFile ./scripts/launch-vm.sh));
+          meta.description = "Launch the NixOS test VM";
         };
         launch-vm-iso = {
           type = "app";
           program = toString (
             pkgs.writeShellScript "launch-vm-iso" (builtins.readFile ./scripts/launch-vm-iso.sh)
           );
+          meta.description = "Launch the VM from an installer ISO";
         };
         bootstrap-vm = {
           type = "app";
           program = toString (pkgs.writeShellScript "bootstrap-vm" (builtins.readFile ./scripts/bootstrap-vm.sh));
+          meta.description = "Bootstrap a fresh VM install";
         };
         reinstall-vm = {
           type = "app";
@@ -97,6 +100,7 @@
               exec ${pkgs.bash}/bin/bash ${./scripts/reinstall-vm.sh}
             ''
           );
+          meta.description = "Reinstall NixOS on the VM via nixos-anywhere";
         };
         reinstall-homeserver = {
           type = "app";
@@ -107,6 +111,7 @@
               exec ${pkgs.bash}/bin/bash ${./scripts/reinstall-homeserver.sh} "$@"
             ''
           );
+          meta.description = "Reinstall NixOS on the homeserver via nixos-anywhere";
         };
       };
 

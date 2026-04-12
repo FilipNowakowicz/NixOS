@@ -9,7 +9,7 @@
   ...
 }:
 let
-  tailnetFQDN = "homeserver.filip-nowakowicz.ts.net"
+  tailnetFQDN = "homeserver.filip-nowakowicz.ts.net";
 in
 {
   imports = [

@@ -225,6 +225,3 @@ nix build '.#nixosConfigurations.vm.config.system.build.toplevel' --no-link
 nix build '.#nixosConfigurations.main.config.system.build.toplevel' --no-link
 nix build '.#nixosConfigurations.homeserver.config.system.build.toplevel' --no-link
 ```
-ix build '.#nixosConfigurations.main.config.system.build.toplevel' --no-link
-nix build '.#nixosConfigurations.homeserver.config.system.build.toplevel' --no-link
-```
