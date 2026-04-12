@@ -30,6 +30,10 @@
 
     # ── Systemd in initrd ───────────────────────────────────────────────────────
     initrd.systemd.enable = true;
+
+    # ── IOMMU Protection ────────────────────────────────────────────────────────
+    # Blocks Thunderbolt/PCIe DMA attacks by enabling IOMMU isolation
+    kernelParams = [ "intel_iommu=on" "iommu=force" ];
   };
 
   zramSwap.enable = true;
