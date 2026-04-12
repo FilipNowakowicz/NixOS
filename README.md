@@ -21,9 +21,19 @@ The repository separates hardware, host identity, system profiles, and user conf
 The `main` host has been reinstalled to enable Secure Boot and Full Disk Encryption. This work is **now implemented**. The `main` host now uses a secure, encrypted systemd-boot setup.
 
 The current architecture is:
-- **Bootloader**: [Lanzaboote](https://github.com/nix-community/lanzaboote) manages Secure Boot, signing a unified kernel image.
+- **Bootloader**: [Lanzaboote](https://github.com/nix-community/lanzaboote) manages Secure Boot, signing a unified kernel image. The `configurationLimit` has been removed to avoid dead bootloader entries.
 - **Disk Encryption**: LUKS encrypts the entire disk.
 - **TPM Unlocking**: The system's TPM 2.0 is used to automatically unlock the LUKS-encrypted disk on boot.
+- **Hardware Pass-through**: IOMMU is enabled (`intel_iommu=on iommu=force`) for potential VM GPU pass-through.
+- **Graphics Drivers**: The configuration uses stable by-path device paths for `AQ_DRM_DEVICES` to ensure stable multi-GPU / monitor performance.
+
+---
+
+## Features
+
+- **Runtime Theming**: A runtime-swappable color system allows changing themes without a full NixOS rebuild.
+- **Sleep on Inactivity**: Systems are configured to automatically suspend after 10 minutes of inactivity.
+- **Centralized Keys**: SSH public keys are managed in `lib/pubkeys.nix` for easy access across the flake.
 
 ---
 
@@ -46,6 +56,8 @@ The current architecture is:
 │   │   └── disko.nix
 │   └── installer/                     # Minimal NixOS ISO for fresh installs
 │       └── default.nix
+├── lib/                               # Shared library functions and constants
+│   └── pubkeys.nix                    # Centralized SSH public keys
 ├── modules
 │   └── nixos/
 │       ├── hardware/                  # Hardware-specific modules (NVIDIA PRIME, etc.)
@@ -92,7 +104,7 @@ A `theme-switch` script is available in the shell to list and apply themes. It u
     ```bash
     theme-switch <theme-name>
     ```
-    This command updates `home/theme/active.nix`, runs `home-manager switch` (via the flake) using `nh` to apply changes, and reloads running applications instantly.
+    This command updates `home/theme/active.nix`, runs `home-manager switch` (via the flake) using `nh` to apply changes, and reloads running applications instantly. This also updates the symlink at `home/theme/wallpapers/current.png`, which is used by Hyprlock and other UI elements.
 
 ### How to Add a New Theme
 
@@ -126,8 +138,9 @@ The `homeserver` is configured to run the following services, accessible via Tai
 | Service | Purpose | Access |
 |---|---|---|
 | **Tailscale** | Zero-config VPN for secure remote access. | Connect from any Tailscale client. |
-| **Vaultwarden** | Self-hosted Bitwarden-compatible password manager. | `https://homeserver` (via Tailscale) |
-| **Syncthing** | Continuous, peer-to-peer file synchronization. | `http://homeserver:8384` (via Tailscale) |
+| **Nginx** | Reverse proxy with automatic Tailscale TLS certs. | `https://homeserver.<tailnet-name>.ts.net` |
+| **Vaultwarden** | Self-hosted Bitwarden-compatible password manager. | `https://homeserver...` (via Nginx) |
+| **Syncthing** | Continuous, peer-to-peer file synchronization. | `http://localhost:8384` (via SSH tunnel) |
 
 ---
 
@@ -178,6 +191,7 @@ The flake provides several `devShells` and `apps` for development and maintenanc
 |------|------|---------|
 | `devShell` | `default` | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, `nh`, `nixd`, etc. |
 | `devShell` | `security`| Includes common security tools: `nmap`, `gobuster`, `sqlmap`, `hydra`, `john`, etc. |
+| `app` | `bootstrap-vm` | Prepares and launches a fresh VM install in one command: `nix run '.#bootstrap-vm'`. |
 | `app` | `reinstall-vm` | Runs `nixos-anywhere` to perform a fresh installation of the VM. |
 | `app` | `launch-vm` | Boots the installed VM with QEMU. |
 | `app` | `launch-vm-iso`| Boots the installer ISO in the VM to begin a fresh install. |
@@ -209,5 +223,8 @@ nix flake check
 # Build all host configurations to ensure they evaluate correctly
 nix build '.#nixosConfigurations.vm.config.system.build.toplevel' --no-link
 nix build '.#nixosConfigurations.main.config.system.build.toplevel' --no-link
+nix build '.#nixosConfigurations.homeserver.config.system.build.toplevel' --no-link
+```
+ix build '.#nixosConfigurations.main.config.system.build.toplevel' --no-link
 nix build '.#nixosConfigurations.homeserver.config.system.build.toplevel' --no-link
 ```

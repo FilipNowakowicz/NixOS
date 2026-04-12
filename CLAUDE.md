@@ -20,26 +20,28 @@ approaches proactively. Explain why, not just what.
 
 The VM uses impermanence. A fresh install is required whenever the disk layout (`hosts/vm/disko.nix`) changes.
 
-1.  **Create disk image** (if not already present):
-    `qemu-img create -f qcow2 /vmstore/images/nixos-test.qcow2 40G`
+1.  **Run the bootstrap app**:
+    `nix run '.#bootstrap-vm'`
+    This script automates the full process of clearing stale keys, decrypting VM keys, running `nixos-anywhere`, and launching the VM.
 
-2.  **Copy OVMF vars** (if not already present):
-    `cp /usr/share/OVMF/x64/OVMF_VARS.4m.fd /vmstore/images/nixos-test-vars.fd`
+2.  **Manual alternative**:
+    If the bootstrap app fails, follow these steps manually:
+    - **Create disk image** (if not already present):
+      `qemu-img create -f qcow2 /vmstore/images/nixos-test.qcow2 40G`
+    - **Copy OVMF vars** (if not already present):
+      `cp /usr/share/OVMF/x64/OVMF_VARS.4m.fd /vmstore/images/nixos-test-vars.fd`
+    - **Build the installer ISO**:
+      `nix build '.#packages.x86_64-linux.installer-iso'`
+    - **Boot the ISO in the VM**:
+      `nix run '.#launch-vm-iso' -- result/iso/*.iso`
+    - **From the dev shell, run the installation**:
+      `nix run '.#reinstall-vm'`
+      This script automates the `nixos-anywhere` process:
+      - Clears the stale SSH host key from `~/.ssh/known_hosts`.
+      - Decrypts the VM's persistent SSH host keys from sops secrets and injects them.
+      - Runs `nixos-anywhere` to partition `/dev/vda` (via disko) and install the `vm` configuration from the flake.
 
-3.  **Build the installer ISO**:
-    `nix build '.#packages.x86_64-linux.installer-iso'`
-
-4.  **Boot the ISO in the VM**:
-    `nix run '.#launch-vm-iso' -- result/iso/*.iso`
-
-5.  **From the dev shell, run the installation**:
-    `nix run '.#reinstall-vm'`
-    This script automates the `nixos-anywhere` process:
-    - Clears the stale SSH host key from `~/.ssh/known_hosts`.
-    - Decrypts the VM's persistent SSH host keys from sops secrets and injects them. This ensures the VM's age identity is stable from the first boot, which is required for it to decrypt its own secrets.
-    - Runs `nixos-anywhere` to partition `/dev/vda` (via disko) and install the `vm` configuration from the flake.
-
-6.  **Post-install**: After the installer reboots the VM, launch it normally and deploy any pending changes.
+3.  **Post-install**: After the installer reboots the VM, launch it normally and deploy any pending changes.
     `nix run '.#launch-vm'`
     `deploy .#vm`
 
@@ -51,6 +53,7 @@ The VM uses impermanence. A fresh install is required whenever the disk layout (
 - `hosts/main/` — real machine config, disko layout, LUKS/LVM
 - `hosts/vm/` — VM config, virtio drivers, disko layout, impermanence, sops secrets
 - `hosts/installer/` — minimal NixOS ISO config for fresh installs
+- `lib/pubkeys.nix` — centralized SSH public keys
 - `modules/nixos/hardware/` — hardware drivers and graphics (NVIDIA PRIME)
 - `modules/nixos/profiles/` — system profiles (base, desktop, security)
 - `home/profiles/` — home-manager profiles (base, desktop)
@@ -132,6 +135,7 @@ Secrets are managed with sops-nix and age encryption.
 ## Security Preferences
 
 - **Passwordless sudo is for VMs and dev machines only.**
+- **VM and Homeserver users have no password** (rely on SSH keys).
 - **Scope secrets appropriately.** Each host should only be able to decrypt
   the secrets it needs, as defined in `.sops.yaml`.
 
