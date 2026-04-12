@@ -90,12 +90,15 @@
     };
   };
 
+  # ── SSH Agent ──────────────────────────────────────────────────────────────
+  services.ssh-agent.enable = true;
+
   # ── Keychain ───────────────────────────────────────────────────────────────
   programs.keychain = {
     enable = true;
     enableZshIntegration = true;
     keys = [ "id_ed25519" ];
-    extraFlags = [ "--quiet" ];
+    extraFlags = [ "--quiet" "--systemd" ];
   };
 
   # ── FZF ────────────────────────────────────────────────────────────────────
