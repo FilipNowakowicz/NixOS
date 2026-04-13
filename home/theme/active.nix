@@ -1,1 +1,1 @@
-import ./themes/mono-mesh.nix
+import ./themes/acid-statue.nix
