@@ -118,8 +118,6 @@ Secrets are managed with sops-nix and age encryption.
 ### Pending
 - Waybar redesign 
 - eww floating widgets (deferred)
-- Sunshine screen mirror
-- Fix inactivity suspension not working
 - Impermanence on main — attempted and reverted. Too much friction on a daily driver. Not planned.
 
 ---

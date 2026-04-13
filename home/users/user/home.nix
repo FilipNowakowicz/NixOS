@@ -186,4 +186,26 @@ in
     };
   };
 
+  # ── Swayidle ───────────────────────────────────────────────────────────
+  # Idle detection for Wayland. Triggers systemd actions after 15 minutes.
+  services.swayidle = {
+    enable = true;
+    events = [
+      {
+        event = "before-sleep";
+        command = "${pkgs.hyprlock}/bin/hyprlock";
+      }
+    ];
+    timeouts = [
+      {
+        timeout = 900; # 15 minutes
+        command = "${pkgs.systemd}/bin/systemctl suspend";
+      }
+      {
+        timeout = 600; # 10 minutes
+        command = "${pkgs.hyprlock}/bin/hyprlock";
+      }
+    ];
+  };
+
 }
