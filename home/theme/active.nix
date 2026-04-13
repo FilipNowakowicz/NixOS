@@ -1,1 +1,1 @@
-import ./themes/nighthawks.nix
+import ./themes/mono-mesh.nix

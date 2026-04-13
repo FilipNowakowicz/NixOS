@@ -8,8 +8,8 @@
     "spacing": 4,
 
     "modules-left":   ["hyprland/workspaces"],
-    "modules-center": ["clock", "custom/weather"],
-    "modules-right":  ["network", "bluetooth", "pulseaudio", "battery", "tray"],
+    "modules-center": ["clock"],
+    "modules-right":  ["group/tray-group", "bluetooth", "network", "pulseaudio", "battery"],
 
     "hyprland/workspaces": {
         "format": "{icon}",
@@ -26,36 +26,44 @@
     },
 
     "clock": {
-        "interval": 1,
-        "format": "{:%H:%M:%S%n%A, %B %d}",
+        "interval": 60,
+        "format": "{:%H:%M <span alpha='9999'> · %a %d</span>}",
         "tooltip-format": "<tt><small>{calendar}</small></tt>"
     },
 
-    "custom/weather": {
-        "exec": "$HOME/.local/bin/waybar-weather",
-        "interval": 1800,
-        "format": "{}",
+    "group/tray-group": {
+        "orientation": "horizontal",
+        "drawer": {
+            "transition-duration": 300,
+            "children-class": "tray-child",
+            "transition-left-to-right": false
+        },
+        "modules": ["custom/chevron", "tray"]
+    },
+
+    "custom/chevron": {
+        "format": "‹",
         "tooltip": false
     },
 
-    "network": {
-        "format-wifi":         "󰤨  {essid}",
-        "format-ethernet":     "󰈀  {ifname}",
-        "format-disconnected": "󰤭",
-        "tooltip-format": "{ifname}: {ipaddr}/{cidr}",
-        "max-length": 20
+    "tray": {
+        "icon-size": 14,
+        "spacing":   6
     },
 
-    "bluetooth": {
-        "format":           "󰂯",
-        "format-connected": "󰂱  {device_alias}",
-        "format-off":       "󰂲",
-        "tooltip-format":   "{controller_alias}\t{controller_address}",
-        "on-click":         "blueman-manager"
+    "battery": {
+        "format":          "{icon}  {capacity}%",
+        "format-charging": "󰂄  {capacity}%",
+        "format-full":     "󰁹",
+        "format-icons":    ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
+        "states": {
+            "warning":  30,
+            "critical": 15
+        }
     },
 
     "pulseaudio": {
-        "format":       "{icon}  {volume}%",
+        "format":       "{icon}",
         "format-muted": "󰝟",
         "format-icons": {
             "default": ["󰕿", "󰖀", "󰕾"]
@@ -64,18 +72,20 @@
         "scroll-step": 5
     },
 
-    "battery": {
-        "format":          "{icon}  {capacity}%",
-        "format-charging": "󰂄  {capacity}%",
-        "format-icons":    ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
-        "states": {
-            "warning":  30,
-            "critical": 15
-        }
+    "network": {
+        "format-wifi":        "{icon}",
+        "format-ethernet":    "󰈀",
+        "format-disconnected": "󰤭",
+        "format-icons":       ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
+        "tooltip-format":             "{essid} {signalStrength}%",
+        "tooltip-format-disconnected": "Disconnected"
     },
 
-    "tray": {
-        "icon-size": 14,
-        "spacing":    6
+    "bluetooth": {
+        "format":           "󰂯",
+        "format-connected": "󰂱  {device_alias}",
+        "format-off":       "󰂲",
+        "tooltip-format":   "{controller_alias}\t{controller_address}",
+        "on-click":         "blueman-manager"
     }
 }
