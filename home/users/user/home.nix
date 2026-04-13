@@ -193,7 +193,7 @@ in
     events = [
       {
         event = "before-sleep";
-        command = "${pkgs.hyprlock}/bin/hyprlock";
+        command = "pidof hyprlock || ${pkgs.hyprlock}/bin/hyprlock";
       }
     ];
     timeouts = [
