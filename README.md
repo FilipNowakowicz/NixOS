@@ -34,6 +34,8 @@ The current architecture is:
 - **Runtime Theming**: A runtime-swappable color system allows changing themes without a full NixOS rebuild.
 - **Sleep on Inactivity**: Systems are configured to automatically suspend after 10 minutes of inactivity.
 - **Centralized Keys**: SSH public keys are managed in `lib/pubkeys.nix` for easy access across the flake.
+- **Shared SSH Agent**: Home Manager runs a single user `ssh-agent` service; shells use one shared socket, so loaded keys are reused across terminals.
+
 
 ---
 

@@ -93,17 +93,6 @@
   # ── SSH Agent ──────────────────────────────────────────────────────────────
   services.ssh-agent.enable = true;
 
-  # ── Keychain ───────────────────────────────────────────────────────────────
-  programs.keychain = {
-    enable = true;
-    enableZshIntegration = true;
-    keys = [ "id_ed25519" ];
-    extraFlags = [
-      "--quiet"
-      "--systemd"
-    ];
-  };
-
   # ── FZF ────────────────────────────────────────────────────────────────────
   programs.fzf = {
     enable = true;
@@ -157,6 +146,16 @@
       zstyle ':completion:*' use-cache on
       zstyle ':completion:*' cache-path "''${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
       zstyle ':completion:*' rehash true
+
+      # Use the shared systemd-managed SSH agent in every shell.
+      export SSH_AUTH_SOCK="''${XDG_RUNTIME_DIR:-/run/user/$UID}/ssh-agent"
+      # Load the default key once per login session when the agent is empty.
+      if [[ -S "$SSH_AUTH_SOCK" ]]; then
+        ssh-add -l >/dev/null 2>&1
+        if [[ $? -eq 1 && -r "$HOME/.ssh/id_ed25519" ]]; then
+          ssh-add -q "$HOME/.ssh/id_ed25519"
+        fi
+      fi
 
       # Accept autosuggestion with Ctrl+Space
       (( ''${+widgets[autosuggest-accept]} )) && bindkey '^ ' autosuggest-accept

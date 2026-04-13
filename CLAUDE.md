@@ -16,6 +16,13 @@ approaches proactively. Explain why, not just what.
 - **Launch VM:** `nix run '.#launch-vm'`
 - **Git** is for version control only, not deployment
 
+### SSH Agent Behavior
+
+- Use Home Manager `services.ssh-agent` as the single SSH agent manager.
+- Do not enable `programs.keychain`; stale `~/.keychain` state can cause `ssh-add` failures (`Error connecting to agent: Connection refused`).
+- Zsh exports `SSH_AUTH_SOCK` to `${XDG_RUNTIME_DIR:-/run/user/$UID}/ssh-agent`.
+- Zsh auto-runs `ssh-add -q ~/.ssh/id_ed25519` only when the shared agent is empty, so passphrase entry happens once per login session and is reused in new terminals.
+
 ### Fresh VM install
 
 The VM uses impermanence. A fresh install is required whenever the disk layout (`hosts/vm/disko.nix`) changes.
@@ -112,6 +119,7 @@ Secrets are managed with sops-nix and age encryption.
 - Waybar redesign 
 - eww floating widgets (deferred)
 - Sunshine screen mirror
+- Fix inactivity suspension not working
 - Impermanence on main — attempted and reverted. Too much friction on a daily driver. Not planned.
 
 ---
