@@ -24,7 +24,8 @@
       "Bash(then)",
       "Bash(echo:*)",
       "Bash(fi)",
-      "Bash(done)"
+      "Bash(done)",
+      "Read(//home/user/.claude/**)"
     ]
   }
 }

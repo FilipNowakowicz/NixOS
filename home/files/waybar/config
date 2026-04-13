@@ -54,7 +54,7 @@
     "battery": {
         "format":          "{icon}  {capacity}%",
         "format-charging": "󰂄  {capacity}%",
-        "format-full":     "󰁹",
+        "format-full":     "",
         "format-icons":    ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
         "states": {
             "warning":  30,
