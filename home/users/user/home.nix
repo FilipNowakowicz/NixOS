@@ -186,26 +186,34 @@ in
     };
   };
 
-  # ── Swayidle ───────────────────────────────────────────────────────────
-  # Idle detection for Wayland. Triggers systemd actions after 15 minutes.
-  services.swayidle = {
+  # ── Hypridle ───────────────────────────────────────────────────────────
+  # Hyprland-native idle daemon. Uses loginctl lock-session so Hyprland's
+  # session-lock protocol handles hyprlock lifecycle independently of the
+  # idle timer — this avoids the swayidle -w re-arm race where unlocking
+  # would immediately re-trigger the lock or suspend command.
+  services.hypridle = {
     enable = true;
-    events = [
-      {
-        event = "before-sleep";
-        command = "pidof hyprlock || ${pkgs.hyprlock}/bin/hyprlock";
-      }
-    ];
-    timeouts = [
-      {
-        timeout = 900; # 15 minutes
-        command = "${pkgs.systemd}/bin/systemctl suspend";
-      }
-      {
-        timeout = 600; # 10 minutes
-        command = "${pkgs.hyprlock}/bin/hyprlock";
-      }
-    ];
+    settings = {
+      general = {
+        # Called when loginctl lock-session is received (covers both the
+        # 10-min timeout below and before_sleep_cmd).
+        lock_cmd = "pidof hyprlock || ${pkgs.hyprlock}/bin/hyprlock";
+        # Lock before sleep so the screen is never briefly visible on wake.
+        before_sleep_cmd = "loginctl lock-session";
+        # Turn displays back on after waking from suspend.
+        after_sleep_cmd = "hyprctl dispatch dpms on";
+      };
+      listener = [
+        {
+          timeout = 600; # 10 minutes → lock
+          on_timeout = "loginctl lock-session";
+        }
+        {
+          timeout = 900; # 15 minutes total (5 min after lock) → suspend
+          on_timeout = "${pkgs.systemd}/bin/systemctl suspend";
+        }
+      ];
+    };
   };
 
 }
