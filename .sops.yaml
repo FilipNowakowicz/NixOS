@@ -5,6 +5,9 @@ keys:
   # VM SSH host key converted to age: ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub
   - &vm_host age18g3r6u8cpw8re990wvpsk8rrvphz5ndthmck4ufk96prua8vuchqkg4h0e
 
+  # Homeserver-VM SSH host key converted to age
+  - &homeserver_vm_host age1y5luznghxf6uu6raf4u2dyrwkala99dm0fzy3qhl2q2naculrvuq5uwgnh
+
   # Main SSH host key converted to age: ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub
   - &main_host age1nn9990zfx0azcv9fm0m5gmcw2lhg5e2px0wawgnew0234w3nrdws0v2c0f
 
@@ -19,6 +22,11 @@ creation_rules:
       - age:
           - *user
           - *vm_host
+  - path_regex: hosts/homeserver-vm/secrets/.*
+    key_groups:
+      - age:
+          - *user
+          - *homeserver_vm_host
   - path_regex: hosts/main/secrets/.*
     key_groups:
       - age:

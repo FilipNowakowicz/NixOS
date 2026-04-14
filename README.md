@@ -8,9 +8,9 @@ The repository separates hardware, host identity, system profiles, and user conf
 ## Overview
 
 - **Reproducible & Declarative**: NixOS defines the entire system state, services, and hardware. Home Manager manages the user environment and dotfiles.
-- **Multi-Host**: Built from reusable profiles to support a primary workstation (`main`), a headless `homeserver`, and a `vm`.
+- **Multi-Host**: Built from reusable profiles to support a primary workstation (`main`), a headless `homeserver`, and multiple VMs.
 - **Secrets Management**: Handled by [sops-nix](https://github.com/Mic92/sops-nix) with age encryption, with secrets decrypted at boot by the host itself.
-- **Impermanent Root**: The `vm` and `homeserver` use an ephemeral root filesystem created with [impermanence](https://github.com/nix-community/impermanence). System state is reset on boot, with persistent data explicitly stored on a `/persist` volume.
+- **Impermanent Root**: VMs and the `homeserver` use an ephemeral root filesystem created with [impermanence](https://github.com/nix-community/impermanence). System state is reset on boot, with persistent data explicitly stored on a `/persist` volume.
 - **Declarative Disks**: Disk layouts for all hosts are managed declaratively with [disko](https://github.com/nix-community/disko).
 - **Runtime Theming**: A runtime-swappable color system allows changing themes without a full NixOS rebuild.
 
@@ -18,10 +18,9 @@ The repository separates hardware, host identity, system profiles, and user conf
 
 ## Secure Boot & Encryption for `main`
 
-The `main` host has been reinstalled to enable Secure Boot and Full Disk Encryption. This work is **now implemented**. The `main` host now uses a secure, encrypted systemd-boot setup.
+The `main` host uses a secure, encrypted systemd-boot setup:
 
-The current architecture is:
-- **Bootloader**: [Lanzaboote](https://github.com/nix-community/lanzaboote) manages Secure Boot, signing a unified kernel image. The `configurationLimit` has been removed to avoid dead bootloader entries.
+- **Bootloader**: [Lanzaboote](https://github.com/nix-community/lanzaboote) manages Secure Boot, signing a unified kernel image.
 - **Disk Encryption**: LUKS encrypts the entire disk.
 - **TPM Unlocking**: The system's TPM 2.0 is used to automatically unlock the LUKS-encrypted disk on boot.
 - **Hardware Pass-through**: IOMMU is enabled (`intel_iommu=on iommu=force`) for potential VM GPU pass-through.
@@ -36,7 +35,6 @@ The current architecture is:
 - **Centralized Keys**: SSH public keys are managed in `lib/pubkeys.nix` for easy access across the flake.
 - **Shared SSH Agent**: Home Manager runs a single user `ssh-agent` service; shells use one shared socket, so loaded keys are reused across terminals.
 
-
 ---
 
 ## Repository Structure
@@ -45,48 +43,116 @@ The current architecture is:
 .
 ├── flake.nix                          # Flake entry point
 ├── .sops.yaml                         # SOPS configuration for secret management
-├── hosts
+├── lib/
+│   ├── vm.nix                         # VM registry (single source of truth)
+│   └── pubkeys.nix                    # Centralized SSH public keys
+├── hosts/
 │   ├── main/                          # Primary workstation
-│   │   ├── default.nix                # Host configuration
-│   │   ├── disko.nix                  # Declarative disk partitioning
-│   │   └── hardware-configuration.nix # Hardware-specific settings
-│   ├── homeserver/                    # Headless server
+│   │   ├── default.nix
+│   │   ├── disko.nix
+│   │   └── hardware-configuration.nix
+│   ├── homeserver/                    # Headless server (Vaultwarden, Syncthing, Tailscale)
 │   │   ├── default.nix
 │   │   └── disko.nix
-│   ├── vm/                            # QEMU/KVM test virtual machine
+│   ├── vm/                            # Dev/test VM (desktop + home-manager)
 │   │   ├── default.nix
-│   │   └── disko.nix
+│   │   └── secrets/
+│   ├── homeserver-vm/                 # Homeserver services in a VM
+│   │   ├── default.nix
+│   │   └── secrets/
 │   └── installer/                     # Minimal NixOS ISO for fresh installs
 │       └── default.nix
-├── lib/                               # Shared library functions and constants
-│   └── pubkeys.nix                    # Centralized SSH public keys
-├── modules
+├── scripts/
+│   ├── vm.sh                          # Unified VM management (create/start/stop/etc.)
+│   └── reinstall-homeserver.sh        # Real homeserver reinstall
+├── modules/
 │   └── nixos/
-│       ├── hardware/                  # Hardware-specific modules (NVIDIA PRIME, etc.)
-│       └── profiles/                  # System-level profiles
+│       ├── hardware/                  # Hardware-specific modules (NVIDIA PRIME)
+│       └── profiles/
 │           ├── base.nix               # Base system settings (Nix, locale)
 │           ├── desktop.nix            # Desktop environment (Hyprland, PipeWire)
 │           ├── security.nix           # Security hardening (Firewall, SSH)
-│           └── server.nix             # Server-specific settings
-└── home
+│           ├── server.nix             # Server-specific settings
+│           ├── user.nix               # User account and home-manager base
+│           └── vm.nix                 # Shared VM module (hardware, disko, impermanence)
+└── home/
     ├── profiles/                      # User-level profiles (home-manager)
-    │   ├── base.nix                   # Base user packages (CLI tools, Zsh)
-    │   └── desktop.nix                # Desktop user packages (GUI apps, GTK)
+    │   ├── base.nix
+    │   └── desktop.nix
     ├── theme/
-    │   ├── active.nix                 # (→) Active theme pointer
+    │   ├── active.nix                 # Active theme pointer
     │   ├── module.nix                 # Home Manager theme module
-    │   ├── themes/                    # Theme definitions
-    │   └── wallpapers/                # Wallpaper images
+    │   ├── themes/
+    │   └── wallpapers/
     ├── users/
     │   └── user/
-    │       ├── home.nix               # Main user configuration
-    │       └── home-server.nix        # User config specific to the server
+    │       ├── home.nix
+    │       └── home-server.nix
     └── files/                         # Static dotfiles and scripts
         ├── kitty/
         ├── nvim/
-        ├── scripts/                   # Standalone shell scripts (theme-switch, etc.)
+        ├── scripts/
         └── waybar/
 ```
+
+---
+
+## VM Management
+
+All VMs are managed through a single unified command. The VM registry (`lib/vm.nix`) is the single source of truth — SSH ports, disk sizes, deploy-rs nodes, and QEMU config are all derived from it.
+
+```bash
+nix run '.#vm' -- <action> <name>
+```
+
+| Action | Description |
+|--------|-------------|
+| `create <name>` | Full setup: disk image + ISO boot + nixos-anywhere install + boot |
+| `start <name>` | Launch an existing VM |
+| `stop <name>` | Graceful shutdown (SSH poweroff, falls back to SIGTERM) |
+| `reinstall <name>` | Wipe and reinstall (for disko changes or broken state) |
+| `destroy <name>` | Delete all VM artifacts (disk, OVMF vars, SSH config) |
+| `ssh <name> [cmd]` | SSH into the VM |
+| `list` | Show all registered VMs with status |
+| `init <name>` | Generate SSH host key and sops secrets for a new VM |
+
+### Adding a new VM
+
+1. Add an entry to `lib/vm.nix` (name, SSH port, disk size)
+2. Create `hosts/<name>/default.nix` (import `modules/nixos/profiles/vm.nix` + host-specific config)
+3. Generate sops secrets: `nix run '.#vm' -- init <name>`
+4. Create the VM: `nix run '.#vm' -- create <name>`
+
+### Example: homeserver-vm end-to-end
+
+```bash
+nix run '.#vm' -- create homeserver-vm
+deploy .#homeserver-vm
+ssh homeserver-vm curl http://127.0.0.1:8222    # Vaultwarden responds
+```
+
+Multiple VMs can run simultaneously — each has its own disk image, OVMF vars, and SSH port.
+
+---
+
+## Hosts
+
+| Host | Description |
+|------|-------------|
+| `main` | Primary workstation, running a full desktop environment with NVIDIA PRIME support. |
+| `homeserver` | Headless server for self-hosted services with an ephemeral root filesystem. |
+| `vm` | QEMU/KVM dev/test VM with desktop profile. Port 2222. |
+| `homeserver-vm` | QEMU/KVM VM running homeserver services for development. Port 2223. |
+| `installer` | Minimal ISO configuration used to bootstrap new installations. |
+
+### Deployment
+
+| Host | Command | Notes |
+|---|---|---|
+| `main` | `nh os switch --hostname main .` | Modern Nix helper (`nh`) for fast rebuilds. |
+| `homeserver` | `deploy .#homeserver` | Run from the `nix develop` shell. |
+| `vm` | `deploy .#vm` | After `nix run '.#vm' -- create vm`. |
+| `homeserver-vm` | `deploy .#homeserver-vm` | After `nix run '.#vm' -- create homeserver-vm`. |
 
 ---
 
@@ -115,24 +181,6 @@ A `theme-switch` script is available in the shell to list and apply themes. It u
 
 ---
 
-## Hosts
-
-| Host | Description |
-|------|-------------|
-| `main` | Primary workstation, running a full desktop environment with NVIDIA PRIME support. |
-| `homeserver` | Headless server for self-hosted services with an ephemeral root filesystem. (Not yet deployed) |
-| `vm` | Ephemeral QEMU/KVM test VM for development and testing. |
-| `installer` | Minimal ISO configuration used to bootstrap new installations. |
-
-### Deployment
-
-| Host | Command | Notes |
-|---|---|---|
-| `main` | `nh os switch --hostname main .` | Modern Nix helper (`nh`) for fast rebuilds. |
-| `homeserver` | `deploy .#homeserver` | Run from the `nix develop` shell. (Blocked on hardware) |
-| `vm` | `deploy .#vm` | Run from the `nix develop` shell on the dev machine. |
-
-
 ## Services (Homeserver)
 
 The `homeserver` is configured to run the following services, accessible via Tailscale:
@@ -153,10 +201,11 @@ Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) and [age]
 ### How it works
 
 - `.sops.yaml` defines rules for which age public keys can decrypt which secret files.
-- Keys are grouped by name (e.g., `&user`, `&vm_host`, `&main_host`).
+- Keys are grouped by name (e.g., `&user`, `&vm_host`, `&homeserver_vm_host`, `&main_host`).
 - Host keys are derived from their respective SSH host public keys using `ssh-to-age`.
 - This allows a host to decrypt its own secrets automatically during activation. The host's SSH key is persisted via `impermanence` to ensure the age key remains stable across reboots.
 - The user's personal age key (`user`) can decrypt all secrets.
+- Each VM has its own encrypted SSH host keys in `hosts/<name>/secrets/`, injected during `create`/`reinstall` so sops works from first boot.
 
 ### Setup
 
@@ -191,12 +240,11 @@ The flake provides several `devShells` and `apps` for development and maintenanc
 
 | Type | Name | Purpose |
 |------|------|---------|
-| `devShell` | `default` | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, `nh`, `nixd`, etc. |
+| `devShell` | `default` | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, `qemu`, `OVMF`, `nixd`, etc. |
 | `devShell` | `security`| Includes common security tools: `nmap`, `gobuster`, `sqlmap`, `hydra`, `john`, etc. |
-| `app` | `bootstrap-vm` | Prepares and launches a fresh VM install in one command: `nix run '.#bootstrap-vm'`. |
-| `app` | `reinstall-vm` | Runs `nixos-anywhere` to perform a fresh installation of the VM. |
-| `app` | `launch-vm` | Boots the installed VM with QEMU. |
-| `app` | `launch-vm-iso`| Boots the installer ISO in the VM to begin a fresh install. |
+| `app` | `vm` | Unified VM management: `nix run '.#vm' -- <action> <name>` |
+| `app` | `reinstall-homeserver` | Runs `nixos-anywhere` for fresh homeserver install on real hardware. |
+| `package` | `installer-iso` | Minimal NixOS ISO: `nix build '.#installer-iso'` |
 
 ---
 
@@ -226,4 +274,5 @@ nix flake check
 nix build '.#nixosConfigurations.vm.config.system.build.toplevel' --no-link
 nix build '.#nixosConfigurations.main.config.system.build.toplevel' --no-link
 nix build '.#nixosConfigurations.homeserver.config.system.build.toplevel' --no-link
+nix build '.#nixosConfigurations.homeserver-vm.config.system.build.toplevel' --no-link
 ```

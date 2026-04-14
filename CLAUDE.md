@@ -9,33 +9,58 @@ approaches proactively. Explain why, not just what.
 ## Environment
 
 - **Dev machine:** NixOS (main)
-- **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nh`, `nixd`, `statix`, `deadnix`, `sops`, `ssh-to-age`
-- **Deploy (VM):** `deploy .#vm`
+- **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nh`, `nixd`, `statix`, `deadnix`, `sops`, `ssh-to-age`, `qemu`, `OVMF`
+- **Deploy (VM):** `deploy .#vm` or `deploy .#homeserver-vm`
 - **Deploy (main):** `nh os switch --hostname main .` (alias: `rebuild`)
 - **Validate flake:** `nix flake check`
 - **Lint:** `statix check .` and `deadnix .`
-- **Hot-reload:** `ssh nixvm 'hyprctl reload'`
-- **Launch VM:** `nix run '.#launch-vm'`
 - **Git** is for version control only, not deployment
+
+---
+
+## VM Management
+
+All VMs are managed through a single unified command:
+
+```bash
+nix run '.#vm' -- <action> <name>
+```
+
+| Action | Description |
+|--------|-------------|
+| `create <name>` | Full setup: disk + ISO + nixos-anywhere + boot |
+| `start <name>` | Launch existing VM |
+| `stop <name>` | Graceful shutdown |
+| `reinstall <name>` | Wipe and reinstall |
+| `destroy <name>` | Delete all VM artifacts |
+| `ssh <name>` | SSH into the VM |
+| `list` | Show all VMs with status |
+| `init <name>` | Generate sops secrets for a new VM |
+
+**VM registry** (`lib/vm.nix`) is the single source of truth — SSH ports, disk sizes, deploy-rs nodes, and QEMU config are all derived from it.
+
+**Shared VM module** (`modules/nixos/profiles/vm.nix`) provides hardware, disko, impermanence base, passwordless sudo, and SSH for all VMs.
 
 ---
 
 ## Repository Structure
 
-- `flake.nix` — entry point, defines hosts, home-manager, deploy-rs nodes, VM apps
-- `hosts/main/` — real machine config, disko layout, LUKS/LVM, Lanzaboote (Secure Boot)
-- `hosts/vm/` — VM config, virtio drivers, disko layout, impermanence, sops secrets
-- `hosts/installer/` — minimal NixOS ISO config for fresh installs
-- `hosts/homeserver/` — homeserver config (Vaultwarden, Nginx, Tailscale)
+- `flake.nix` — entry point, defines hosts, home-manager, deploy-rs nodes, VM app
+- `lib/vm.nix` — VM registry (single source of truth for all VMs)
 - `lib/pubkeys.nix` — centralized SSH public keys
-- `scripts/` — VM/homeserver bootstrap and reinstall scripts
+- `hosts/main/` — real machine config, disko layout, LUKS/LVM, Lanzaboote (Secure Boot)
+- `hosts/vm/` — dev/test VM config (desktop profile + home-manager)
+- `hosts/homeserver-vm/` — homeserver services in a VM (Vaultwarden, Syncthing)
+- `hosts/homeserver/` — real hardware homeserver (same services + Tailscale, Nginx, TLS)
+- `hosts/installer/` — minimal NixOS ISO config for fresh installs
+- `scripts/vm.sh` — unified VM management script
+- `scripts/reinstall-homeserver.sh` — real homeserver reinstall (separate workflow)
+- `modules/nixos/profiles/` — system profiles (base, desktop, security, server, vm)
 - `modules/nixos/hardware/` — hardware drivers and graphics (NVIDIA PRIME)
-- `modules/nixos/profiles/` — system profiles (base, desktop, security)
 - `home/profiles/` — home-manager profiles (base, desktop)
 - `home/theme/` — runtime-swappable themes and Home Manager module
 - `home/files/` — dotfiles and standalone scripts (NIX_REPO injected)
 - `home/users/user/` — user home-manager entry point
-- `home/users/user/home.nix` — main user config, imports theme module and scripts
 
 ---
 
@@ -51,9 +76,9 @@ approaches proactively. Explain why, not just what.
 Managed with sops-nix + age. Edit secrets with `sops <file>`.
 
 - **Age key:** `~/.config/sops/age/keys.txt`
-- **Adding a host key:** `ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub` → add result to `.sops.yaml` under `&vm_host`, `&main_host`, or `&homeserver_host`
+- **Adding a host key:** `ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub` → add result to `.sops.yaml`
 - **`.sops.yaml`:** repo root, defines key groups per path regex
-- **VM secrets:** `hosts/vm/secrets/secrets.yaml` — host key survives reboots via impermanence
+- **Each VM has its own host key** in `hosts/<name>/secrets/` — encrypted host keys are injected during `create`/`reinstall` so sops works from first boot
 
 ---
 

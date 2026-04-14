@@ -56,54 +56,61 @@
         config.allowUnfree = true;
       };
 
+      lib = nixpkgs.lib;
+
+      vmRegistry = import ./lib/vm.nix;
+
       mkNixos =
         host:
         nixpkgs.lib.nixosSystem {
           inherit system;
-
           specialArgs = { inherit inputs; };
-
           modules = [
             ./hosts/${host}/default.nix
             home-manager.nixosModules.home-manager
             sops-nix.nixosModules.sops
           ];
         };
+
+      # ── VM-derived infrastructure ────────────────────────────────────────
+      vmDeployNodes = lib.mapAttrs (name: _: {
+        hostname = name;
+        sshUser = "user";
+        magicRollback = false;
+        autoRollback = false;
+        profiles.system = {
+          user = "root";
+          path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.${name};
+        };
+      }) vmRegistry;
+
+      vmNixosConfigs = lib.mapAttrs (name: _: mkNixos name) vmRegistry;
+
+      # VM management script — unified entry point
+      vmApp = {
+        type = "app";
+        program = toString (
+          pkgs.writeShellScript "vm" ''
+            export VM_REGISTRY='${builtins.toJSON vmRegistry}'
+            export OVMF_CODE="${pkgs.OVMF.fd}/FV/OVMF_CODE.fd"
+            export OVMF_SOURCE="${pkgs.OVMF.fd}/FV/OVMF_VARS.fd"
+            export QEMU_BIN="${pkgs.qemu}/bin/qemu-system-x86_64"
+            export QEMU_IMG_BIN="${pkgs.qemu}/bin/qemu-img"
+            export JQ_BIN="${pkgs.jq}/bin/jq"
+            export SSH_KEYGEN_BIN="${pkgs.openssh}/bin/ssh-keygen"
+            export NIXOS_ANYWHERE_BIN="${nixos-anywhere.packages.${system}.nixos-anywhere}/bin/nixos-anywhere"
+            export SOPS_BIN="${pkgs.sops}/bin/sops"
+            export SSH_TO_AGE_BIN="${pkgs.ssh-to-age}/bin/ssh-to-age"
+            exec ${pkgs.bash}/bin/bash ${./scripts/vm.sh} "$@"
+          ''
+        );
+        meta.description = "Manage QEMU/KVM virtual machines";
+      };
     in
     {
       # ── Apps ────────────────────────────────────────────────────────────────
       apps.${system} = {
-        launch-vm = {
-          type = "app";
-          program = toString (pkgs.writeShellScript "launch-vm" (builtins.readFile ./scripts/launch-vm.sh));
-          meta.description = "Launch the NixOS test VM";
-        };
-        launch-vm-iso = {
-          type = "app";
-          program = toString (
-            pkgs.writeShellScript "launch-vm-iso" (builtins.readFile ./scripts/launch-vm-iso.sh)
-          );
-          meta.description = "Launch the VM from an installer ISO";
-        };
-        bootstrap-vm = {
-          type = "app";
-          program = toString (
-            pkgs.writeShellScript "bootstrap-vm" (builtins.readFile ./scripts/bootstrap-vm.sh)
-          );
-          meta.description = "Bootstrap a fresh VM install";
-        };
-        reinstall-vm = {
-          type = "app";
-          program = toString (
-            pkgs.writeShellScript "reinstall-vm" ''
-              export SSH_KEYGEN_BIN="${pkgs.openssh}/bin/ssh-keygen"
-              export SOPS_BIN="${pkgs.sops}/bin/sops"
-              export NIXOS_ANYWHERE_BIN="${nixos-anywhere.packages.${system}.nixos-anywhere}/bin/nixos-anywhere"
-              exec ${pkgs.bash}/bin/bash ${./scripts/reinstall-vm.sh}
-            ''
-          );
-          meta.description = "Reinstall NixOS on the VM via nixos-anywhere";
-        };
+        vm = vmApp;
         reinstall-homeserver = {
           type = "app";
           program = toString (
@@ -141,13 +148,15 @@
               sops
               ssh-to-age
               qemu
-              ovmf
+              OVMF
             ])
             ++ [
               deploy-rs.packages.${system}.deploy-rs
               nixos-anywhere.packages.${system}.nixos-anywhere
             ];
           shellHook = ''
+            # Make 'vm' command available directly in the dev shell
+            alias vm="nix run '.#vm' --"
             exec ${pkgs.zsh}/bin/zsh
           '';
         };
@@ -156,7 +165,7 @@
           packages = with pkgs; [
             nmap
             whois
-            dnsutils # provides dig
+            dnsutils
             sqlmap
             gobuster
             ffuf
@@ -180,35 +189,13 @@
       };
 
       # ── NixOS Configurations ────────────────────────────────────────────────
-      nixosConfigurations = {
+      nixosConfigurations = vmNixosConfigs // {
         main = mkNixos "main";
-        vm = mkNixos "vm";
-        homeserver-vm = mkNixos "homeserver-vm";
         homeserver = mkNixos "homeserver";
       };
 
       # ── Deploy-RS ───────────────────────────────────────────────────────────
-      deploy.nodes = {
-        vm = {
-          hostname = "nixvm"; # uses ~/.ssh/config alias → localhost:2222
-          sshUser = "user";
-          magicRollback = false; # VM is local; rollback machinery not needed
-          autoRollback = false;
-          profiles.system = {
-            user = "root";
-            path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.vm;
-          };
-        };
-        homeserver-vm = {
-          hostname = "nixvm"; # Test homeserver-vm on the same VM as dev vm
-          sshUser = "user";
-          magicRollback = false;
-          autoRollback = false;
-          profiles.system = {
-            user = "root";
-            path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.homeserver-vm;
-          };
-        };
+      deploy.nodes = vmDeployNodes // {
         homeserver = {
           hostname = "homeserver";
           sshUser = "user";
@@ -239,6 +226,7 @@
         profiles-base = import ./modules/nixos/profiles/base.nix;
         profiles-desktop = import ./modules/nixos/profiles/desktop.nix;
         profiles-security = import ./modules/nixos/profiles/security.nix;
+        profiles-vm = import ./modules/nixos/profiles/vm.nix;
       };
 
       homeModules = {
