@@ -140,6 +140,8 @@
               deadnix
               sops
               ssh-to-age
+              qemu
+              ovmf
             ])
             ++ [
               deploy-rs.packages.${system}.deploy-rs
@@ -181,6 +183,7 @@
       nixosConfigurations = {
         main = mkNixos "main";
         vm = mkNixos "vm";
+        homeserver-vm = mkNixos "homeserver-vm";
         homeserver = mkNixos "homeserver";
       };
 
@@ -194,6 +197,16 @@
           profiles.system = {
             user = "root";
             path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.vm;
+          };
+        };
+        homeserver-vm = {
+          hostname = "nixvm"; # Test homeserver-vm on the same VM as dev vm
+          sshUser = "user";
+          magicRollback = false;
+          autoRollback = false;
+          profiles.system = {
+            user = "root";
+            path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.homeserver-vm;
           };
         };
         homeserver = {

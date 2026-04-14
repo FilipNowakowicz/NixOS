@@ -31,4 +31,5 @@ This document tracks the evolution of this NixOS configuration, from immediate i
 ### 5. Design
 - [ ] **Waybar**: Extra Icons
 - [ ] **eww Widgets**: Research and implement floating dashboard widgets (currently deferred).
+
 ---
