@@ -222,7 +222,6 @@ action_create() {
   "$NIXOS_ANYWHERE_BIN" \
     --flake ".#${name}" \
     --extra-files "$tmpdir" \
-    --no-substitute-on-destination \
     --ssh-port "$port" \
     --ssh-option StrictHostKeyChecking=no \
     --ssh-option UserKnownHostsFile=/dev/null \
@@ -359,7 +358,6 @@ action_reinstall() {
   "$NIXOS_ANYWHERE_BIN" \
     --flake ".#${name}" \
     --extra-files "$tmpdir" \
-    --no-substitute-on-destination \
     --ssh-port "$port" \
     --ssh-option StrictHostKeyChecking=no \
     --ssh-option UserKnownHostsFile=/dev/null \
