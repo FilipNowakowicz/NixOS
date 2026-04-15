@@ -73,6 +73,21 @@ in
     "/persist/sync"
   ];
 
+  # Fix permissions on /persist/sync before Syncthing starts.
+  systemd.user.services.syncthing-fixperms = {
+    description = "Fix Syncthing sync directory permissions";
+    before = [ "syncthing.service" ];
+    wantedBy = [ "syncthing.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    script = ''
+      mkdir -p /persist/sync/documents /persist/sync/photos
+      chmod 755 /persist/sync /persist/sync/documents /persist/sync/photos
+    '';
+  };
+
   # Generate a self-signed TLS cert on first boot, stored in /persist so it
   # survives reboots. nginx reads it directly from /persist/ssl/.
   systemd.services.vaultwarden-tls-cert = {
