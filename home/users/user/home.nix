@@ -110,8 +110,6 @@ in
       # System
       rebuild = "nh os switch --hostname main ${nixRepo}";
       battery = "acpi -b";
-      buds = "bluetoothctl connect DC:69:E2:CF:9A:BD";
-      headset = "bluetoothctl connect 40:58:99:3D:C8:D3";
       whatsapp = "wasistlos &";
       copilot = "steam-run gh copilot";
     };

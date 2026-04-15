@@ -9,13 +9,6 @@ This document tracks the evolution of this NixOS configuration, from immediate i
 ### 2. Infrastructure & Observability
 4. - [ ] **Declarative Backups (Restic)**: Configure `services.restic` to automate encrypted, deduplicated backups of `/persist` volumes to offsite storage (B2/R2) with automated pruning and health checks.
 
-### 3. Security Hardening & Identity
-2. - [ ] **Advanced Service Sandboxing**: Systematically audit systemd services to apply strict security wrappers like `ProtectSystem=strict`, `PrivateTmp=true`, and `CapabilityBoundingSet`.
-    *   Implemented (phase 1): homeserver + homeserver-vm hardening for `nginx`, `vaultwarden`, `syncthing`, `tailscale-cert`, and `vaultwarden-tls-cert`.
-    *   Next step: extend the same audit/hardening workflow to `main` and any additional long-running services.
-    *   `main` impact notes: highest-risk/most-sensitive targets are `tailscaled`, `mullvad-vpn`, `NetworkManager`, `openssh`, `greetd`, `pipewire`, and `fwupd`; desktop/VPN services will require careful `ReadWritePaths`, device, socket-family, and capability allowances (`/dev/net/tun`, `CAP_NET_ADMIN`, `CAP_NET_RAW`, runtime IPC paths) to avoid breakage.
-
-
 
 <!-- ### 5. Design -->
 <!-- - [ ] **Waybar**: Extra Icons -->

@@ -199,6 +199,28 @@ in
   sops = {
     defaultSopsFile = ./secrets/secrets.yaml;
     secrets.user_password.neededForUsers = true;
+    secrets.restic_password = {};
+  };
+
+  # ── Backups ──────────────────────────────────────────────────────────────────
+  services.restic.backups.local = {
+    paths = [
+      "/var/lib/vaultwarden"
+      "/var/lib/syncthing"
+      "/persist/sync"
+    ];
+    repository = "/persist/restic-repo";
+    passwordFile = config.sops.secrets.restic_password.path;
+    initialize = true;
+    timerConfig = {
+      OnCalendar = "daily";
+      Persistent = true;
+    };
+    pruneOpts = [
+      "--keep-daily 7"
+      "--keep-weekly 4"
+      "--keep-monthly 3"
+    ];
   };
 
   # Support SSH sessions from Kitty terminals (`TERM=xterm-kitty`).
