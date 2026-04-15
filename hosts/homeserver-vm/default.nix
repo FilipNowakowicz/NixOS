@@ -7,6 +7,26 @@
 { config, pkgs, ... }:
 let
   syncthing = import ../../lib/syncthing.nix;
+  commonSandbox = {
+    NoNewPrivileges = true;
+    PrivateTmp = true;
+    PrivateDevices = true;
+    ProtectSystem = "strict";
+    ProtectHome = true;
+    ProtectControlGroups = true;
+    ProtectKernelTunables = true;
+    ProtectKernelModules = true;
+    LockPersonality = true;
+    RestrictSUIDSGID = true;
+    RestrictRealtime = true;
+    RestrictNamespaces = true;
+    SystemCallArchitectures = "native";
+    RestrictAddressFamilies = [
+      "AF_UNIX"
+      "AF_INET"
+      "AF_INET6"
+    ];
+  };
 in
 {
   imports = [
@@ -15,12 +35,24 @@ in
     ../../modules/nixos/profiles/security.nix
     ../../modules/nixos/profiles/user.nix
     ../../modules/nixos/profiles/server.nix
+    ../../modules/nixos/profiles/observability.nix
   ];
 
   system.stateVersion = "24.11";
   networking.hostName = "homeserver-vm";
 
   # ── Services ────────────────────────────────────────────────────────────────
+  profiles.observability = {
+    enable = true;
+    grafana.enable = true;
+    loki.enable = true;
+    tempo.enable = true;
+    mimir.enable = true;
+    collectors.metrics.enable = true;
+    collectors.logs.enable = true;
+    collectors.traces.enable = true;
+  };
+
   services = {
     vaultwarden = {
       enable = true;
@@ -70,10 +102,40 @@ in
     "/etc/NetworkManager/system-connections"
     "/var/lib/syncthing"
     "/var/lib/vaultwarden"
+    "/var/lib/grafana"
+    "/var/lib/loki"
+    "/var/lib/mimir"
+    "/var/lib/prometheus2"
+    "/var/lib/tempo"
     "/persist/sync"
   ];
 
   # Fix permissions on /persist/sync before Syncthing starts.
+  systemd.services.vaultwarden.serviceConfig = commonSandbox // {
+    CapabilityBoundingSet = "";
+    AmbientCapabilities = "";
+    ReadWritePaths = [ "/var/lib/vaultwarden" ];
+  };
+
+  systemd.services.nginx.serviceConfig = commonSandbox // {
+    CapabilityBoundingSet = "";
+    AmbientCapabilities = "";
+    ReadWritePaths = [
+      "/var/cache/nginx"
+      "/var/log/nginx"
+    ];
+  };
+
+  systemd.services.syncthing.serviceConfig = commonSandbox // {
+    CapabilityBoundingSet = "";
+    AmbientCapabilities = "";
+    ProtectSystem = "full";
+    ReadWritePaths = [
+      "/var/lib/syncthing"
+      "/persist/sync"
+    ];
+  };
+
   systemd.user.services.syncthing-fixperms = {
     description = "Fix Syncthing sync directory permissions";
     before = [ "syncthing.service" ];
@@ -95,9 +157,12 @@ in
     wantedBy = [ "nginx.service" ];
     before = [ "nginx.service" ];
     after = [ "local-fs.target" ];
-    serviceConfig = {
+    serviceConfig = commonSandbox // {
       Type = "oneshot";
       RemainAfterExit = true;
+      ProtectHome = false;
+      ReadWritePaths = [ "/persist" ];
+      RestrictAddressFamilies = [ "AF_UNIX" ];
     };
     script = ''
       if [ ! -f /persist/ssl/cert.pem ]; then

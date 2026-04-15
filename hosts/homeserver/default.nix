@@ -11,6 +11,26 @@
 let
   tailnetFQDN = "homeserver.filip-nowakowicz.ts.net";
   syncthing = import ../../lib/syncthing.nix;
+  commonSandbox = {
+    NoNewPrivileges = true;
+    PrivateTmp = true;
+    PrivateDevices = true;
+    ProtectSystem = "strict";
+    ProtectHome = true;
+    ProtectControlGroups = true;
+    ProtectKernelTunables = true;
+    ProtectKernelModules = true;
+    LockPersonality = true;
+    RestrictSUIDSGID = true;
+    RestrictRealtime = true;
+    RestrictNamespaces = true;
+    SystemCallArchitectures = "native";
+    RestrictAddressFamilies = [
+      "AF_UNIX"
+      "AF_INET"
+      "AF_INET6"
+    ];
+  };
 in
 {
   imports = [
@@ -146,9 +166,12 @@ in
       # Reload nginx to apply new cert
       systemctl reload nginx || true
     '';
-    serviceConfig = {
+    serviceConfig = commonSandbox // {
       Type = "oneshot";
       RemainAfterExit = true;
+      ProtectHome = false;
+      ReadWritePaths = [ "/var/lib/tailscale" ];
+      RestrictAddressFamilies = [ "AF_UNIX" ];
     };
   };
 
@@ -156,6 +179,30 @@ in
   systemd.services.nginx = {
     after = [ "tailscale-cert.service" ];
     requires = [ "tailscale-cert.service" ];
+    serviceConfig = commonSandbox // {
+      CapabilityBoundingSet = "CAP_NET_BIND_SERVICE";
+      AmbientCapabilities = "CAP_NET_BIND_SERVICE";
+      ReadWritePaths = [
+        "/var/cache/nginx"
+        "/var/log/nginx"
+      ];
+    };
+  };
+
+  systemd.services.vaultwarden.serviceConfig = commonSandbox // {
+    CapabilityBoundingSet = "";
+    AmbientCapabilities = "";
+    ReadWritePaths = [ "/var/lib/vaultwarden" ];
+  };
+
+  systemd.services.syncthing.serviceConfig = commonSandbox // {
+    CapabilityBoundingSet = "";
+    AmbientCapabilities = "";
+    ProtectSystem = "full";
+    ReadWritePaths = [
+      "/var/lib/syncthing"
+      "/persist/sync"
+    ];
   };
 
   # Fix permissions on /persist/sync before Syncthing starts.

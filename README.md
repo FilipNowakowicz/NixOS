@@ -194,6 +194,24 @@ The `homeserver` is configured to run the following services, accessible via Tai
 
 ---
 
+## Observability (homeserver-vm pilot)
+
+`homeserver-vm` now runs a full local LGTM stack for validation before promoting to real hosts:
+
+| Component | Purpose | Local endpoint |
+|---|---|---|
+| **Grafana** | Dashboards and datasource UI | `http://127.0.0.1:3000` |
+| **Loki** | Log storage and querying | `http://127.0.0.1:3100` |
+| **Tempo** | Trace storage/query backend | `http://127.0.0.1:3200` |
+| **Mimir** | Metrics storage/query backend | `http://127.0.0.1:9009` |
+| **Prometheus** | Scraping + remote write to Mimir | `http://127.0.0.1:9090` |
+| **Grafana Alloy** | Journald log shipping to Loki | local systemd service |
+| **OpenTelemetry Collector** | Trace pipeline to Tempo | receivers on `127.0.0.1:14317/14318` |
+
+Implementation is shared via `modules/nixos/profiles/observability.nix` and enabled on `hosts/homeserver-vm/default.nix`.
+
+---
+
 ## Secrets (sops-nix)
 
 Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) and [age](https://age-encryption.org) encryption.

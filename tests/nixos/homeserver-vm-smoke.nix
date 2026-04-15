@@ -34,11 +34,26 @@ in
     machine.wait_for_unit("vaultwarden.service")
     machine.wait_for_unit("nginx.service")
     machine.wait_for_unit("syncthing.service")
+    machine.wait_for_unit("grafana.service")
+    machine.wait_for_unit("loki.service")
+    machine.wait_for_unit("tempo.service")
+    machine.wait_for_unit("mimir.service")
+    machine.wait_for_unit("prometheus.service")
+    machine.wait_for_unit("prometheus-node-exporter.service")
+    machine.wait_for_unit("alloy.service")
+    machine.wait_for_unit("opentelemetry-collector.service")
 
     # Validate nginx TLS proxy to Vaultwarden.
     machine.succeed("curl -kfsS https://127.0.0.1:8443/ | grep -Eqi 'vaultwarden|bitwarden'")
 
     # Validate Syncthing GUI bind.
     machine.succeed("ss -ltn '( sport = :8384 )' | grep -q 127.0.0.1:8384")
+
+    # Validate observability endpoints.
+    machine.succeed("curl -fsS http://127.0.0.1:3000/api/health | grep -q '\"database\":\"ok\"'")
+    machine.succeed("curl -fsS http://127.0.0.1:3100/ready")
+    machine.succeed("curl -fsS http://127.0.0.1:3200/ready")
+    machine.succeed("curl -fsS http://127.0.0.1:9009/ready")
+    machine.succeed("curl -fsS http://127.0.0.1:9090/-/ready")
   '';
 }

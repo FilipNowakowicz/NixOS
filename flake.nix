@@ -229,6 +229,7 @@
       nixosModules = {
         profiles-base = import ./modules/nixos/profiles/base.nix;
         profiles-desktop = import ./modules/nixos/profiles/desktop.nix;
+        profiles-observability = import ./modules/nixos/profiles/observability.nix;
         profiles-security = import ./modules/nixos/profiles/security.nix;
         profiles-vm = import ./modules/nixos/profiles/vm.nix;
       };
