@@ -1,10 +1,28 @@
 { config, lib, ... }:
 let
   cfg = config.profiles.observability;
+  shouldUseIngestAuth = cfg.ingestAuth.username != null && cfg.ingestAuth.passwordFile != null;
+  metricsRemoteWriteAuth = lib.optionalAttrs shouldUseIngestAuth {
+    basic_auth = {
+      username = cfg.ingestAuth.username;
+      password_file = toString cfg.ingestAuth.passwordFile;
+    };
+  };
+  alloyBasicAuth =
+    if shouldUseIngestAuth then
+      ''
+                basic_auth {
+                  username = "${cfg.ingestAuth.username}"
+                  password_file = "${toString cfg.ingestAuth.passwordFile}"
+                }
+      ''
+    else
+      "";
   alloyConfig = ''
-    loki.write "local" {
+    loki.write "target" {
       endpoint {
-        url = "http://127.0.0.1:3100/loki/api/v1/push"
+        url = "${cfg.collectors.logs.pushURL}"
+${alloyBasicAuth}
       }
     }
 
@@ -14,13 +32,13 @@ let
         job  = "systemd-journal",
         host = "${config.networking.hostName}",
       }
-      forward_to = [loki.write.local.receiver]
+      forward_to = [loki.write.target.receiver]
     }
   '';
   dashboardJson = builtins.toJSON {
     id = null;
-    uid = "homeserver-vm-overview";
-    title = "Homeserver VM Overview";
+    uid = "homeserver-fleet-overview";
+    title = "Homeserver Fleet Overview";
     timezone = "browser";
     schemaVersion = 39;
     version = 1;
@@ -69,6 +87,28 @@ let
           }
         ];
       }
+      {
+        id = 3;
+        title = "Memory Usage %";
+        type = "timeseries";
+        datasource = {
+          type = "prometheus";
+          uid = "mimir";
+        };
+        gridPos = {
+          h = 8;
+          w = 12;
+          x = 12;
+          y = 0;
+        };
+        targets = [
+          {
+            expr = "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100";
+            legendFormat = "{{instance}}";
+            refId = "A";
+          }
+        ];
+      }
     ];
     time = {
       from = "now-1h";
@@ -82,13 +122,69 @@ in
     enable = lib.mkEnableOption "LGTM observability profile";
 
     grafana.enable = lib.mkEnableOption "Grafana";
+    grafana.adminUser = lib.mkOption {
+      type = lib.types.str;
+      default = "admin";
+      description = "Grafana admin username";
+    };
+    grafana.adminPasswordFile = lib.mkOption {
+      type = with lib.types; nullOr path;
+      default = null;
+      description = "File containing the Grafana admin password";
+    };
     loki.enable = lib.mkEnableOption "Loki";
     tempo.enable = lib.mkEnableOption "Tempo";
     mimir.enable = lib.mkEnableOption "Mimir";
 
-    collectors.metrics.enable = lib.mkEnableOption "Prometheus metrics collection";
-    collectors.logs.enable = lib.mkEnableOption "Loki log shipping";
-    collectors.traces.enable = lib.mkEnableOption "OpenTelemetry trace pipeline";
+    collectors.metrics = {
+      enable = lib.mkEnableOption "Prometheus metrics collection";
+      remoteWriteURL = lib.mkOption {
+        type = with lib.types; nullOr str;
+        default = null;
+        description = "Remote write URL for Prometheus metrics";
+      };
+    };
+
+    collectors.logs = {
+      enable = lib.mkEnableOption "Loki log shipping";
+      pushURL = lib.mkOption {
+        type = lib.types.str;
+        default = "http://127.0.0.1:3100/loki/api/v1/push";
+        description = "Loki push URL used by Alloy";
+      };
+    };
+
+    collectors.traces = {
+      enable = lib.mkEnableOption "OpenTelemetry trace pipeline";
+      receiverGRPCEndpoint = lib.mkOption {
+        type = lib.types.str;
+        default = "127.0.0.1:14317";
+        description = "OpenTelemetry Collector OTLP gRPC receiver endpoint";
+      };
+      receiverHTTPEndpoint = lib.mkOption {
+        type = lib.types.str;
+        default = "127.0.0.1:14318";
+        description = "OpenTelemetry Collector OTLP HTTP receiver endpoint";
+      };
+      exportURL = lib.mkOption {
+        type = with lib.types; nullOr str;
+        default = null;
+        description = "Remote OTLP HTTP endpoint for trace export";
+      };
+    };
+
+    ingestAuth = {
+      username = lib.mkOption {
+        type = with lib.types; nullOr str;
+        default = null;
+        description = "Username for authenticated ingest";
+      };
+      passwordFile = lib.mkOption {
+        type = with lib.types; nullOr path;
+        default = null;
+        description = "Password file for authenticated ingest";
+      };
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -211,11 +307,22 @@ in
         }
       ];
 
-      remoteWrite = lib.optionals cfg.mimir.enable [
-        {
-          url = "http://127.0.0.1:9009/api/v1/push";
-        }
-      ];
+      remoteWrite =
+        if cfg.collectors.metrics.remoteWriteURL != null then
+          [
+            (
+              {
+                url = cfg.collectors.metrics.remoteWriteURL;
+              }
+              // metricsRemoteWriteAuth
+            )
+          ]
+        else
+          lib.optionals cfg.mimir.enable [
+            {
+              url = "http://127.0.0.1:9009/api/v1/push";
+            }
+          ];
     };
 
     services.grafana = lib.mkIf cfg.grafana.enable {
@@ -226,7 +333,14 @@ in
           http_port = 3000;
           domain = "localhost";
         };
-        security.secret_key = "SW2YcwTIb9zpOOhoPsMm";
+        security =
+          {
+            secret_key = "SW2YcwTIb9zpOOhoPsMm";
+            admin_user = cfg.grafana.adminUser;
+          }
+          // lib.optionalAttrs (cfg.grafana.adminPasswordFile != null) {
+            admin_password = "$__file{${toString cfg.grafana.adminPasswordFile}}";
+          };
       };
       provision = {
         enable = true;
@@ -276,7 +390,7 @@ in
 
     environment.etc = lib.mkMerge [
       (lib.mkIf cfg.grafana.enable {
-        "grafana-dashboards/homeserver-vm-overview.json".text = dashboardJson;
+        "grafana-dashboards/homeserver-fleet-overview.json".text = dashboardJson;
       })
       (lib.mkIf cfg.collectors.logs.enable {
         "alloy/config.alloy".text = alloyConfig;
@@ -301,8 +415,8 @@ in
       configPath = "/etc/alloy/config.alloy";
     };
     systemd.services.alloy = lib.mkIf cfg.collectors.logs.enable {
-      after = [ "loki.service" ];
-      requires = [ "loki.service" ];
+      after = lib.optionals cfg.loki.enable [ "loki.service" ];
+      requires = lib.optionals cfg.loki.enable [ "loki.service" ];
       serviceConfig.SupplementaryGroups = [ "systemd-journal" ];
     };
 
@@ -310,19 +424,42 @@ in
       enable = true;
       settings = {
         receivers.otlp.protocols = {
-          grpc.endpoint = "127.0.0.1:14317";
-          http.endpoint = "127.0.0.1:14318";
+          grpc.endpoint = cfg.collectors.traces.receiverGRPCEndpoint;
+          http.endpoint = cfg.collectors.traces.receiverHTTPEndpoint;
         };
         processors.batch = { };
-        exporters.otlp = {
-          endpoint = "127.0.0.1:4317";
-          tls.insecure = true;
+        extensions = lib.optionalAttrs shouldUseIngestAuth {
+          "basicauth/client" = {
+            client_auth = {
+              username = cfg.ingestAuth.username;
+              password_file = toString cfg.ingestAuth.passwordFile;
+            };
+          };
         };
+        exporters =
+          if cfg.collectors.traces.exportURL != null then
+            {
+              otlphttp =
+                {
+                  endpoint = cfg.collectors.traces.exportURL;
+                }
+                // lib.optionalAttrs shouldUseIngestAuth {
+                  auth.authenticator = "basicauth/client";
+                };
+            }
+          else
+            {
+              otlp = {
+                endpoint = "127.0.0.1:4317";
+                tls.insecure = true;
+              };
+            };
         service.pipelines.traces = {
           receivers = [ "otlp" ];
           processors = [ "batch" ];
-          exporters = [ "otlp" ];
+          exporters = if cfg.collectors.traces.exportURL != null then [ "otlphttp" ] else [ "otlp" ];
         };
+        service.extensions = lib.optionals shouldUseIngestAuth [ "basicauth/client" ];
       };
     };
   };

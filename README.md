@@ -194,11 +194,11 @@ The `homeserver` is configured to run the following services, accessible via Tai
 
 ---
 
-## Observability (homeserver-vm pilot)
+## Observability (homeserver rollout)
 
-`homeserver-vm` now runs a full local LGTM stack for validation before promoting to real hosts:
+`homeserver` now hosts the shared LGTM stack. `main` and `vm` ship logs/metrics/traces to it over authenticated Tailscale HTTPS ingest paths.
 
-| Component | Purpose | Local endpoint |
+| Component | Purpose | Homeserver local endpoint |
 |---|---|---|
 | **Grafana** | Dashboards and datasource UI | `http://127.0.0.1:3000` |
 | **Loki** | Log storage and querying | `http://127.0.0.1:3100` |
@@ -208,7 +208,15 @@ The `homeserver` is configured to run the following services, accessible via Tai
 | **Grafana Alloy** | Journald log shipping to Loki | local systemd service |
 | **OpenTelemetry Collector** | Trace pipeline to Tempo | receivers on `127.0.0.1:14317/14318` |
 
-Implementation is shared via `modules/nixos/profiles/observability.nix` and enabled on `hosts/homeserver-vm/default.nix`.
+Authenticated ingest routes on `https://homeserver.<tailnet-name>.ts.net`:
+
+- `/obs/loki/` → Loki push API
+- `/obs/mimir/` → Mimir remote_write API
+- `/obs/otlp/` → OpenTelemetry Collector HTTP ingest
+
+Implementation is shared via `modules/nixos/profiles/observability.nix`, enabled as a full stack on `hosts/homeserver/default.nix`, and enabled as telemetry sources on `hosts/main/default.nix` and `hosts/vm/default.nix`.
+
+Grafana admin credentials and ingest credentials are managed with `sops` secrets; keep a mirrored copy in Vaultwarden for operator recovery.
 
 ---
 

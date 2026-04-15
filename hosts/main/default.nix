@@ -14,6 +14,7 @@
     ../../modules/nixos/hardware/nvidia-prime.nix
     ../../modules/nixos/profiles/base.nix
     ../../modules/nixos/profiles/desktop.nix
+    ../../modules/nixos/profiles/observability.nix
     ../../modules/nixos/profiles/security.nix
     ../../modules/nixos/profiles/user.nix
   ];
@@ -52,6 +53,19 @@
   };
 
   hardware.bluetooth.enable = true;
+
+  profiles.observability = {
+    enable = true;
+    collectors.metrics.enable = true;
+    collectors.metrics.remoteWriteURL = "https://homeserver.filip-nowakowicz.ts.net/obs/mimir/api/v1/push";
+    collectors.logs.enable = true;
+    collectors.logs.pushURL = "https://homeserver.filip-nowakowicz.ts.net/obs/loki/loki/api/v1/push";
+    collectors.traces.enable = true;
+    collectors.traces.exportURL = "https://homeserver.filip-nowakowicz.ts.net/obs/otlp";
+    ingestAuth.username = "telemetry";
+    ingestAuth.passwordFile = config.sops.secrets.observability_ingest_password.path;
+  };
+
   services = {
     blueman.enable = true;
 
@@ -91,6 +105,7 @@
     defaultSopsFormat = "yaml";
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     secrets.user_password.neededForUsers = true;
+    secrets.observability_ingest_password = { };
   };
 
   users.users.user = {

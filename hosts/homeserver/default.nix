@@ -39,6 +39,7 @@ in
     ./disko.nix
     ./hardware-configuration.nix
     ../../modules/nixos/profiles/base.nix
+    ../../modules/nixos/profiles/observability.nix
     ../../modules/nixos/profiles/security.nix
     ../../modules/nixos/profiles/user.nix
     ../../modules/nixos/profiles/server.nix
@@ -59,6 +60,18 @@ in
       matchConfig.Name = "en*";
       networkConfig.DHCP = "yes";
     };
+  };
+
+  profiles.observability = {
+    enable = true;
+    grafana.enable = true;
+    grafana.adminPasswordFile = config.sops.secrets.grafana_admin_password.path;
+    loki.enable = true;
+    tempo.enable = true;
+    mimir.enable = true;
+    collectors.metrics.enable = true;
+    collectors.logs.enable = true;
+    collectors.traces.enable = true;
   };
 
   # ── Services ────────────────────────────────────────────────────────────────
@@ -128,6 +141,21 @@ in
         locations."/" = {
           proxyPass = "http://127.0.0.1:8222";
           proxyWebsockets = true;
+        };
+
+        locations."/obs/loki/" = {
+          proxyPass = "http://127.0.0.1:3100/";
+          basicAuthFile = config.sops.secrets.observability_ingest_htpasswd.path;
+        };
+
+        locations."/obs/mimir/" = {
+          proxyPass = "http://127.0.0.1:9009/";
+          basicAuthFile = config.sops.secrets.observability_ingest_htpasswd.path;
+        };
+
+        locations."/obs/otlp/" = {
+          proxyPass = "http://127.0.0.1:14318/";
+          basicAuthFile = config.sops.secrets.observability_ingest_htpasswd.path;
         };
       };
     };
@@ -240,6 +268,11 @@ in
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     secrets.user_password.neededForUsers = true;
     secrets.tailscale_auth_key = { };
+    secrets.grafana_admin_password = { };
+    secrets.observability_ingest_htpasswd = {
+      owner = config.services.nginx.user;
+      group = config.services.nginx.group;
+    };
   };
 
   # ── Impermanence ────────────────────────────────────────────────────────────
@@ -254,6 +287,11 @@ in
       "/var/lib/tailscale" # Persist Tailscale auth state and certs across reboots
       "/var/lib/syncthing" # Persist Syncthing config, database, and synced files
       "/var/lib/vaultwarden" # Persist Vaultwarden database and config
+      "/var/lib/grafana"
+      "/var/lib/loki"
+      "/var/lib/mimir"
+      "/var/lib/prometheus2"
+      "/var/lib/tempo"
     ];
     files = [
       "/etc/machine-id"

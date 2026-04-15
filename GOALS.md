@@ -7,9 +7,6 @@ This document tracks the evolution of this NixOS configuration, from immediate i
 ## Active & Pending
 
 ### 2. Infrastructure & Observability
-3. - [ ] **LGTM Stack (Loki, Grafana, Tempo, Mimir)**: Implement centralized logging and metrics for all NixOS nodes. Visualize system health, temps, and traffic in a single dashboard on the `homeserver`.
-    * Implemented (pilot): full LGTM stack on `homeserver-vm` with local-only endpoints, Grafana datasource provisioning, and smoke-test coverage.
-    * Next step: promote the shared observability profile to `homeserver`, then onboard `main` and `vm` as telemetry sources.
 4. - [ ] **Declarative Backups (Restic)**: Configure `services.restic` to automate encrypted, deduplicated backups of `/persist` volumes to offsite storage (B2/R2) with automated pruning and health checks.
 
 ### 3. Security Hardening & Identity
@@ -19,14 +16,10 @@ This document tracks the evolution of this NixOS configuration, from immediate i
     *   `main` impact notes: highest-risk/most-sensitive targets are `tailscaled`, `mullvad-vpn`, `NetworkManager`, `openssh`, `greetd`, `pipewire`, and `fwupd`; desktop/VPN services will require careful `ReadWritePaths`, device, socket-family, and capability allowances (`/dev/net/tun`, `CAP_NET_ADMIN`, `CAP_NET_RAW`, runtime IPC paths) to avoid breakage.
 
 
-### 4. Advanced Nix Ecosystem
-1. - [x] **NixOS Integration Tests**: Learn the `nixosTest` framework to write Python-based integration tests.
-    *   Implemented: `checks.x86_64-linux.homeserver-vm-smoke` for Vaultwarden/Nginx/Syncthing smoke coverage.
-    *   Next step: expand to multi-node (`homeserver` + `client`) proxy/network behavior tests.
 
-### 5. Design
-- [ ] **Waybar**: Extra Icons
-- [ ] **eww Widgets**: Research and implement floating dashboard widgets (currently deferred).
+<!-- ### 5. Design -->
+<!-- - [ ] **Waybar**: Extra Icons -->
+<!-- - [ ] **eww Widgets**: Research and implement floating dashboard widgets (currently deferred). -->
 
 <!-- ### 6. Homeserver on Hardware -->
 <!---->
@@ -41,4 +34,5 @@ This document tracks the evolution of this NixOS configuration, from immediate i
 <!-- - [ ] **Local DNS & Ad-blocking**: Deploy `AdGuard Home` or `Pi-hole` on the `homeserver`, integrated with Tailscale to provide network-wide privacy for all connected devices. -->
 <!-- - [ ] **Micro-segmentation**: Use Tailscale ACLs and the NixOS firewall to enforce a "Zero Trust" architecture between internal services (e.g., Vaultwarden only accessible via the Nginx proxy). -->
 <!-- - [ ] **Hardware Security Keys (YubiKey)**: Implement YubiKey-backed PAM for local login/sudo and transition to hardware-backed SSH keys (sk-ecdsa) to eliminate file-based private keys. -->
+- LGTM Next step: expand dashboards/alerts and tune retention/cardinality for long-running operation.
 ---
