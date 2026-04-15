@@ -17,13 +17,11 @@
   folders = {
     documents = {
       path = "/persist/sync/documents";
-      devices = [ "homeserver" ];
-      # devices = [ "homeserver" "main" ];
+      devices = [ "homeserver" "main" ];
     };
     photos = {
       path = "/persist/sync/photos";
-      devices = [ "homeserver" ];
-      # devices = [ "homeserver" "main" ];
+      devices = [ "homeserver" "main" ];
     };
   };
 }
