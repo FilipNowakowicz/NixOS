@@ -25,11 +25,10 @@ Hardware not yet provisioned. Steps in order:
    `sops updatekeys hosts/homeserver/secrets/secrets.yaml`
 5. **Create Vaultwarden account** — temporarily set `SIGNUPS_ALLOWED = true`, deploy, create account at `https://homeserver.filip-nowakowicz.ts.net`, set back to `false`, deploy again
 
-## Syncthing Bootstrap
+## Syncthing Configuration
 
-`overrideDevices` and `overrideFolders` are `false` until device IDs are known.
-After first deploy: use web UI or `syncthing cli show system | grep myID` to get IDs,
-add peers to `lib/syncthing.nix`, then flip both overrides to `true`.
+Syncthing devices/folders are declarative and shared with `homeserver-vm` via `lib/syncthing.nix`.
+`overrideDevices` and `overrideFolders` are enabled so the host always converges to that validated config.
 
 ## Gotchas
 

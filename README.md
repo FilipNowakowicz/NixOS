@@ -267,6 +267,9 @@ nix run 'nixpkgs#nixfmt-tree' -- --fail-on-change .
 ## Validation
 
 ```bash
+# Run the homeserver VM integration smoke test
+nix build '.#checks.x86_64-linux.homeserver-vm-smoke'
+
 # Check for flake inputs, formatting, and unused variables
 nix flake check
 

@@ -208,7 +208,11 @@
         };
       };
 
-      checks.${system} = deploy-rs.lib.${system}.deployChecks self.deploy;
+      checks.${system} = deploy-rs.lib.${system}.deployChecks self.deploy // {
+        homeserver-vm-smoke = import ./tests/nixos/homeserver-vm-smoke.nix {
+          inherit nixpkgs system inputs;
+        };
+      };
 
       # ── Home Manager Configurations ─────────────────────────────────────────
       homeConfigurations = {

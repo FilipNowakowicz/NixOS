@@ -10,6 +10,7 @@
 }:
 let
   tailnetFQDN = "homeserver.filip-nowakowicz.ts.net";
+  syncthing = import ../../lib/syncthing.nix;
 in
 {
   imports = [
@@ -76,26 +77,18 @@ in
     };
 
     # Syncthing file synchronization
-    # Web UI accessible via SSH tunnel: ssh -L 8384:localhost:8384 homeserver
     syncthing = {
       enable = true;
       user = "user";
-      dataDir = "/var/lib/syncthing"; # Sync folder base directory
-      configDir = "/var/lib/syncthing/.config/syncthing"; # Config and database
-      openDefaultPorts = true; # Opens TCP 22000, UDP 22000, TCP 21027, UDP 21027
-      overrideDevices = false; # Use declarative device config only after bootstrap (see below)
-      overrideFolders = false; # Use declarative folder config only after bootstrap (see below)
-      # Bootstrap: after deploy, use syncthing web UI or CLI to add devices/folders.
-      # Get your device ID: syncthing cli show system | grep myID
-      # Once you have device IDs from all peers, add them to lib/syncthing.nix,
-      # set overrideDevices/Folders to true, and redeploy.
+      dataDir = "/var/lib/syncthing";
+      configDir = "/var/lib/syncthing/.config/syncthing";
+      openDefaultPorts = true;
+      overrideDevices = true;
+      overrideFolders = true;
       settings = {
-        gui = {
-          address = "127.0.0.1:8384"; # Bind to localhost only
-        };
-        options = {
-          urAccepted = -1; # Disable usage reporting
-        };
+        inherit (syncthing) devices folders;
+        gui.address = "127.0.0.1:8384";
+        options.urAccepted = -1;
       };
     };
 
@@ -164,6 +157,30 @@ in
     after = [ "tailscale-cert.service" ];
     requires = [ "tailscale-cert.service" ];
   };
+
+  # Fix permissions on /persist/sync before Syncthing starts.
+  systemd.user.services.syncthing-fixperms = {
+    description = "Fix Syncthing sync directory permissions";
+    before = [ "syncthing.service" ];
+    wantedBy = [ "syncthing.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    script = ''
+      mkdir -p /persist/sync/documents /persist/sync/photos
+      chmod 755 /persist/sync /persist/sync/documents /persist/sync/photos
+    '';
+  };
+
+  systemd.tmpfiles.rules = [
+    "d /var/lib/syncthing 0750 user syncthing -"
+    "d /var/lib/syncthing/.config 0750 user syncthing -"
+    "d /var/lib/syncthing/.config/syncthing 0750 user syncthing -"
+    "d /persist/sync 0755 user user -"
+    "d /persist/sync/documents 0755 user user -"
+    "d /persist/sync/photos 0755 user user -"
+  ];
 
   # ── Sops ────────────────────────────────────────────────────────────────────
   # sops-nix secrets management
