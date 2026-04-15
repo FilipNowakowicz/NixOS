@@ -300,19 +300,8 @@ in
         "d /var/lib/loki 0750 loki loki -"
         "d /var/lib/loki/chunks 0750 loki loki -"
       ])
-      (lib.mkIf cfg.tempo.enable [
-        "d /var/lib/tempo 0750 tempo tempo -"
-        "d /var/lib/tempo/traces 0750 tempo tempo -"
-      ])
       (lib.mkIf cfg.collectors.metrics.enable [
         "d /var/lib/prometheus2 0750 prometheus prometheus -"
-      ])
-      (lib.mkIf cfg.mimir.enable [
-        "d /var/lib/mimir 0750 mimir mimir -"
-        "d /var/lib/mimir/blocks 0750 mimir mimir -"
-        "d /var/lib/mimir/compactor 0750 mimir mimir -"
-        "d /var/lib/mimir/rules 0750 mimir mimir -"
-        "d /var/lib/mimir/alertmanager 0750 mimir mimir -"
       ])
     ];
 
