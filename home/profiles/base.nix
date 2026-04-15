@@ -71,7 +71,13 @@
     enableZshIntegration = false;
     settings = {
       add_newline = false;
-      format = "$directory$nix_shell$character";
+      format = "$hostname$directory$nix_shell$character";
+      hostname = {
+        ssh_only = true;
+        format = "\\[[$hostname]($style)\\] ";
+        style = "fg:#d79921 bold";
+        trim_at = ".";
+      };
       directory = {
         truncation_length = 2;
         truncate_to_repo = false;

@@ -1,8 +1,13 @@
 # Homeserver config running in a test VM.
 # Same services as the real homeserver (Vaultwarden, Syncthing)
-# but without Tailscale, Nginx, or cert provisioning.
+# but without Tailscale or cert provisioning.
+# Uses nginx with a self-signed cert so the browser accepts HTTPS (required by
+# Vaultwarden's web vault). The cert is generated on first boot and persisted.
 # Use this to develop and test before hardware arrives.
 { config, pkgs, ... }:
+let
+  syncthing = import ../../lib/syncthing.nix;
+in
 {
   imports = [
     ../../modules/nixos/profiles/vm.nix
@@ -23,7 +28,24 @@
         ROCKET_ADDRESS = "127.0.0.1";
         ROCKET_PORT = 8222;
         SIGNUPS_ALLOWED = false;
-        DOMAIN = "http://127.0.0.1:8222";
+        # nginx proxies HTTPS on 8443 → Vaultwarden on 8222.
+        # The DOMAIN must match the URL the browser sees.
+        DOMAIN = "https://localhost:8443";
+      };
+    };
+
+    nginx = {
+      enable = true;
+      virtualHosts."localhost" = {
+        onlySSL = true;
+        listen = [{ addr = "127.0.0.1"; port = 8443; ssl = true; }];
+        # Self-signed cert generated on first boot by vaultwarden-tls-cert.service.
+        sslCertificate = "/persist/ssl/cert.pem";
+        sslCertificateKey = "/persist/ssl/key.pem";
+        locations."/" = {
+          proxyPass = "http://127.0.0.1:8222";
+          proxyWebsockets = true;
+        };
       };
     };
 
@@ -33,9 +55,10 @@
       dataDir = "/var/lib/syncthing";
       configDir = "/var/lib/syncthing/.config/syncthing";
       openDefaultPorts = true;
-      overrideDevices = false;
-      overrideFolders = false;
+      overrideDevices = true;
+      overrideFolders = true;
       settings = {
+        inherit (syncthing) devices folders;
         gui.address = "127.0.0.1:8384";
         options.urAccepted = -1;
       };
@@ -48,6 +71,29 @@
     "/var/lib/syncthing"
     "/var/lib/vaultwarden"
   ];
+
+  # Generate a self-signed TLS cert on first boot, stored in /persist so it
+  # survives reboots. nginx reads it directly from /persist/ssl/.
+  systemd.services.vaultwarden-tls-cert = {
+    description = "Generate self-signed TLS cert for Vaultwarden (dev VM only)";
+    wantedBy = [ "nginx.service" ];
+    before = [ "nginx.service" ];
+    after = [ "local-fs.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    script = ''
+      if [ ! -f /persist/ssl/cert.pem ]; then
+        mkdir -p /persist/ssl
+        ${pkgs.openssl}/bin/openssl req -x509 -newkey rsa:2048 \
+          -keyout /persist/ssl/key.pem \
+          -out /persist/ssl/cert.pem \
+          -days 3650 -nodes -subj '/CN=localhost'
+        chmod 644 /persist/ssl/key.pem /persist/ssl/cert.pem
+      fi
+    '';
+  };
 
   # Syncthing requires this tree to exist and be writable on first boot.
   systemd.tmpfiles.rules = [

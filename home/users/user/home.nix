@@ -162,6 +162,9 @@ in
     "waybar/style.css".source = ../../files/waybar/style.css;
   };
 
+  # ── Syncthing ──────────────────────────────────────────────────────────
+  services.syncthing.enable = true;
+
   # ── Cliphist ────────────────────────────────────────────────────────────
   services.cliphist = {
     enable = true;
