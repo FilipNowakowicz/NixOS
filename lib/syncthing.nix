@@ -9,9 +9,9 @@
     homeserver = {
       id = "QVJAXRA-D3RSA5P-H4KBGHB-7RPN55M-BRTQ3CU-XT45VLH-PJEYJU6-Q4FXGQA";
     };
-    # main = {
-    #   id = "XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX";
-    # };
+    main = {
+      id = "GWVJIWP-VPVMQLF-JWYUCEQ-DSO67XH-E6U5FYT-I5VQ43L-2HH5NDL-IH5PNQN";
+    };
   };
 
   folders = {
