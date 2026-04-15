@@ -70,6 +70,7 @@ in
     "/etc/NetworkManager/system-connections"
     "/var/lib/syncthing"
     "/var/lib/vaultwarden"
+    "/persist/sync"
   ];
 
   # Generate a self-signed TLS cert on first boot, stored in /persist so it
@@ -100,6 +101,9 @@ in
     "d /var/lib/syncthing 0750 user syncthing -"
     "d /var/lib/syncthing/.config 0750 user syncthing -"
     "d /var/lib/syncthing/.config/syncthing 0750 user syncthing -"
+    "d /persist/sync 0755 user user -"
+    "d /persist/sync/documents 0755 user user -"
+    "d /persist/sync/photos 0755 user user -"
   ];
 
   # ── User ────────────────────────────────────────────────────────────────────
