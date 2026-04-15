@@ -50,10 +50,10 @@ in
     machine.succeed("ss -ltn '( sport = :8384 )' | grep -q 127.0.0.1:8384")
 
     # Validate observability endpoints.
-    machine.succeed("curl -fsS http://127.0.0.1:3000/api/health | grep -q '\"database\":\"ok\"'")
-    machine.succeed("curl -fsS http://127.0.0.1:3100/ready")
-    machine.succeed("curl -fsS http://127.0.0.1:3200/ready")
-    machine.succeed("curl -fsS http://127.0.0.1:9009/ready")
-    machine.succeed("curl -fsS http://127.0.0.1:9090/-/ready")
+    machine.wait_until_succeeds("curl -fsS http://127.0.0.1:3000/api/health | grep -q '\"database\"[[:space:]]*:[[:space:]]*\"ok\"'")
+    machine.wait_until_succeeds("curl -fsS http://127.0.0.1:3100/ready")
+    machine.wait_until_succeeds("curl -fsS http://127.0.0.1:3200/ready")
+    machine.wait_until_succeeds("curl -fsS http://127.0.0.1:9009/ready")
+    machine.wait_until_succeeds("curl -fsS http://127.0.0.1:9090/-/ready")
   '';
 }

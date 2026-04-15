@@ -111,6 +111,7 @@ in
         server = {
           http_listen_address = "127.0.0.1";
           http_listen_port = 3100;
+          grpc_listen_port = 9096;
         };
         common = {
           path_prefix = "/var/lib/loki";
@@ -139,6 +140,7 @@ in
         server = {
           http_listen_address = "127.0.0.1";
           http_listen_port = 3200;
+          grpc_listen_port = 3201;
         };
         distributor.receivers.otlp.protocols = {
           grpc.endpoint = "127.0.0.1:4317";
@@ -147,7 +149,8 @@ in
         storage = {
           trace = {
             backend = "local";
-            local.path = "/var/lib/tempo/traces";
+            local.path = "/var/lib/tempo/blocks";
+            wal.path = "/var/lib/tempo/wal";
           };
         };
       };
