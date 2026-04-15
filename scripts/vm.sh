@@ -120,13 +120,13 @@ ssh_clear_known_hosts() {
 
 # ── SSH wait ─────────────────────────────────────────────────────────────────
 wait_for_ssh() {
-  local name="$1" port="$2"
+  local name="$1" port="$2" ssh_user="$3"
   local elapsed=0
 
   echo "Waiting for SSH on localhost:${port}..."
   while [ "$elapsed" -lt "$SSH_WAIT_TIMEOUT" ]; do
     if ssh -o ConnectTimeout=2 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-         -o LogLevel=ERROR -p "$port" root@localhost true 2>/dev/null; then
+         -o LogLevel=ERROR -p "$port" "${ssh_user}@localhost" true 2>/dev/null; then
       echo "SSH is ready"
       return 0
     fi
@@ -204,7 +204,7 @@ action_create() {
   qemu_launch "$name" "$port" -cdrom "$iso_file" -boot order=d
 
   # 6. Wait for SSH
-  wait_for_ssh "$name" "$port"
+  wait_for_ssh "$name" "$port" root
 
   # 7. Run nixos-anywhere
   echo "Installing NixOS via nixos-anywhere..."
@@ -212,12 +212,12 @@ action_create() {
   tmpdir=$(mktemp -d)
   trap "rm -rf $tmpdir" EXIT
 
-  mkdir -p "$tmpdir/etc/ssh"
+  mkdir -p "$tmpdir/persist/etc/ssh"
   "$SOPS_BIN" --decrypt "${secrets_dir}/ssh_host_ed25519_key.enc" \
-    > "$tmpdir/etc/ssh/ssh_host_ed25519_key"
+    > "$tmpdir/persist/etc/ssh/ssh_host_ed25519_key"
   "$SOPS_BIN" --decrypt "${secrets_dir}/ssh_host_ed25519_key.pub.enc" \
-    > "$tmpdir/etc/ssh/ssh_host_ed25519_key.pub"
-  chmod 600 "$tmpdir/etc/ssh/ssh_host_ed25519_key"
+    > "$tmpdir/persist/etc/ssh/ssh_host_ed25519_key.pub"
+  chmod 600 "$tmpdir/persist/etc/ssh/ssh_host_ed25519_key"
 
   "$NIXOS_ANYWHERE_BIN" \
     --flake ".#${name}" \
@@ -236,7 +236,7 @@ action_create() {
   ssh_clear_known_hosts "$name" "$port"
   echo "Starting installed VM..."
   qemu_launch "$name" "$port"
-  wait_for_ssh "$name" "$port"
+  wait_for_ssh "$name" "$port" user
 
   echo ""
   echo "✓ VM '$name' is ready"
@@ -340,7 +340,7 @@ action_reinstall() {
   qemu_launch "$name" "$port" -cdrom "$iso_file" -boot order=d
 
   # Wait for SSH
-  wait_for_ssh "$name" "$port"
+  wait_for_ssh "$name" "$port" root
 
   # Run nixos-anywhere
   echo "Reinstalling NixOS via nixos-anywhere..."
@@ -348,12 +348,12 @@ action_reinstall() {
   tmpdir=$(mktemp -d)
   trap "rm -rf $tmpdir" EXIT
 
-  mkdir -p "$tmpdir/etc/ssh"
+  mkdir -p "$tmpdir/persist/etc/ssh"
   "$SOPS_BIN" --decrypt "${secrets_dir}/ssh_host_ed25519_key.enc" \
-    > "$tmpdir/etc/ssh/ssh_host_ed25519_key"
+    > "$tmpdir/persist/etc/ssh/ssh_host_ed25519_key"
   "$SOPS_BIN" --decrypt "${secrets_dir}/ssh_host_ed25519_key.pub.enc" \
-    > "$tmpdir/etc/ssh/ssh_host_ed25519_key.pub"
-  chmod 600 "$tmpdir/etc/ssh/ssh_host_ed25519_key"
+    > "$tmpdir/persist/etc/ssh/ssh_host_ed25519_key.pub"
+  chmod 600 "$tmpdir/persist/etc/ssh/ssh_host_ed25519_key"
 
   "$NIXOS_ANYWHERE_BIN" \
     --flake ".#${name}" \
@@ -371,7 +371,7 @@ action_reinstall() {
   ssh_clear_known_hosts "$name" "$port"
   echo "Starting reinstalled VM..."
   qemu_launch "$name" "$port"
-  wait_for_ssh "$name" "$port"
+  wait_for_ssh "$name" "$port" user
 
   echo ""
   echo "✓ VM '$name' reinstalled and ready"

@@ -14,7 +14,7 @@ This document tracks the evolution of this NixOS configuration, from immediate i
 
 - [ ] **Deploy homeserver-vm to VM**
     - `nix run '.#vm' -- create homeserver-vm` (creates disk, installs, boots — fully automated)
-    - `deploy .#homeserver-vm`
+    - `deploy '.#homeserver-vm'`
     - `ssh homeserver-vm` and verify Vaultwarden responds: `curl http://127.0.0.1:8222`
 - [ ] **Vaultwarden — first account**
     - In `hosts/homeserver-vm/default.nix` set `SIGNUPS_ALLOWED = true`, redeploy
@@ -32,7 +32,7 @@ This document tracks the evolution of this NixOS configuration, from immediate i
 - [ ] **Generate hardware config** — boot installer ISO on real hardware, run `nixos-generate-config`, copy result to `hosts/homeserver/hardware-configuration.nix`
 - [ ] **Provision Tailscale auth key** — Tailscale admin → Settings → Keys → reusable + ephemeral, add to `hosts/homeserver/secrets/secrets.yaml` via `sops`
 - [ ] **Add host age key to sops** — pre-generate SSH host key, convert with `ssh-to-age`, add under `&homeserver_host` in `.sops.yaml`, then `sops updatekeys hosts/homeserver/secrets/secrets.yaml`
-- [ ] **Initial deploy** — `nix run '.#reinstall-homeserver' <target-ip>` for fresh install, or `deploy .#homeserver` if NixOS already running
+- [ ] **Initial deploy** — `nix run '.#reinstall-homeserver' <target-ip>` for fresh install, or `deploy '.#homeserver'` if NixOS already running
 - [ ] **Vaultwarden — first account on real hardware** — same flow as VM phase: temporarily set `SIGNUPS_ALLOWED = true`, create account at `https://homeserver.filip-nowakowicz.ts.net`, lock back down
 - [ ] **Verify Tailscale cert** — nginx depends on `tailscale-cert.service`; first boot may take a minute for cert provisioning
 

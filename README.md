@@ -127,7 +127,7 @@ nix run '.#vm' -- <action> <name>
 
 ```bash
 nix run '.#vm' -- create homeserver-vm
-deploy .#homeserver-vm
+deploy '.#homeserver-vm'
 ssh homeserver-vm curl http://127.0.0.1:8222    # Vaultwarden responds
 ```
 
@@ -150,9 +150,9 @@ Multiple VMs can run simultaneously — each has its own disk image, OVMF vars, 
 | Host | Command | Notes |
 |---|---|---|
 | `main` | `nh os switch --hostname main .` | Modern Nix helper (`nh`) for fast rebuilds. |
-| `homeserver` | `deploy .#homeserver` | Run from the `nix develop` shell. |
-| `vm` | `deploy .#vm` | After `nix run '.#vm' -- create vm`. |
-| `homeserver-vm` | `deploy .#homeserver-vm` | After `nix run '.#vm' -- create homeserver-vm`. |
+| `homeserver` | `deploy '.#homeserver'` | Run from the `nix develop` shell. |
+| `vm` | `deploy '.#vm'` | After `nix run '.#vm' -- create vm`. |
+| `homeserver-vm` | `deploy '.#homeserver-vm'` | After `nix run '.#vm' -- create homeserver-vm`. |
 
 ---
 

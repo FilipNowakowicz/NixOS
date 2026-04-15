@@ -16,7 +16,7 @@ Hardware not yet provisioned. Steps in order:
 
 1. **Replace hardware config** — run `nixos-generate-config` on target or use `nixos-anywhere --generate-hardware-config`
 2. **Set Tailscale auth key** — `sops hosts/homeserver/secrets/secrets.yaml`, set `tailscale_auth_key` (Tailscale admin → Settings → Keys → reusable + ephemeral)
-3. **Deploy** — `deploy .#homeserver` (or `nix run '.#reinstall-homeserver' <target-ip>` for fresh install)
+3. **Deploy** — `deploy '.#homeserver'` (or `nix run '.#reinstall-homeserver' <target-ip>` for fresh install)
 4. **Add host age key to sops** — after first boot:
    ```
    ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub  # run on homeserver

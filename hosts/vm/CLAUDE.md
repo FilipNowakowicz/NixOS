@@ -8,7 +8,7 @@ NixOS VM for testing deployments. Uses impermanence — ephemeral root, selectiv
 nix run '.#vm' -- create vm       # Full setup: disk + install + boot
 nix run '.#vm' -- start vm        # Boot existing VM
 nix run '.#vm' -- stop vm         # Graceful shutdown
-deploy .#vm                       # Deploy config changes
+deploy '.#vm'                       # Deploy config changes
 ssh vm                            # SSH into the VM
 ```
 
@@ -25,7 +25,7 @@ ssh vm                            # Verify SSH access
 
 ```bash
 nix run '.#vm' -- start vm        # Start the VM
-deploy .#vm                       # Deploy config changes
+deploy '.#vm'                       # Deploy config changes
 ssh vm                            # SSH into the VM
 nix run '.#vm' -- stop vm         # Stop the VM
 ```

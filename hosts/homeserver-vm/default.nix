@@ -49,6 +49,13 @@
     "/var/lib/vaultwarden"
   ];
 
+  # Syncthing requires this tree to exist and be writable on first boot.
+  systemd.tmpfiles.rules = [
+    "d /var/lib/syncthing 0750 user syncthing -"
+    "d /var/lib/syncthing/.config 0750 user syncthing -"
+    "d /var/lib/syncthing/.config/syncthing 0750 user syncthing -"
+  ];
+
   # ── User ────────────────────────────────────────────────────────────────────
   users.users.user = {
     home = "/home/user";

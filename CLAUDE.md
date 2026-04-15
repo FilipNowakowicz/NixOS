@@ -10,7 +10,7 @@ approaches proactively. Explain why, not just what.
 
 - **Dev machine:** NixOS (main)
 - **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nh`, `nixd`, `statix`, `deadnix`, `sops`, `ssh-to-age`, `qemu`, `OVMF`
-- **Deploy (VM):** `deploy .#vm` or `deploy .#homeserver-vm`
+- **Deploy (VM):** `deploy '.#vm'` or `deploy '.#homeserver-vm'`
 - **Deploy (main):** `nh os switch --hostname main .` (alias: `rebuild`)
 - **Validate flake:** `nix flake check`
 - **Lint:** `statix check .` and `deadnix .`

@@ -7,7 +7,7 @@ Configured with Vaultwarden and Syncthing (same as real homeserver), but without
 
 ```bash
 nix run '.#vm' -- create homeserver-vm    # Full setup
-deploy .#homeserver-vm                    # Deploy config changes
+deploy '.#homeserver-vm'                    # Deploy config changes
 ssh homeserver-vm                         # SSH into the VM (port 2223)
 ```
 
@@ -28,10 +28,10 @@ ssh homeserver-vm                         # SSH into the VM (port 2223)
 ## Testing Workflow
 
 1. **Create VM**: `nix run '.#vm' -- create homeserver-vm`
-2. **Deploy changes**: `deploy .#homeserver-vm`
+2. **Deploy changes**: `deploy '.#homeserver-vm'`
 3. **Verify Vaultwarden**: `ssh homeserver-vm curl http://127.0.0.1:8222`
 4. **Access Syncthing**: `ssh -L 8384:localhost:8384 homeserver-vm` then `localhost:8384` in browser
-5. **Iterate**: edit config, `deploy .#homeserver-vm`, test
+5. **Iterate**: edit config, `deploy '.#homeserver-vm'`, test
 
 ## Architecture
 
