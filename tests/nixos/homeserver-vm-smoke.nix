@@ -19,7 +19,7 @@ in
     ];
 
     # Test-only overrides: avoid requiring decryptable sops user password.
-    sops.defaultSopsFile = lib.mkForce (builtins.toFile "dummy-secrets.yaml" "user_password: test\n");
+    sops.defaultSopsFile = lib.mkForce (builtins.toFile "dummy-secrets.yaml" "user_password: test\nrestic_password: test\n");
     sops.secrets.user_password = lib.mkForce { neededForUsers = false; };
     users.users.user.hashedPasswordFile = lib.mkForce null;
     users.users.user.hashedPassword = lib.mkForce "!";
