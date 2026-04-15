@@ -6,10 +6,6 @@ This document tracks the evolution of this NixOS configuration, from immediate i
 
 ## Active & Pending
 
-### 2. Infrastructure & Observability
-4. - [ ] **Declarative Backups (Restic)**: Configure `services.restic` to automate encrypted, deduplicated backups of `/persist` volumes to offsite storage (B2/R2) with automated pruning and health checks.
-
-
 <!-- ### 5. Design -->
 <!-- - [ ] **Waybar**: Extra Icons -->
 <!-- - [ ] **eww Widgets**: Research and implement floating dashboard widgets (currently deferred). -->

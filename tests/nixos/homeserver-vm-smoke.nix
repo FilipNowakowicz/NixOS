@@ -11,7 +11,7 @@ in
   name = "homeserver-vm-smoke";
   node.specialArgs = { inherit inputs; };
 
-  nodes.machine = { lib, ... }: {
+  nodes.machine = { lib, config, ... }: {
     imports = [
       ../../hosts/homeserver-vm/default.nix
       inputs.home-manager.nixosModules.home-manager
@@ -19,7 +19,13 @@ in
     ];
 
     # Test-only overrides: avoid requiring decryptable sops user password.
-    sops.defaultSopsFile = lib.mkForce (builtins.toFile "dummy-secrets.yaml" "user_password: test\nrestic_password: test\n");
+    sops.defaultSopsFile = lib.mkForce (
+      let
+        keys = lib.attrNames config.sops.secrets;
+        yaml = lib.concatMapStrings (k: "${k}: test\n") keys;
+      in
+        builtins.toFile "dummy-secrets.yaml" yaml
+    );
     sops.secrets.user_password = lib.mkForce { neededForUsers = false; };
     users.users.user.hashedPasswordFile = lib.mkForce null;
     users.users.user.hashedPassword = lib.mkForce "!";

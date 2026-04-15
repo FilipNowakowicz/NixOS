@@ -273,6 +273,31 @@ in
       owner = config.services.nginx.user;
       group = config.services.nginx.group;
     };
+    secrets.restic_password = { };
+  };
+
+  # ── Backups ──────────────────────────────────────────────────────────────────
+  # TODO: replace repository with B2 once bucket is provisioned:
+  #   repository = "b2:<bucket-name>:/homeserver";
+  #   environmentFile = config.sops.secrets.b2_env.path; # B2_ACCOUNT_ID + B2_ACCOUNT_KEY
+  services.restic.backups.local = {
+    paths = [
+      "/var/lib/vaultwarden"
+      "/var/lib/syncthing"
+      "/persist/sync"
+    ];
+    repository = "/persist/restic-repo";
+    passwordFile = config.sops.secrets.restic_password.path;
+    initialize = true;
+    timerConfig = {
+      OnCalendar = "daily";
+      Persistent = true;
+    };
+    pruneOpts = [
+      "--keep-daily 7"
+      "--keep-weekly 4"
+      "--keep-monthly 3"
+    ];
   };
 
   # ── Impermanence ────────────────────────────────────────────────────────────
@@ -289,9 +314,7 @@ in
       "/var/lib/vaultwarden" # Persist Vaultwarden database and config
       "/var/lib/grafana"
       "/var/lib/loki"
-      "/var/lib/mimir"
       "/var/lib/prometheus2"
-      "/var/lib/tempo"
     ];
     files = [
       "/etc/machine-id"
