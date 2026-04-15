@@ -8,23 +8,11 @@ let
       }
     }
 
-    loki.relabel "journal" {
-      rule {
-        source_labels = ["__journal__systemd_unit"]
-        target_label  = "unit"
-      }
-      rule {
-        source_labels = ["__journal_priority_keyword"]
-        target_label  = "level"
-      }
-    }
-
     loki.source.journal "systemd" {
       max_age       = "12h"
-      relabel_rules = loki.relabel.journal.rules
       labels = {
-        job  = "systemd-journal"
-        host = "${config.networking.hostName}"
+        job  = "systemd-journal",
+        host = "${config.networking.hostName}",
       }
       forward_to = [loki.write.local.receiver]
     }
