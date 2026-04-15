@@ -2,7 +2,7 @@
 # Same services as the real homeserver (Vaultwarden, Syncthing)
 # but without Tailscale, Nginx, or cert provisioning.
 # Use this to develop and test before hardware arrives.
-{ config, ... }:
+{ config, pkgs, ... }:
 {
   imports = [
     ../../modules/nixos/profiles/vm.nix
@@ -72,6 +72,9 @@
     defaultSopsFile = ./secrets/secrets.yaml;
     secrets.user_password.neededForUsers = true;
   };
+
+  # Support SSH sessions from Kitty terminals (`TERM=xterm-kitty`).
+  environment.systemPackages = [ pkgs.kitty.terminfo ];
 
   # ── Home Manager ────────────────────────────────────────────────────────────
   home-manager.users.user.imports = [ ../../home/users/user/home-server.nix ];
