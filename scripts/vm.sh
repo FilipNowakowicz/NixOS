@@ -223,9 +223,10 @@ action_create() {
     --flake ".#${name}" \
     --extra-files "$tmpdir" \
     --no-substitute-on-destination \
-    "root@localhost" -p "$port" \
-    -o StrictHostKeyChecking=no \
-    -o UserKnownHostsFile=/dev/null
+    --ssh-port "$port" \
+    --ssh-option StrictHostKeyChecking=no \
+    --ssh-option UserKnownHostsFile=/dev/null \
+    "root@localhost"
 
   # 8. Stop ISO VM (nixos-anywhere may have already shut it down)
   echo "Stopping installer..."
@@ -359,9 +360,10 @@ action_reinstall() {
     --flake ".#${name}" \
     --extra-files "$tmpdir" \
     --no-substitute-on-destination \
-    "root@localhost" -p "$port" \
-    -o StrictHostKeyChecking=no \
-    -o UserKnownHostsFile=/dev/null
+    --ssh-port "$port" \
+    --ssh-option StrictHostKeyChecking=no \
+    --ssh-option UserKnownHostsFile=/dev/null \
+    "root@localhost"
 
   # Stop ISO VM
   action_stop "$name" 2>/dev/null || true
