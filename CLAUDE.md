@@ -48,6 +48,9 @@ nix run '.#vm' -- <action> <name>
 - `flake.nix` — entry point, defines hosts, home-manager, deploy-rs nodes, VM app
 - `lib/vm.nix` — VM registry (single source of truth for all VMs)
 - `lib/pubkeys.nix` — centralized SSH public keys
+- `lib/syncthing.nix` — shared Syncthing device/folder registry
+- `lib/sandbox.nix` — common systemd service sandbox options
+- `lib/network.nix` — centralized network identifiers (tailnet FQDN)
 - `hosts/main/` — real machine config, disko layout, LUKS/LVM, Lanzaboote (Secure Boot)
 - `hosts/vm/` — dev/test VM config (desktop profile + home-manager)
 - `hosts/homeserver-vm/` — homeserver services in a VM (Vaultwarden, Syncthing)
@@ -55,9 +58,9 @@ nix run '.#vm' -- <action> <name>
 - `hosts/installer/` — minimal NixOS ISO config for fresh installs
 - `scripts/vm.sh` — unified VM management script
 - `scripts/reinstall-homeserver.sh` — real homeserver reinstall (separate workflow)
-- `modules/nixos/profiles/` — system profiles (base, desktop, security, server, vm)
+- `modules/nixos/profiles/` — system profiles (base, desktop, security, observability, vm)
 - `modules/nixos/hardware/` — hardware drivers and graphics (NVIDIA PRIME)
-- `home/profiles/` — home-manager profiles (base, desktop)
+- `home/profiles/` — home-manager profiles (base, desktop, workstation)
 - `home/theme/` — runtime-swappable themes and Home Manager module
 - `home/files/` — dotfiles and standalone scripts (NIX_REPO injected)
 - `home/users/user/` — user home-manager entry point

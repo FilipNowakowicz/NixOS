@@ -45,7 +45,10 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 ├── .sops.yaml                         # SOPS configuration for secret management
 ├── lib/
 │   ├── vm.nix                         # VM registry (single source of truth)
-│   └── pubkeys.nix                    # Centralized SSH public keys
+│   ├── pubkeys.nix                    # Centralized SSH public keys
+│   ├── syncthing.nix                  # Shared Syncthing device/folder registry
+│   ├── sandbox.nix                    # Common systemd service sandbox options
+│   └── network.nix                    # Centralized network identifiers (tailnet FQDN)
 ├── hosts/
 │   ├── main/                          # Primary workstation
 │   │   ├── default.nix
@@ -72,13 +75,14 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 │           ├── base.nix               # Base system settings (Nix, locale)
 │           ├── desktop.nix            # Desktop environment (Hyprland, PipeWire)
 │           ├── security.nix           # Security hardening (Firewall, SSH)
-│           ├── server.nix             # Server-specific settings
+│           ├── observability.nix      # LGTM observability stack (Grafana, Loki, Tempo, Mimir)
 │           ├── user.nix               # User account and home-manager base
 │           └── vm.nix                 # Shared VM module (hardware, disko, impermanence)
 └── home/
     ├── profiles/                      # User-level profiles (home-manager)
     │   ├── base.nix
-    │   └── desktop.nix
+    │   ├── desktop.nix
+    │   └── workstation.nix            # Workstation-specific packages (TeX, Anki, VS Code)
     ├── theme/
     │   ├── active.nix                 # Active theme pointer
     │   ├── module.nix                 # Home Manager theme module
@@ -87,7 +91,7 @@ The `main` host uses a secure, encrypted systemd-boot setup:
     ├── users/
     │   └── user/
     │       ├── home.nix
-    │       └── home-server.nix
+    │       └── server.nix
     └── files/                         # Static dotfiles and scripts
         ├── kitty/
         ├── nvim/

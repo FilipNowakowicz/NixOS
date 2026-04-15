@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.profiles.observability;
   shouldUseIngestAuth = cfg.ingestAuth.username != null && cfg.ingestAuth.passwordFile != null;
@@ -11,29 +16,29 @@ let
   alloyBasicAuth =
     if shouldUseIngestAuth then
       ''
-                basic_auth {
-                  username = "${cfg.ingestAuth.username}"
-                  password_file = "${toString cfg.ingestAuth.passwordFile}"
-                }
+        basic_auth {
+          username = "${cfg.ingestAuth.username}"
+          password_file = "${toString cfg.ingestAuth.passwordFile}"
+        }
       ''
     else
       "";
   alloyConfig = ''
-    loki.write "target" {
-      endpoint {
-        url = "${cfg.collectors.logs.pushURL}"
-${alloyBasicAuth}
-      }
-    }
+        loki.write "target" {
+          endpoint {
+            url = "${cfg.collectors.logs.pushURL}"
+    ${alloyBasicAuth}
+          }
+        }
 
-    loki.source.journal "systemd" {
-      max_age       = "12h"
-      labels = {
-        job  = "systemd-journal",
-        host = "${config.networking.hostName}",
-      }
-      forward_to = [loki.write.target.receiver]
-    }
+        loki.source.journal "systemd" {
+          max_age       = "12h"
+          labels = {
+            job  = "systemd-journal",
+            host = "${config.networking.hostName}",
+          }
+          forward_to = [loki.write.target.receiver]
+        }
   '';
   dashboardJson = builtins.toJSON {
     id = null;
@@ -131,6 +136,11 @@ in
       type = with lib.types; nullOr path;
       default = null;
       description = "File containing the Grafana admin password";
+    };
+    grafana.secretKeyFile = lib.mkOption {
+      type = with lib.types; nullOr path;
+      default = null;
+      description = "File containing the Grafana secret key for signing cookies/tokens";
     };
     loki.enable = lib.mkEnableOption "Loki";
     tempo.enable = lib.mkEnableOption "Tempo";
@@ -333,14 +343,15 @@ in
           http_port = 3000;
           domain = "localhost";
         };
-        security =
-          {
-            secret_key = "SW2YcwTIb9zpOOhoPsMm";
-            admin_user = cfg.grafana.adminUser;
-          }
-          // lib.optionalAttrs (cfg.grafana.adminPasswordFile != null) {
-            admin_password = "$__file{${toString cfg.grafana.adminPasswordFile}}";
-          };
+        security = {
+          admin_user = cfg.grafana.adminUser;
+        }
+        // lib.optionalAttrs (cfg.grafana.secretKeyFile != null) {
+          secret_key = "$__file{${toString cfg.grafana.secretKeyFile}}";
+        }
+        // lib.optionalAttrs (cfg.grafana.adminPasswordFile != null) {
+          admin_password = "$__file{${toString cfg.grafana.adminPasswordFile}}";
+        };
       };
       provision = {
         enable = true;
@@ -441,13 +452,12 @@ in
         exporters =
           if cfg.collectors.traces.exportURL != null then
             {
-              otlphttp =
-                {
-                  endpoint = cfg.collectors.traces.exportURL;
-                }
-                // lib.optionalAttrs shouldUseIngestAuth {
-                  auth.authenticator = "basicauth/client";
-                };
+              otlphttp = {
+                endpoint = cfg.collectors.traces.exportURL;
+              }
+              // lib.optionalAttrs shouldUseIngestAuth {
+                auth.authenticator = "basicauth/client";
+              };
             }
           else
             {

@@ -20,10 +20,9 @@ ssh homeserver-vm                         # SSH into the VM (port 2223)
 ## Differences from Real Homeserver
 
 - No Tailscale — not applicable to a VM
-- No Nginx reverse proxy — Vaultwarden accessible directly on port 8222
-- No TLS certificates — test with HTTP only
+- Nginx with self-signed TLS cert (not Tailscale cert) — Vaultwarden proxied on port 8443
 - Uses NetworkManager (not systemd-networkd)
-- Uses standard home.nix instead of home-server.nix
+- Uses home-server.nix (same as real homeserver)
 
 ## Testing Workflow
 

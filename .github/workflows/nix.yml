@@ -30,6 +30,9 @@ jobs:
       - name: Eval homeserver host
         run: nix eval .#nixosConfigurations.homeserver.config.system.build.toplevel --show-trace
 
+      - name: Eval homeserver-vm host
+        run: nix eval .#nixosConfigurations.homeserver-vm.config.system.build.toplevel --show-trace
+
       - name: Dead code (deadnix)
         run: nix run nixpkgs#deadnix -- --fail .
 

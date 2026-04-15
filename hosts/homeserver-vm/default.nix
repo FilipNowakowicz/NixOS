@@ -7,26 +7,7 @@
 { config, pkgs, ... }:
 let
   syncthing = import ../../lib/syncthing.nix;
-  commonSandbox = {
-    NoNewPrivileges = true;
-    PrivateTmp = true;
-    PrivateDevices = true;
-    ProtectSystem = "strict";
-    ProtectHome = true;
-    ProtectControlGroups = true;
-    ProtectKernelTunables = true;
-    ProtectKernelModules = true;
-    LockPersonality = true;
-    RestrictSUIDSGID = true;
-    RestrictRealtime = true;
-    RestrictNamespaces = true;
-    SystemCallArchitectures = "native";
-    RestrictAddressFamilies = [
-      "AF_UNIX"
-      "AF_INET"
-      "AF_INET6"
-    ];
-  };
+  commonSandbox = import ../../lib/sandbox.nix;
 in
 {
   imports = [
@@ -34,7 +15,6 @@ in
     ../../modules/nixos/profiles/base.nix
     ../../modules/nixos/profiles/security.nix
     ../../modules/nixos/profiles/user.nix
-    ../../modules/nixos/profiles/server.nix
     ../../modules/nixos/profiles/observability.nix
   ];
 
@@ -45,6 +25,7 @@ in
   profiles.observability = {
     enable = true;
     grafana.enable = true;
+    grafana.secretKeyFile = config.sops.secrets.grafana_secret_key.path;
     loki.enable = true;
     tempo.enable = true;
     mimir.enable = true;
@@ -70,7 +51,13 @@ in
       enable = true;
       virtualHosts."localhost" = {
         onlySSL = true;
-        listen = [{ addr = "127.0.0.1"; port = 8443; ssl = true; }];
+        listen = [
+          {
+            addr = "127.0.0.1";
+            port = 8443;
+            ssl = true;
+          }
+        ];
         # Self-signed cert generated on first boot by vaultwarden-tls-cert.service.
         sslCertificate = "/persist/ssl/cert.pem";
         sslCertificateKey = "/persist/ssl/key.pem";
@@ -134,20 +121,6 @@ in
     ];
   };
 
-  systemd.user.services.syncthing-fixperms = {
-    description = "Fix Syncthing sync directory permissions";
-    before = [ "syncthing.service" ];
-    wantedBy = [ "syncthing.service" ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-    };
-    script = ''
-      mkdir -p /persist/sync/documents /persist/sync/photos
-      chmod 755 /persist/sync /persist/sync/documents /persist/sync/photos
-    '';
-  };
-
   # Generate a self-signed TLS cert on first boot, stored in /persist so it
   # survives reboots. nginx reads it directly from /persist/ssl/.
   systemd.services.vaultwarden-tls-cert = {
@@ -169,7 +142,8 @@ in
           -keyout /persist/ssl/key.pem \
           -out /persist/ssl/cert.pem \
           -days 3650 -nodes -subj '/CN=localhost'
-        chmod 644 /persist/ssl/key.pem /persist/ssl/cert.pem
+        chmod 640 /persist/ssl/key.pem
+        chmod 644 /persist/ssl/cert.pem
       fi
     '';
   };
@@ -199,7 +173,10 @@ in
   sops = {
     defaultSopsFile = ./secrets/secrets.yaml;
     secrets.user_password.neededForUsers = true;
-    secrets.restic_password = {};
+    secrets.restic_password = { };
+    secrets.grafana_secret_key = {
+      owner = "grafana";
+    };
   };
 
   # ── Backups ──────────────────────────────────────────────────────────────────
@@ -227,5 +204,5 @@ in
   environment.systemPackages = [ pkgs.kitty.terminfo ];
 
   # ── Home Manager ────────────────────────────────────────────────────────────
-  home-manager.users.user.imports = [ ../../home/users/user/home-server.nix ];
+  home-manager.users.user.imports = [ ../../home/users/user/server.nix ];
 }

@@ -6,6 +6,8 @@
   ...
 }:
 let
+  network = import ../../lib/network.nix;
+  inherit (network) tailnetFQDN;
   # Sandbox options shared by hardware daemons that need sysfs but no network/home access.
   # PrivateDevices is intentionally omitted — both thermald and power-profiles-daemon
   # access hardware nodes under /sys which PrivateDevices would block.
@@ -66,8 +68,6 @@ in
     ];
   };
 
-  zramSwap.enable = true;
-
   environment.systemPackages = with pkgs; [
     sbctl
   ];
@@ -81,14 +81,24 @@ in
 
   profiles.observability = {
     enable = true;
-    collectors.metrics.enable = true;
-    collectors.metrics.remoteWriteURL = "https://homeserver.filip-nowakowicz.ts.net/obs/mimir/api/v1/push";
-    collectors.logs.enable = true;
-    collectors.logs.pushURL = "https://homeserver.filip-nowakowicz.ts.net/obs/loki/loki/api/v1/push";
-    collectors.traces.enable = true;
-    collectors.traces.exportURL = "https://homeserver.filip-nowakowicz.ts.net/obs/otlp";
-    ingestAuth.username = "telemetry";
-    ingestAuth.passwordFile = config.sops.secrets.observability_ingest_password.path;
+    collectors = {
+      metrics = {
+        enable = true;
+        remoteWriteURL = "https://${tailnetFQDN}/obs/mimir/api/v1/push";
+      };
+      logs = {
+        enable = true;
+        pushURL = "https://${tailnetFQDN}/obs/loki/loki/api/v1/push";
+      };
+      traces = {
+        enable = true;
+        exportURL = "https://${tailnetFQDN}/obs/otlp";
+      };
+    };
+    ingestAuth = {
+      username = "telemetry";
+      passwordFile = config.sops.secrets.observability_ingest_password.path;
+    };
   };
 
   services = {
@@ -181,6 +191,33 @@ in
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     secrets.user_password.neededForUsers = true;
     secrets.observability_ingest_password = { };
+    secrets.restic_password = { };
+  };
+
+  # ── Backups ──────────────────────────────────────────────────────────────────
+  services.restic.backups.local = {
+    paths = [
+      "/home/user/.ssh"
+      "/home/user/.gnupg"
+      "/home/user/nix"
+      "/home/user/documents"
+    ];
+    exclude = [
+      "/home/user/nix/.direnv"
+      "/home/user/nix/result"
+    ];
+    repository = "/var/backup/restic-repo";
+    passwordFile = config.sops.secrets.restic_password.path;
+    initialize = true;
+    timerConfig = {
+      OnCalendar = "daily";
+      Persistent = true;
+    };
+    pruneOpts = [
+      "--keep-daily 7"
+      "--keep-weekly 4"
+      "--keep-monthly 3"
+    ];
   };
 
   users.users.user = {

@@ -56,7 +56,7 @@
         config.allowUnfree = true;
       };
 
-      lib = nixpkgs.lib;
+      inherit (nixpkgs) lib;
 
       vmRegistry = import ./lib/vm.nix;
 

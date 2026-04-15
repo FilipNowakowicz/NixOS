@@ -1,5 +1,7 @@
 { pkgs, ... }:
 {
+  zramSwap.enable = true;
+
   # ── Nix ────────────────────────────────────────────────────────────────────
   nixpkgs.config.allowUnfree = true;
   nix = {

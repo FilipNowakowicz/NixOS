@@ -1,4 +1,8 @@
 { config, ... }:
+let
+  network = import ../../lib/network.nix;
+  inherit (network) tailnetFQDN;
+in
 {
   imports = [
     ../../modules/nixos/profiles/vm.nix
@@ -7,7 +11,6 @@
     ../../modules/nixos/profiles/observability.nix
     ../../modules/nixos/profiles/security.nix
     ../../modules/nixos/profiles/user.nix
-    ../../modules/nixos/profiles/server.nix
   ];
 
   system.stateVersion = "24.11";
@@ -20,14 +23,24 @@
 
   profiles.observability = {
     enable = true;
-    collectors.metrics.enable = true;
-    collectors.metrics.remoteWriteURL = "https://homeserver.filip-nowakowicz.ts.net/obs/mimir/api/v1/push";
-    collectors.logs.enable = true;
-    collectors.logs.pushURL = "https://homeserver.filip-nowakowicz.ts.net/obs/loki/loki/api/v1/push";
-    collectors.traces.enable = true;
-    collectors.traces.exportURL = "https://homeserver.filip-nowakowicz.ts.net/obs/otlp";
-    ingestAuth.username = "telemetry";
-    ingestAuth.passwordFile = config.sops.secrets.observability_ingest_password.path;
+    collectors = {
+      metrics = {
+        enable = true;
+        remoteWriteURL = "https://${tailnetFQDN}/obs/mimir/api/v1/push";
+      };
+      logs = {
+        enable = true;
+        pushURL = "https://${tailnetFQDN}/obs/loki/loki/api/v1/push";
+      };
+      traces = {
+        enable = true;
+        exportURL = "https://${tailnetFQDN}/obs/otlp";
+      };
+    };
+    ingestAuth = {
+      username = "telemetry";
+      passwordFile = config.sops.secrets.observability_ingest_password.path;
+    };
   };
 
   # ── User ────────────────────────────────────────────────────────────────────

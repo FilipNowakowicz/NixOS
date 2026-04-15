@@ -27,7 +27,10 @@
       "Bash(done)",
       "Read(//home/user/.claude/**)",
       "Bash(hyprctl keyword:*)",
-      "Bash(grim /tmp/screenshot-ws-rule.png)"
+      "Bash(grim /tmp/screenshot-ws-rule.png)",
+      "Bash(statix check:*)",
+      "Bash(deadnix .)",
+      "Bash(sops:*)"
     ]
   }
 }
