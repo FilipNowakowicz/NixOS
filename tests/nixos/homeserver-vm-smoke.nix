@@ -36,6 +36,9 @@ in
         sops.secrets.user_password = lib.mkForce { neededForUsers = false; };
         users.users.user.hashedPasswordFile = lib.mkForce null;
         users.users.user.hashedPassword = lib.mkForce "!";
+        profiles.observability.grafana.secretKeyFile = lib.mkForce (
+          builtins.toFile "grafana-secret-key" "vm-smoke-grafana-secret-key"
+        );
 
         environment.systemPackages = [ pkgs.curl ];
       };

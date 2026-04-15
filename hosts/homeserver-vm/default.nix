@@ -108,6 +108,7 @@ in
     ReadWritePaths = [
       "/var/cache/nginx"
       "/var/log/nginx"
+      "/persist/ssl"
     ];
   };
 
@@ -136,20 +137,26 @@ in
       RestrictAddressFamilies = [ "AF_UNIX" ];
     };
     script = ''
-      if [ ! -f /persist/ssl/cert.pem ]; then
-        mkdir -p /persist/ssl
+      mkdir -p /persist/ssl
+
+      if [ ! -f /persist/ssl/cert.pem ] || [ ! -f /persist/ssl/key.pem ]; then
         ${pkgs.openssl}/bin/openssl req -x509 -newkey rsa:2048 \
           -keyout /persist/ssl/key.pem \
           -out /persist/ssl/cert.pem \
           -days 3650 -nodes -subj '/CN=localhost'
-        chmod 640 /persist/ssl/key.pem
-        chmod 644 /persist/ssl/cert.pem
       fi
+
+      chown root:nginx /persist/ssl/key.pem /persist/ssl/cert.pem
+      chmod 750 /persist/ssl
+      chmod 640 /persist/ssl/key.pem
+      chmod 644 /persist/ssl/cert.pem
     '';
   };
 
   # Syncthing requires this tree to exist and be writable on first boot.
   systemd.tmpfiles.rules = [
+    "d /persist 0755 root root -"
+    "d /persist/ssl 0750 root nginx -"
     "d /var/lib/syncthing 0750 user syncthing -"
     "d /var/lib/syncthing/.config 0750 user syncthing -"
     "d /var/lib/syncthing/.config/syncthing 0750 user syncthing -"
