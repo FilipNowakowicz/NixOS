@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 let
   cfg = config.profiles.observability;
   shouldUseIngestAuth = cfg.ingestAuth.username != null && cfg.ingestAuth.passwordFile != null;
@@ -422,6 +422,8 @@ in
 
     services."opentelemetry-collector" = lib.mkIf cfg.collectors.traces.enable {
       enable = true;
+      # contrib distribution required for the basicauth extension used for authenticated remote export
+      package = pkgs.opentelemetry-collector-contrib;
       settings = {
         receivers.otlp.protocols = {
           grpc.endpoint = cfg.collectors.traces.receiverGRPCEndpoint;

@@ -5,6 +5,31 @@
   inputs,
   ...
 }:
+let
+  # Sandbox options shared by hardware daemons that need sysfs but no network/home access.
+  # PrivateDevices is intentionally omitted — both thermald and power-profiles-daemon
+  # access hardware nodes under /sys which PrivateDevices would block.
+  hwDaemonSandbox = {
+    NoNewPrivileges = true;
+    PrivateTmp = true;
+    ProtectSystem = "strict";
+    ProtectHome = true;
+    ProtectClock = true;
+    ProtectKernelLogs = true;
+    ProtectKernelTunables = true;
+    ProtectKernelModules = true;
+    ProtectControlGroups = true;
+    ProtectHostname = true;
+    LockPersonality = true;
+    MemoryDenyWriteExecute = true;
+    RestrictSUIDSGID = true;
+    RestrictRealtime = true;
+    RestrictNamespaces = true;
+    SystemCallArchitectures = "native";
+    CapabilityBoundingSet = "";
+    RestrictAddressFamilies = "AF_UNIX";
+  };
+in
 {
   imports = [
     inputs.disko.nixosModules.disko
@@ -98,6 +123,56 @@
       # Optional: keep running on AC power
       # lidSwitchExternalPower = "ignore";
     };
+  };
+
+  systemd.services.thermald.serviceConfig = hwDaemonSandbox;
+  systemd.services.power-profiles-daemon.serviceConfig = hwDaemonSandbox;
+
+  # fwupd has almost no upstream hardening. Skip ProtectSystem/PrivateDevices (writes
+  # firmware to hardware), ProtectKernelModules (loads capsule/UEFI modules), ProtectClock
+  # (UEFI updates may touch EFI time), MemoryDenyWriteExecute (plugin loading), and
+  # CapabilityBoundingSet (needs CAP_SYS_ADMIN and others for UEFI/hardware access).
+  systemd.services.fwupd.serviceConfig = {
+    NoNewPrivileges = true;
+    PrivateTmp = true;
+    ProtectHome = true;
+    ProtectKernelLogs = true;
+    ProtectControlGroups = true;
+    ProtectHostname = true;
+    LockPersonality = true;
+    RestrictSUIDSGID = true;
+    RestrictRealtime = true;
+    RestrictNamespaces = true;
+    SystemCallArchitectures = "native";
+    RestrictAddressFamilies = [
+      "AF_UNIX"
+      "AF_INET"
+      "AF_INET6"
+      "AF_NETLINK"
+    ];
+  };
+
+  # bluetoothd (powers blueman). Needs AF_BLUETOOTH + AF_NETLINK for HCI management and
+  # CAP_NET_ADMIN/CAP_NET_RAW for BT interface control — those are left unrestricted.
+  # Skip PrivateDevices (/dev/hci*), ProtectKernelModules (hci module loading).
+  systemd.services.bluetooth.serviceConfig = {
+    NoNewPrivileges = true;
+    PrivateTmp = true;
+    ProtectHome = true;
+    ProtectClock = true;
+    ProtectKernelLogs = true;
+    ProtectControlGroups = true;
+    ProtectHostname = true;
+    LockPersonality = true;
+    RestrictSUIDSGID = true;
+    RestrictRealtime = true;
+    RestrictNamespaces = true;
+    SystemCallArchitectures = "native";
+    RestrictAddressFamilies = [
+      "AF_UNIX"
+      "AF_BLUETOOTH"
+      "AF_NETLINK"
+    ];
   };
 
   sops = {
