@@ -1,6 +1,7 @@
 { config, lib, pkgs, ... }:
 let
   nixRepo = "${config.home.homeDirectory}/nix";
+  privateUserJs = ../../files/firefox/private-user.js;
 in
 {
   home.username = "user";
@@ -66,6 +67,17 @@ in
         wl-clipboard
       ];
       text = builtins.readFile ../../files/scripts/clipboard-pick.sh;
+    })
+
+    (writeShellApplication {
+      name = "firefox-private";
+      runtimeInputs = [ pkgs.firefox ];
+      text = ''
+        profile=$(mktemp -d)
+        trap 'rm -rf "$profile"' EXIT
+        cp ${privateUserJs} "$profile/user.js"
+        exec firefox --profile "$profile" --no-remote "$@"
+      '';
     })
 
     hypridle
