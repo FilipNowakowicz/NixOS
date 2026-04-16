@@ -28,7 +28,8 @@ let
     RestrictRealtime = true;
     RestrictNamespaces = true;
     SystemCallArchitectures = "native";
-    CapabilityBoundingSet = "";
+    # CapabilityBoundingSet intentionally not set — thermald and power-profiles-daemon
+    # need capabilities (CAP_SYS_ADMIN/CAP_SYS_RAWIO) for hardware access.
     RestrictAddressFamilies = "AF_UNIX";
   };
 in

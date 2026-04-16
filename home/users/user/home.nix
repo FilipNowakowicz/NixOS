@@ -231,8 +231,9 @@ in
 
       [Service]
       ExecStart=${pkgs.hypridle}/bin/hypridle -c %h/.config/hypr/hypridle.conf
-      Restart=always
+      Restart=on-failure
       RestartSec=10
+      TimeoutStopSec=5
 
       [Install]
       WantedBy=graphical-session.target
