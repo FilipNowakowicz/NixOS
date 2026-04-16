@@ -33,7 +33,12 @@
       "Bash(sops:*)",
       "Bash(hypridle --help)",
       "Bash(/nix/store/aw20w9c8npbmi6c7b0p5fnpfmwdfgijv-hypridle-0.1.7/bin/hypridle --help)",
-      "Bash(timeout 5s /nix/store/aw20w9c8npbmi6c7b0p5fnpfmwdfgijv-hypridle-0.1.7/bin/hypridle -c ~/.config/hypr/hypridle.conf -v)"
+      "Bash(timeout 5s /nix/store/aw20w9c8npbmi6c7b0p5fnpfmwdfgijv-hypridle-0.1.7/bin/hypridle -c ~/.config/hypr/hypridle.conf -v)",
+      "Bash(mullvad status:*)",
+      "Bash(ping -c 3 1.1.1.1)",
+      "Bash(ping -c 3 google.com)",
+      "Bash(ip route:*)",
+      "Bash(journalctl -u mullvad-daemon -n 30 --no-pager)"
     ]
   }
 }

@@ -76,6 +76,11 @@ in
   networking = {
     hostName = "NixOS";
     networkmanager.enable = true;
+    # Mullvad (and VPNs in general) route return traffic through the WireGuard
+    # interface. Strict RPF drops these packets because they arrive on a
+    # different interface than the kernel expects. "loose" still validates that
+    # a route to the source exists, without requiring interface symmetry.
+    firewall.checkReversePath = "loose";
   };
 
   hardware.bluetooth.enable = true;
@@ -111,6 +116,11 @@ in
     };
 
     mullvad-vpn.enable = true;
+
+    # Mullvad requires systemd-resolved to manage DNS inside the tunnel.
+    # The mullvad-vpn module sets this via mkDefault, but that isn't
+    # taking effect — explicitly enabling it here ensures it runs.
+    resolved.enable = true;
 
     tailscale = {
       enable = true;
