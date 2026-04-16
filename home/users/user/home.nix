@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 let
   nixRepo = "${config.home.homeDirectory}/nix";
 in
@@ -195,15 +195,9 @@ in
   # idle timer — this avoids the swayidle -w re-arm race where unlocking
   # would immediately re-trigger the lock or suspend command.
   #
-  # NOTE: home-manager hypridle module has a bug: generates on_timeout (with
-  # underscore) but hypridle 0.1.7 expects on-timeout (with dash). This breaks
-  # the lock/suspend functionality. We work around it by managing hypridle
-  # completely outside the home-manager service module.
-  # ── Hypridle Config Fix ────────────────────────────────────────────────
-  # Home-manager's hypridle service module generates config with on_timeout
-  # (underscore), but hypridle 0.1.7 requires on-timeout (dash). Disabling
-  # the module and providing corrected config via xdg.configFile + custom
-  # systemd user service.
+  # NOTE: home-manager's hypridle module generates on_timeout (underscore)
+  # but hypridle 0.1.7 requires on-timeout (dash). Module is disabled and
+  # replaced with home.file service + xdg.configFile with correct syntax.
   services.hypridle.enable = false;
 
   xdg.configFile."hypr/hypridle.conf" = {
@@ -226,5 +220,27 @@ in
       }
     '';
   };
+
+  home.activation.hypridle-service = lib.hm.dag.entryAfter [ "writeBoundary" ] (let
+    unit = pkgs.writeText "hypridle.service" ''
+      [Unit]
+      After=graphical-session.target
+      ConditionEnvironment=WAYLAND_DISPLAY
+      Description=hypridle
+      PartOf=graphical-session.target
+
+      [Service]
+      ExecStart=${pkgs.hypridle}/bin/hypridle -c %h/.config/hypr/hypridle.conf
+      Restart=always
+      RestartSec=10
+
+      [Install]
+      WantedBy=graphical-session.target
+    '';
+  in ''
+    install -Dm644 ${unit} "$HOME/.config/systemd/user/hypridle.service"
+    ${pkgs.systemd}/bin/systemctl --user daemon-reload
+    ${pkgs.systemd}/bin/systemctl --user enable --now hypridle.service || true
+  '');
 
 }
