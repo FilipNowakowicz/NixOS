@@ -337,21 +337,20 @@ nix build '.#nixosConfigurations.homeserver-vm.config.system.build.toplevel' --n
 
 ---
 
-## CI
+## Continuous Integration
 
-The GitHub Actions workflow at `.github/workflows/nix.yml` runs on every push to `main` and on pull requests.
+The repository uses GitHub Actions (`.github/workflows/nix.yml`) for automated validation on every push to `main` and for all pull requests.
 
-| Job | What it does |
-|-----|-------------|
-| `flake-check` | `nix flake check`, eval all four hosts, `deadnix`, `nixfmt` |
-| `smoke-test` | Boots the homeserver-vm NixOS test and validates all services |
+| Job | Description |
+| :--- | :--- |
+| **Flake Check** | Runs `nix flake check`, evaluates all host configurations, checks for dead code (`deadnix`), and verifies formatting (`nixfmt`). |
+| **Smoke Test** | Executes the `homeserver-vm` integration test, booting a full NixOS environment to validate all services. |
 
-**Cachix** is wired into both jobs. Before the workflow can push or pull from the cache, two one-time steps are needed:
+### Path Filtering & Performance
 
-1. Create a cache at [app.cachix.org](https://app.cachix.org) and note the cache name.
-2. Replace `<cache-name>` in the workflow with the actual name.
-3. Add `CACHIX_AUTH_TOKEN` to the repository's **Settings → Secrets → Actions**.
+To optimize CI runtime, the **Smoke Test** only executes when changes are detected in paths that affect the server configuration (`hosts/homeserver*/**`, `modules/**`, `lib/**`). 
 
-**Smoke-test path filter** — the `smoke-test` job only runs when files under `hosts/homeserver*/**`, `modules/**`, or `lib/**` change. It depends on `flake-check` passing first.
+The workflow uses **Cachix** (`filipnowakowicz`) to persist built artifacts. To enable pushing from CI, ensure `CACHIX_AUTH_TOKEN` is set in your repository secrets.
 
-**KVM note** — NixOS tests boot real QEMU VMs and require `/dev/kvm`. GitHub-hosted `ubuntu-latest` runners expose `/dev/kvm` for public repositories. For private repos or self-hosted runners, confirm KVM is available; the job will time out silently rather than fail fast if it is not.
+> [!IMPORTANT]
+> **KVM Requirement**: NixOS integration tests require KVM virtualization. While GitHub-hosted `ubuntu-latest` runners provide `/dev/kvm` for public repositories, private or self-hosted runners must have KVM support enabled to prevent silent job timeouts.
