@@ -1,6 +1,5 @@
 {
   config,
-  lib,
   pkgs,
   ...
 }:
@@ -207,14 +206,15 @@ in
   };
 
   # ── Hypridle ───────────────────────────────────────────────────────────
-  # Hyprland-native idle daemon. Uses loginctl lock-session so Hyprland's
-  # session-lock protocol handles hyprlock lifecycle independently of the
-  # idle timer — this avoids the swayidle -w re-arm race where unlocking
-  # would immediately re-trigger the lock or suspend command.
+  # Hyprland-native idle daemon. Single source of truth for desktop idle
+  # behavior: lock at 10 minutes, suspend at 15 minutes.
+  #
+  # Uses loginctl lock-session so Hyprland's session-lock protocol handles
+  # hyprlock lifecycle independently of the idle timer.
   #
   # NOTE: home-manager's hypridle module generates on_timeout (underscore)
   # but hypridle 0.1.7 requires on-timeout (dash). Module is disabled and
-  # replaced with home.file service + xdg.configFile with correct syntax.
+  # replaced with a handwritten config file plus user service unit.
   services.hypridle.enable = false;
 
   xdg.configFile."hypr/hypridle.conf" = {
@@ -238,30 +238,24 @@ in
     '';
   };
 
-  home.activation.hypridle-service = lib.hm.dag.entryAfter [ "writeBoundary" ] (
-    let
-      unit = pkgs.writeText "hypridle.service" ''
-        [Unit]
-        After=graphical-session.target
-        ConditionEnvironment=WAYLAND_DISPLAY
-        Description=hypridle
-        PartOf=graphical-session.target
-
-        [Service]
-        ExecStart=${pkgs.hypridle}/bin/hypridle -c %h/.config/hypr/hypridle.conf
-        Restart=on-failure
-        RestartSec=10
-        TimeoutStopSec=5
-
-        [Install]
-        WantedBy=graphical-session.target
-      '';
-    in
-    ''
-      install -Dm644 ${unit} "$HOME/.config/systemd/user/hypridle.service"
-      ${pkgs.systemd}/bin/systemctl --user daemon-reload
-      ${pkgs.systemd}/bin/systemctl --user enable --now hypridle.service || true
-    ''
-  );
+  # Start with the same user target that Hyprland explicitly starts in
+  # ~/.config/hypr/hyprland.conf (nixos-fake-graphical-session.target).
+  systemd.user.services.hypridle = {
+    Unit = {
+      Description = "hypridle";
+      After = [ "nixos-fake-graphical-session.target" ];
+      PartOf = [ "nixos-fake-graphical-session.target" ];
+      ConditionEnvironment = "WAYLAND_DISPLAY";
+    };
+    Service = {
+      ExecStart = "${pkgs.hypridle}/bin/hypridle -c %h/.config/hypr/hypridle.conf";
+      Restart = "on-failure";
+      RestartSec = 10;
+      TimeoutStopSec = 5;
+    };
+    Install = {
+      WantedBy = [ "nixos-fake-graphical-session.target" ];
+    };
+  };
 
 }

@@ -122,6 +122,9 @@ in
     # taking effect — explicitly enabling it here ensures it runs.
     resolved.enable = true;
 
+    # Bound remote-write draining on shutdown to avoid long stop jobs.
+    prometheus.extraFlags = [ "--storage.remote.flush-deadline=15s" ];
+
     tailscale = {
       enable = true;
       openFirewall = true;
@@ -138,9 +141,8 @@ in
     logind.settings = {
       Login = {
         HandleLidSwitch = "suspend";
-        IdleAction = "suspend";
-        IdleActionSec = "15min";
       };
+      # Idle lock/suspend is managed in the user Hypridle config.
       # Optional: keep running on AC power
       # lidSwitchExternalPower = "ignore";
     };
@@ -148,6 +150,12 @@ in
 
   systemd.services.thermald.serviceConfig = hwDaemonSandbox;
   systemd.services.power-profiles-daemon.serviceConfig = hwDaemonSandbox;
+  systemd.services.prometheus.serviceConfig = {
+    TimeoutStopSec = "20s";
+    SupplementaryGroups = [ "telemetry-ingest" ];
+  };
+  systemd.services."opentelemetry-collector".serviceConfig.SupplementaryGroups =
+    lib.mkAfter [ "telemetry-ingest" ];
 
   # fwupd has almost no upstream hardening. Skip ProtectSystem/PrivateDevices (writes
   # firmware to hardware), ProtectKernelModules (loads capsule/UEFI modules), ProtectClock
@@ -201,9 +209,14 @@ in
     defaultSopsFormat = "yaml";
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     secrets.user_password.neededForUsers = true;
-    secrets.observability_ingest_password = { };
+    secrets.observability_ingest_password = {
+      group = "telemetry-ingest";
+      mode = "0440";
+    };
     secrets.restic_password = { };
   };
+
+  users.groups.telemetry-ingest = { };
 
   # ── Backups ──────────────────────────────────────────────────────────────────
   services.restic.backups.local = {
