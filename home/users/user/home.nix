@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   nixRepo = "${config.home.homeDirectory}/nix";
   privateUserJs = ../../files/firefox/private-user.js;
@@ -233,27 +238,30 @@ in
     '';
   };
 
-  home.activation.hypridle-service = lib.hm.dag.entryAfter [ "writeBoundary" ] (let
-    unit = pkgs.writeText "hypridle.service" ''
-      [Unit]
-      After=graphical-session.target
-      ConditionEnvironment=WAYLAND_DISPLAY
-      Description=hypridle
-      PartOf=graphical-session.target
+  home.activation.hypridle-service = lib.hm.dag.entryAfter [ "writeBoundary" ] (
+    let
+      unit = pkgs.writeText "hypridle.service" ''
+        [Unit]
+        After=graphical-session.target
+        ConditionEnvironment=WAYLAND_DISPLAY
+        Description=hypridle
+        PartOf=graphical-session.target
 
-      [Service]
-      ExecStart=${pkgs.hypridle}/bin/hypridle -c %h/.config/hypr/hypridle.conf
-      Restart=on-failure
-      RestartSec=10
-      TimeoutStopSec=5
+        [Service]
+        ExecStart=${pkgs.hypridle}/bin/hypridle -c %h/.config/hypr/hypridle.conf
+        Restart=on-failure
+        RestartSec=10
+        TimeoutStopSec=5
 
-      [Install]
-      WantedBy=graphical-session.target
-    '';
-  in ''
-    install -Dm644 ${unit} "$HOME/.config/systemd/user/hypridle.service"
-    ${pkgs.systemd}/bin/systemctl --user daemon-reload
-    ${pkgs.systemd}/bin/systemctl --user enable --now hypridle.service || true
-  '');
+        [Install]
+        WantedBy=graphical-session.target
+      '';
+    in
+    ''
+      install -Dm644 ${unit} "$HOME/.config/systemd/user/hypridle.service"
+      ${pkgs.systemd}/bin/systemctl --user daemon-reload
+      ${pkgs.systemd}/bin/systemctl --user enable --now hypridle.service || true
+    ''
+  );
 
 }
