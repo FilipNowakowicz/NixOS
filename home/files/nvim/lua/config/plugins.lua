@@ -161,9 +161,9 @@ require("lazy").setup({
   -----------------------------------------------------------
   -- Editing utilities
   -----------------------------------------------------------
-  { "numToStr/Comment.nvim" },
+  { "numToStr/Comment.nvim",  opts = {} },
   { "windwp/nvim-autopairs" },
-  { "kylechui/nvim-surround" },
+  { "kylechui/nvim-surround", opts = {} },
   { "tpope/vim-sleuth" },
 
   -----------------------------------------------------------
@@ -178,7 +178,7 @@ require("lazy").setup({
   -----------------------------------------------------------
   -- Language-specific
   -----------------------------------------------------------
-  { "ellisonleao/glow.nvim", cmd = "Glow" },
+  { "ellisonleao/glow.nvim", cmd = "Glow", opts = {} },
   { "lervag/vimtex", ft = { "tex", "plaintex" } },
 }, {
   -- For NixOS compatibility

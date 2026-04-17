@@ -278,6 +278,16 @@ The flake provides several `devShells` and `apps` for development and maintenanc
 
 ---
 
+## Neovim
+
+Raw `neovim-unwrapped` binary; config in `home/files/nvim/`, plugins via [lazy.nvim](https://github.com/folke/lazy.nvim). LSP uses the Neovim 0.11 native API (`vim.lsp.config` / `vim.lsp.enable`) backed by nvim-lspconfig defaults. Servers: `clangd`, `basedpyright`, `nixd`, and optional `ltex-ls-plus` for prose grammar.
+
+**Core plugins:** blink.cmp (completion + Copilot), conform.nvim (format-on-save), nvim-lint, nvim-dap + dap-ui, neotest, nvim-treesitter, Telescope, oil.nvim, leap.nvim, gitsigns + fugitive + lazygit, snacks.nvim, trouble.nvim, which-key, toggleterm, persistence.nvim, vimtex, nvim-surround, Comment.nvim.
+
+See [`home/files/nvim/CHEATSHEET.md`](home/files/nvim/CHEATSHEET.md) for a full keybind reference.
+
+---
+
 ## Code Quality
 
 ### Formatting

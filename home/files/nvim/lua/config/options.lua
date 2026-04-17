@@ -27,5 +27,5 @@ vim.opt.shiftwidth = 4
 vim.opt.tabstop = 4
 
 vim.opt.foldmethod = "expr"
-vim.opt.foldexpr   = "nvim_treesitter#foldexpr()"
+vim.opt.foldexpr   = "v:lua.vim.treesitter.foldexpr()"
 vim.opt.foldenable = false   -- open by default, fold manually with zc/zo

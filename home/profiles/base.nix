@@ -27,6 +27,7 @@
     gcc
     tree-sitter
     nixd
+    basedpyright
     ruff
     stylua
     nixfmt

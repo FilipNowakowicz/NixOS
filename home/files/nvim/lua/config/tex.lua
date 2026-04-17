@@ -42,11 +42,12 @@ pcall(function()
   local Rule = require("nvim-autopairs.rule")
   npairs.add_rules({
     Rule("$", "$", { "tex", "plaintex" }):with_pair(function(opts)
-      local line = opts.line
-      local before = line:sub(1, opts.col - 1)
-      local after = line:sub(opts.col, opts.col)
-      local double_dollar = before:match("%$%$") or after == "$"
-      return double_dollar or false
+      -- Don't pair if next char is already "$" (would create "$$$")
+      -- Don't pair if already inside an odd number of "$" (inside inline math)
+      local before = opts.line:sub(1, opts.col - 1)
+      local after  = opts.line:sub(opts.col, opts.col)
+      local count  = select(2, before:gsub("%$", ""))
+      return after ~= "$" and (count % 2 == 0)
     end),
   })
 end)

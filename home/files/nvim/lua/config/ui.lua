@@ -24,7 +24,7 @@ end)
 -----------------------------------------------------------
 pcall(function()
   require("nvim-treesitter.configs").setup({
-    ensure_installed = { "c", "python", "lua", "latex", "bibtex" },
+    ensure_installed = { "c", "python", "lua", "nix", "latex", "bibtex" },
     highlight = { enable = true },
     indent = { enable = true },
     incremental_selection = {

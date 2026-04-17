@@ -11,10 +11,10 @@ conform.setup({
   },
   format_on_save = {
     timeout_ms = 500,
-    lsp_fallback = true,
+    lsp_format = "fallback",
   },
 })
 
 vim.keymap.set({ "n", "v" }, "<leader>lf", function()
-  conform.format({ async = true, lsp_fallback = true })
+  conform.format({ async = true, lsp_format = "fallback" })
 end, { desc = "Format" })
