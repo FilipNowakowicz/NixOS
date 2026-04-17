@@ -1,6 +1,6 @@
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 
-if not vim.loop.fs_stat(lazypath) then
+if not vim.uv.fs_stat(lazypath) then
   vim.fn.system({
     "git",
     "clone",
@@ -14,59 +14,135 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
-  { "rebelot/kanagawa.nvim", lazy = false, priority = 1000 },
   { "sainnhe/gruvbox-material", lazy = false, priority = 1000 },
 
   { "nvim-tree/nvim-web-devicons", lazy = true },
 
+  -----------------------------------------------------------
+  -- LSP + formatting + linting
+  -----------------------------------------------------------
   { "neovim/nvim-lspconfig" },
-  { "williamboman/mason.nvim" },
-  { "williamboman/mason-lspconfig.nvim" },
+  { "stevearc/conform.nvim" },
+  { "mfussenegger/nvim-lint" },
 
-  { "hrsh7th/nvim-cmp" },
-  { "hrsh7th/cmp-nvim-lsp" },
-  { "hrsh7th/cmp-buffer" },
-  { "hrsh7th/cmp-path" },
-  { "saadparwaiz1/cmp_luasnip" },
+  -----------------------------------------------------------
+  -- Completion (blink.cmp replaces nvim-cmp)
+  -----------------------------------------------------------
   { "L3MON4D3/LuaSnip" },
+  {
+    "saghen/blink.cmp",
+    version = "*",
+    dependencies = {
+      "rafamadriz/friendly-snippets",
+      { "saghen/blink-copilot", dependencies = { "zbirenbaum/copilot.lua" } },
+      { "saghen/blink.compat", version = "*" },
+      "hrsh7th/cmp-omni",
+      "kdheepak/cmp-latex-symbols",
+    },
+    config = function(_, opts)
+      require("blink.cmp").setup(opts)
+      require("luasnip.loaders.from_vscode").lazy_load()
+    end,
+    opts = {
+      keymap = {
+        ["<C-Space>"] = { "show", "show_documentation", "hide_documentation" },
+        ["<C-e>"]     = { "cancel", "fallback" },
+        ["<C-y>"]     = { "select_and_accept" },
+        ["<CR>"]      = { "accept", "fallback" },
+        ["<Tab>"]     = { "select_next", "snippet_forward", "fallback" },
+        ["<S-Tab>"]   = { "select_prev", "snippet_backward", "fallback" },
+        ["<C-n>"]     = { "select_next", "fallback" },
+        ["<C-p>"]     = { "select_prev", "fallback" },
+        ["<C-b>"]     = { "scroll_documentation_up", "fallback" },
+        ["<C-f>"]     = { "scroll_documentation_down", "fallback" },
+      },
+      sources = {
+        default = { "lsp", "path", "snippets", "buffer", "copilot" },
+        per_filetype = {
+          tex      = { "omni", "latex_symbols", "lsp", "snippets", "buffer", "path" },
+          plaintex = { "omni", "latex_symbols", "lsp", "snippets", "buffer", "path" },
+        },
+        providers = {
+          copilot = {
+            name = "copilot",
+            module = "blink-copilot",
+            score_offset = 100,
+            async = true,
+          },
+          omni = {
+            name = "omni",
+            module = "blink.compat.source",
+            opts = { name = "omni" },
+          },
+          latex_symbols = {
+            name = "latex_symbols",
+            module = "blink.compat.source",
+            opts = { name = "latex_symbols" },
+          },
+        },
+      },
+      snippets = { preset = "luasnip" },
+      completion = {
+        accept = { auto_brackets = { enabled = true } },
+        documentation = {
+          auto_show = true,
+          auto_show_delay_ms = 200,
+        },
+        menu = {
+          draw = { treesitter = { "lsp" } },
+        },
+      },
+      appearance = { nerd_font_variant = "mono" },
+    },
+  },
 
+  -- Copilot backend (suggestion mode off — blink-copilot shows in completion menu)
   {
     "zbirenbaum/copilot.lua",
     event = "InsertEnter",
     opts = {
-      suggestion = {
-        enabled = true,
-        auto_trigger = true,
-        keymap = {
-          accept = "<C-l>",
-          accept_line = "<C-j>",
-          next = "<M-]>",
-          prev = "<M-[>",
-          dismiss = "<C-]>",
-        },
-      },
+      suggestion = { enabled = false },
       panel = { enabled = false },
       filetypes = { markdown = true },
     },
   },
 
-  { "mfussenegger/nvim-lint" },
-
+  -----------------------------------------------------------
+  -- Debugging + testing
+  -----------------------------------------------------------
   { "mfussenegger/nvim-dap" },
   { "nvim-neotest/nvim-nio" },
   { "rcarriga/nvim-dap-ui" },
-  { "jay-babu/mason-nvim-dap.nvim" },
-
   { "nvim-neotest/neotest" },
   { "nvim-neotest/neotest-python" },
 
+  -----------------------------------------------------------
+  -- UI
+  -----------------------------------------------------------
   { "nvim-lualine/lualine.nvim" },
-  { "nvim-tree/nvim-tree.lua" },
+  { "stevearc/oil.nvim" },
+  {
+    "folke/snacks.nvim",
+    priority = 1000,
+    lazy = false,
+    opts = {
+      notifier  = { enabled = true },
+      bigfile   = { enabled = true },
+      words     = { enabled = true },
+      dashboard = { enabled = true },
+    },
+  },
 
-  -- { "nvim-treesitter/nvim-treesitter", build = ":TSUpdate" },
-  -- { "nvim-treesitter/nvim-treesitter" },
-  -- { "nvim-treesitter/nvim-treesitter-textobjects", dependencies = { "nvim-treesitter/nvim-treesitter" } },
+  -----------------------------------------------------------
+  -- Treesitter
+  -----------------------------------------------------------
+  { "nvim-treesitter/nvim-treesitter", build = ":TSUpdate" },
+  { "nvim-treesitter/nvim-treesitter-textobjects", dependencies = { "nvim-treesitter/nvim-treesitter" } },
+  { "nvim-treesitter/nvim-treesitter-context" },
 
+  -----------------------------------------------------------
+  -- Navigation + search
+  -----------------------------------------------------------
   {
     "nvim-telescope/telescope.nvim",
     dependencies = {
@@ -74,26 +150,36 @@ require("lazy").setup({
       { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
     },
   },
-
-  -- { "nvim-lua/plenary.nvim" },
-
   { url = "https://codeberg.org/andyg/leap.nvim" },
 
+  -----------------------------------------------------------
+  -- Git
+  -----------------------------------------------------------
   { "lewis6991/gitsigns.nvim" },
   { "tpope/vim-fugitive" },
 
+  -----------------------------------------------------------
+  -- Editing utilities
+  -----------------------------------------------------------
   { "numToStr/Comment.nvim" },
   { "windwp/nvim-autopairs" },
   { "kylechui/nvim-surround" },
+  { "tpope/vim-sleuth" },
+
+  -----------------------------------------------------------
+  -- Workspace
+  -----------------------------------------------------------
   { "folke/trouble.nvim" },
   { "folke/which-key.nvim" },
+  { "folke/persistence.nvim", event = "BufReadPre" },
   { "lukas-reineke/indent-blankline.nvim", main = "ibl" },
+  { "akinsho/toggleterm.nvim" },
 
+  -----------------------------------------------------------
+  -- Language-specific
+  -----------------------------------------------------------
   { "ellisonleao/glow.nvim", cmd = "Glow" },
-
   { "lervag/vimtex", ft = { "tex", "plaintex" } },
-  { "hrsh7th/cmp-omni" },
-  { "kdheepak/cmp-latex-symbols" },
 }, {
   -- For NixOS compatibility
   lockfile = vim.fn.stdpath("data") .. "/lazy/lazy-lock.json",

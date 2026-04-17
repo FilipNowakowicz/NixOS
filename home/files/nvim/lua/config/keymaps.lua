@@ -1,9 +1,8 @@
 local map = vim.keymap.set
 
--- Nvim-Tree
-map("n", "<leader>e", function()
-  vim.cmd.NvimTreeToggle()
-end, { silent = true, desc = "File explorer" })
+-- Oil (file explorer)
+map("n", "<leader>e", "<cmd>Oil<cr>",  { silent = true, desc = "File explorer" })
+map("n", "-",         "<cmd>Oil<cr>",  { silent = true, desc = "Open parent directory" })
 
 -- Telescope
 map("n", "<leader>ff", function()

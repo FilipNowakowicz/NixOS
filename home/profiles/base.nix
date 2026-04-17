@@ -22,12 +22,14 @@
     lazygit
     nodejs
     python3
-    python3Packages.flake8
     clang-tools
     gnumake
     gcc
     tree-sitter
     nixd
+    ruff
+    stylua
+    nixfmt
 
     # Neovim helpers
     glow # :Glow markdown preview
