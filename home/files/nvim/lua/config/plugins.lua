@@ -34,7 +34,7 @@ require("lazy").setup({
     version = "*",
     dependencies = {
       "rafamadriz/friendly-snippets",
-      { "saghen/blink-copilot", dependencies = { "zbirenbaum/copilot.lua" } },
+      { "giuxtaposition/blink-cmp-copilot", dependencies = { "zbirenbaum/copilot.lua" } },
       { "saghen/blink.compat", version = "*" },
       "hrsh7th/cmp-omni",
       "kdheepak/cmp-latex-symbols",
@@ -65,7 +65,7 @@ require("lazy").setup({
         providers = {
           copilot = {
             name = "copilot",
-            module = "blink-copilot",
+            module = "blink-cmp-copilot",
             score_offset = 100,
             async = true,
           },
