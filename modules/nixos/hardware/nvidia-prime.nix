@@ -35,15 +35,21 @@
     };
   };
 
+  # ── Stable DRM symlink ──────────────────────────────────────────────────────
+  # AQ_DRM_DEVICES is colon-delimited, so /dev/dri/by-path/pci-0000:00:02.0-card
+  # can't be used directly. This udev rule creates a stable, colon-free symlink
+  # for the Intel iGPU (PCI 0000:00:02.0) that survives kernel updates.
+  services.udev.extraRules = ''
+    SUBSYSTEM=="drm", KERNEL=="card*", KERNELS=="0000:00:02.0", SYMLINK+="dri/intel-igpu"
+  '';
+
   # ── Intel iGPU / Wayland env vars ──────────────────────────────────────────
   # Pins the session to the Intel iGPU. NVIDIA is available on-demand via nvidia-offload.
   environment.sessionVariables = {
     NIXOS_OZONE_WL = "1"; # Electron apps: use Wayland backend
     LIBVA_DRIVER_NAME = "iHD"; # VA-API → Intel Media Driver
     __GLX_VENDOR_LIBRARY_NAME = "mesa"; # GLX → Mesa (Intel) by default
-    # Pins Hyprland's primary GPU to the Intel iGPU so it doesn't accidentally
-    # pick the NVIDIA card. AQ_DRM_DEVICES is colon-delimited, so we can't use
-    # the by-path name which contains colons. Using /dev/dri/card1 instead.
-    AQ_DRM_DEVICES = "/dev/dri/card1";
+    # Pins Hyprland's primary GPU to the Intel iGPU via a stable udev symlink.
+    AQ_DRM_DEVICES = "/dev/dri/intel-igpu";
   };
 }

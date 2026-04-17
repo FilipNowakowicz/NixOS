@@ -6,9 +6,7 @@ This document tracks the evolution of this NixOS configuration, from immediate n
 
 ## Active
 
-- **LGTM tuning**: Expand dashboards/alerts and tune retention/cardinality for long-running operation. Add alerting rules for disk usage >80%, service restarts, and backup failures.
 - **Secrets rotation automation**: Build a manual flake app/script to rotate common secrets (Grafana admin, observability ingest password, Tailscale auth key). Test on `homeserver-vm`, design for easy conversion to systemd timer when moving to real hardware.
-- **AQ_DRM_DEVICES stability** — replace `/dev/dri/card1` with a udev rule that creates a stable symlink, so the GPU assignment survives kernel updates.
 
 ---
 
@@ -25,7 +23,7 @@ This document tracks the evolution of this NixOS configuration, from immediate n
 - [ ] **Nix binary cache** — self-hosted `nix-serve` on the homeserver or Cachix. Saves rebuild time once multiple machines share the same flake. Especially valuable if CI starts building closures.
 - [ ] **CI smoke test scheduling** — the `homeserver-vm-smoke` NixOS test is expensive. Run it on a schedule (weekly) or only when homeserver-related paths change, rather than on every push.
 - [ ] **Local DNS & ad-blocking** — deploy AdGuard Home or Pi-hole on the homeserver, integrated with Tailscale for network-wide privacy.
+- **LGTM tuning**: Expand dashboards/alerts and tune retention/cardinality for long-running operation. Add alerting rules for disk usage >80%, service restarts, and backup failures.
 - console.cloud.google.com
-
 ---
 
