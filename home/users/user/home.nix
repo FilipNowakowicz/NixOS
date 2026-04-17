@@ -67,6 +67,8 @@ in
       ];
       text = builtins.readFile ../../files/scripts/clipboard-pick.sh;
     })
+
+    hypridle
   ];
 
   # ── XDG MIME Apps ──────────────────────────────────────────────────────
@@ -192,29 +194,37 @@ in
   # session-lock protocol handles hyprlock lifecycle independently of the
   # idle timer — this avoids the swayidle -w re-arm race where unlocking
   # would immediately re-trigger the lock or suspend command.
-  services.hypridle = {
-    enable = true;
-    settings = {
-      general = {
-        # Called when loginctl lock-session is received (covers both the
-        # 10-min timeout below and before_sleep_cmd).
-        lock_cmd = "pidof hyprlock || ${pkgs.hyprlock}/bin/hyprlock";
-        # Lock before sleep so the screen is never briefly visible on wake.
-        before_sleep_cmd = "loginctl lock-session";
-        # Turn displays back on after waking from suspend.
-        after_sleep_cmd = "hyprctl dispatch dpms on";
-      };
-      listener = [
-        {
-          timeout = 600; # 10 minutes → lock
-          on_timeout = "loginctl lock-session";
-        }
-        {
-          timeout = 900; # 15 minutes total (5 min after lock) → suspend
-          on_timeout = "${pkgs.systemd}/bin/systemctl suspend";
-        }
-      ];
-    };
+  #
+  # NOTE: home-manager hypridle module has a bug: generates on_timeout (with
+  # underscore) but hypridle 0.1.7 expects on-timeout (with dash). This breaks
+  # the lock/suspend functionality. We work around it by managing hypridle
+  # completely outside the home-manager service module.
+  # ── Hypridle Config Fix ────────────────────────────────────────────────
+  # Home-manager's hypridle service module generates config with on_timeout
+  # (underscore), but hypridle 0.1.7 requires on-timeout (dash). Disabling
+  # the module and providing corrected config via xdg.configFile + custom
+  # systemd user service.
+  services.hypridle.enable = false;
+
+  xdg.configFile."hypr/hypridle.conf" = {
+    force = true;
+    text = ''
+      general {
+        after-sleep-cmd = hyprctl dispatch dpms on
+        before-sleep-cmd = loginctl lock-session
+        lock-cmd = pidof hyprlock || ${pkgs.hyprlock}/bin/hyprlock
+      }
+
+      listener {
+        on-timeout = loginctl lock-session
+        timeout = 600
+      }
+
+      listener {
+        on-timeout = ${pkgs.systemd}/bin/systemctl suspend
+        timeout = 900
+      }
+    '';
   };
 
 }
