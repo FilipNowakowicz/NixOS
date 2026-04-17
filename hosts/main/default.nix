@@ -154,8 +154,9 @@ in
     TimeoutStopSec = "20s";
     SupplementaryGroups = [ "telemetry-ingest" ];
   };
-  systemd.services."opentelemetry-collector".serviceConfig.SupplementaryGroups =
-    lib.mkAfter [ "telemetry-ingest" ];
+  systemd.services."opentelemetry-collector".serviceConfig.SupplementaryGroups = lib.mkAfter [
+    "telemetry-ingest"
+  ];
 
   # fwupd has almost no upstream hardening. Skip ProtectSystem/PrivateDevices (writes
   # firmware to hardware), ProtectKernelModules (loads capsule/UEFI modules), ProtectClock
