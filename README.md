@@ -334,3 +334,24 @@ nix build '.#nixosConfigurations.main.config.system.build.toplevel' --no-link
 nix build '.#nixosConfigurations.homeserver.config.system.build.toplevel' --no-link
 nix build '.#nixosConfigurations.homeserver-vm.config.system.build.toplevel' --no-link
 ```
+
+---
+
+## CI
+
+The GitHub Actions workflow at `.github/workflows/nix.yml` runs on every push to `main` and on pull requests.
+
+| Job | What it does |
+|-----|-------------|
+| `flake-check` | `nix flake check`, eval all four hosts, `deadnix`, `nixfmt` |
+| `smoke-test` | Boots the homeserver-vm NixOS test and validates all services |
+
+**Cachix** is wired into both jobs. Before the workflow can push or pull from the cache, two one-time steps are needed:
+
+1. Create a cache at [app.cachix.org](https://app.cachix.org) and note the cache name.
+2. Replace `<cache-name>` in the workflow with the actual name.
+3. Add `CACHIX_AUTH_TOKEN` to the repository's **Settings → Secrets → Actions**.
+
+**Smoke-test path filter** — the `smoke-test` job only runs when files under `hosts/homeserver*/**`, `modules/**`, or `lib/**` change. It depends on `flake-check` passing first.
+
+**KVM note** — NixOS tests boot real QEMU VMs and require `/dev/kvm`. GitHub-hosted `ubuntu-latest` runners expose `/dev/kvm` for public repositories. For private repos or self-hosted runners, confirm KVM is available; the job will time out silently rather than fail fast if it is not.

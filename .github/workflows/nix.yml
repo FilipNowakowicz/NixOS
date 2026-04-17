@@ -18,6 +18,12 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
 
+      - name: Cachix
+        uses: cachix/cachix-action@v15
+        with:
+          name: filipnowakowicz
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
       - name: Flake check
         run: nix flake check --show-trace
 
@@ -38,3 +44,47 @@ jobs:
 
       - name: Format check (nixfmt)
         run: nix run nixpkgs#nixfmt-tree -- --fail-on-change .
+
+  # Detect whether paths relevant to the homeserver-vm smoke test changed.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      homeserver: ${{ steps.filter.outputs.homeserver }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            homeserver:
+              - 'hosts/homeserver*/**'
+              - 'modules/**'
+              - 'lib/**'
+
+  smoke-test:
+    needs: [flake-check, changes]
+    if: needs.changes.outputs.homeserver == 'true'
+    # NixOS tests require KVM. GitHub-hosted ubuntu-latest runners expose
+    # /dev/kvm on public repositories. For private repos or self-hosted runners,
+    # verify that KVM is available before relying on this job — it will silently
+    # time out rather than fail fast if /dev/kvm is absent.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            system-features = nixos-test benchmark big-parallel kvm
+
+      - name: Cachix
+        uses: cachix/cachix-action@v15
+        with:
+          name: filipnowakowicz
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: homeserver-vm smoke test
+        run: nix build .#checks.x86_64-linux.homeserver-vm-smoke --show-trace
