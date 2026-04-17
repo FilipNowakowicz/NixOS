@@ -125,6 +125,7 @@ in
       gp = "git push";
       gl = "git pull";
       glog = "git log --oneline --graph --decorate";
+      gs = "git status";
       # System
       rebuild = "nh os switch --hostname main ${nixRepo}";
       battery = "acpi -b";
