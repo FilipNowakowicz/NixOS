@@ -280,11 +280,26 @@ The flake provides several `devShells` and `apps` for development and maintenanc
 
 ## Neovim
 
-Raw `neovim-unwrapped` binary; config in `home/files/nvim/`, plugins via [lazy.nvim](https://github.com/folke/lazy.nvim). LSP uses the Neovim 0.11 native API (`vim.lsp.config` / `vim.lsp.enable`) backed by nvim-lspconfig defaults. Servers: `clangd`, `basedpyright`, `nixd`, and optional `ltex-ls-plus` for prose grammar.
+A performance-focused configuration built around the Neovim 0.11+ native LSP API and `lazy.nvim`. It prioritizes speed, minimal wrappers, and a keyboard-driven workflow.
 
-**Core plugins:** blink.cmp (completion + Copilot), conform.nvim (format-on-save), nvim-lint, nvim-dap + dap-ui, neotest, nvim-treesitter, Telescope, oil.nvim, leap.nvim, gitsigns + fugitive + lazygit, snacks.nvim, trouble.nvim, which-key, toggleterm, persistence.nvim, vimtex, nvim-surround, Comment.nvim.
+| Category | Powered By | Description |
+| :--- | :--- | :--- |
+| **Completion** | `blink.cmp` | Fast completion engine with built-in Copilot integration. |
+| **Filesystem** | `oil.nvim` | Edit the filesystem as a text buffer to rename, move, or delete files. |
+| **Navigation** | `leap.nvim` | 2-character jumps to any visible text on screen. |
+| **LSP** | Native 0.11 | Minimal setup for `nixd`, `clangd`, `basedpyright`, and `ltex`. |
+| **UI** | `snacks.nvim` | Notifications, bigfile support, and a startup dashboard. |
+| **Search** | `telescope.nvim` | Fuzzy finding for files, live grep, and LSP symbols. |
 
-See [`home/files/nvim/CHEATSHEET.md`](home/files/nvim/CHEATSHEET.md) for a full keybind reference.
+### Highlights
+
+- **Filesystem Editing**: Press `-` to open `oil.nvim`. Batch-rename or move files across folders by editing lines in the buffer and saving.
+- **Modern Completion**: `blink.cmp` provides a fast completion menu that includes GitHub Copilot suggestions alongside LSP results.
+- **Integrated Tooling**: Full support for debugging (`nvim-dap`), testing (`neotest`), and formatting (`conform`).
+- **LaTeX Support**: `vimtex` integration with continuous compilation, SyncTeX support, and an optional grammar checker (`ltex`).
+- **Theme Integration**: Colors automatically update to match the system-wide runtime theme.
+
+Detailed keymaps are documented in the [**Neovim Cheat Sheet**](home/files/nvim/CHEATSHEET.md).
 
 ---
 
