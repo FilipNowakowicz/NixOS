@@ -1,278 +1,176 @@
-# Neovim Cheat Sheet
+# Neovim Workflow Guide & Cheat Sheet
 
-Leader key: `Space`
+**Leader Key:** `Space`
 
----
-
-## Completion (blink.cmp)
-
-| Key | Action |
-|-----|--------|
-| `<C-Space>` | Open completion / toggle docs |
-| `<Tab>` / `<S-Tab>` | Next / prev item, or jump snippet placeholder |
-| `<C-n>` / `<C-p>` | Next / prev item |
-| `<CR>` or `<C-y>` | Accept selected item |
-| `<C-e>` | Cancel completion |
-| `<C-b>` / `<C-f>` | Scroll documentation up / down |
-
-Copilot suggestions appear as completion items (score-boosted). They don't show as inline ghost text — look in the completion menu.
+This configuration is built for a keyboard-driven workflow. Instead of clicking through menus, you use "motions" and "fuzzy finding" to manipulate code and files.
 
 ---
 
-## LSP
+## 1. The "How to Move" Philosophy
+
+There are three ways to move in this setup, depending on where your target is:
+
+1.  **If you know the name (Searching)**: Use **Telescope** to find files or text anywhere in the project.
+2.  **If you see it on screen (Jumping)**: Use **Leap** to teleport your cursor to any visible character.
+3.  **If it's nearby (Navigation)**: Use standard Vim motions (`w`, `b`, `j`, `k`) or **Oil** for directory-level moves.
+
+### Searching (Telescope)
+*When to use: Finding a file by name or searching for a specific string across the whole project.*
 
 | Key | Action |
 |-----|--------|
-| `gd` | Go to definition |
-| `gD` | Go to declaration |
-| `gi` | Go to implementation |
-| `gr` | Go to references |
-| `K` | Hover documentation |
-| `<leader>lr` | Rename symbol |
-| `<leader>la` | Code action |
-| `<leader>lf` | Format buffer / selection |
-| `<leader>lh` | Toggle inlay hints |
-| `<leader>ld` | Show diagnostics for current line (float) |
-| `<leader>lq` | Send all diagnostics to quickfix |
-| `[d` / `]d` | Previous / next diagnostic |
-| `<leader>lg` | Toggle LTeX grammar checker (LaTeX / prose) |
-
-Active servers: `clangd` (C/C++), `basedpyright` (Python), `nixd` (Nix), `ltex` (opt-in).
-
----
-
-## Diagnostics & Trouble
-
-| Key | Action |
-|-----|--------|
-| `<leader>xx` | Toggle Trouble — workspace diagnostics |
-| `<leader>xf` | Toggle Trouble — current buffer only |
-| `<leader>xl` | Toggle Trouble — LSP references / definitions panel |
-| `<leader>xq` | Toggle Trouble — quickfix list |
-
----
-
-## Fuzzy Finding (Telescope)
-
-| Key | Action |
-|-----|--------|
-| `<leader>ff` | Find files |
-| `<leader>fg` | Live grep (search file contents) |
-| `<leader>fb` | Open buffers |
-| `<leader>fh` | Help tags |
+| `<leader>ff` | **Find Files**: Search by filename. |
+| `<leader>fg` | **Live Grep**: Search for text inside all files. |
+| `<leader>fb` | **Buffers**: Switch between open files. |
+| `<leader>fh` | **Help**: Search Neovim documentation. |
 
 **Inside Telescope:**
+- `<CR>` : Open file.
+- `<C-v>` / `<C-x>` : Open in **Vertical** / **Horizontal** split.
+- `<C-t>` : Open in new **Tab**.
+
+### Jumping (Leap)
+*When to use: You see a word on line 40 and want to be there instantly. Much faster than hitting `jjj...`.*
 
 | Key | Action |
 |-----|--------|
-| `<C-n>` / `<C-p>` | Next / prev result |
-| `<CR>` | Open in current window |
-| `<C-x>` | Open in horizontal split |
-| `<C-v>` | Open in vertical split |
-| `<C-t>` | Open in new tab |
-| `<Esc>` | Close |
+| `s{char}{char}` | **Leap Forward**: Type `s` then the first two letters of your target. |
+| `S{char}{char}` | **Leap Backward**: Same as above, but searches upwards. |
+| `gs{char}{char}` | **Leap Remote**: Perform an action (like `d` or `y`) at a target without moving your cursor. |
 
----
-
-## File Navigation (Oil)
-
-Oil lets you edit the filesystem like a buffer — rename/delete/move by editing lines.
+### Filesystem Mastery (Oil)
+*When to use: Instead of a sidebar, Oil lets you edit your folders like a text file. Want to rename 10 files? Just use find-and-replace on the filenames and save.*
 
 | Key | Action |
 |-----|--------|
-| `-` or `<leader>e` | Open Oil (parent directory of current file) |
-| `<CR>` | Enter directory / open file |
-| `-` (in Oil) | Go up one directory |
-| `<C-s>` | Open in horizontal split |
-| `<C-v>` | Open in vertical split |
-| `<C-p>` | Preview file |
-| `g.` | Toggle hidden files |
+| `-` or `<leader>e` | **Open Oil**: Opens the current directory as a buffer. |
+| `<CR>` | Enter a directory or open a file. |
+| `<C-p>` | **Preview**: See file content without opening it. |
+| `g.` | Toggle **Hidden Files**. |
+| `-` (inside Oil) | Go up to the parent directory. |
+| `:w` (inside Oil) | **Save changes**: Renaming/deleting lines in Oil applies those changes to your disk. |
 
 ---
 
-## Motion (Leap)
+## 2. Intelligent Coding (LSP & Completion)
 
-Leap lets you jump anywhere on screen with 2-character labels.
+### Completion (blink.cmp)
+*When to use: Suggestions appear automatically as you type. GitHub Copilot results are mixed in and "boosted" to the top.*
 
 | Key | Action |
 |-----|--------|
-| `s{char}{char}` | Leap forward — jump to match |
-| `S{char}{char}` | Leap backward |
-| `gs{char}{char}` | Leap remote — run an action at the target position without moving cursor |
+| `<C-Space>` | Manually trigger completion or toggle documentation. |
+| `<Tab>` / `<S-Tab>` | Cycle suggestions or jump through snippet placeholders. |
+| `<CR>` | Accept the selection. |
+| `<C-e>` | Close the menu. |
+| `<C-b>` / `<C-f>` | Scroll documentation up / down. |
 
----
-
-## Git (Gitsigns + Fugitive + Lazygit)
-
-| Key | Action |
-|-----|--------|
-| `<leader>gg` | Open Lazygit (floating terminal) |
-| `]c` / `[c` | Next / prev hunk |
-| `<leader>hs` | Stage hunk |
-| `<leader>hr` | Reset hunk |
-| `<leader>hp` | Preview hunk inline |
-| `<leader>hb` | Blame current line |
-
-Fugitive (`:G`, `:Gdiff`, `:Gclog`, etc.) is also available for anything Lazygit doesn't cover.
-
----
-
-## Debugging (nvim-dap + dap-ui)
-
-The UI opens/closes automatically on launch and exit. Python uses the system `python3`.
+### Code Intelligence (LSP)
+*When to use: Understanding and refactoring code. These keys "know" your programming language.*
 
 | Key | Action |
 |-----|--------|
-| `<F5>` | Continue / start |
-| `<F10>` | Step over |
-| `<F11>` | Step into |
-| `<F12>` | Step out |
-| `<leader>db` | Toggle breakpoint |
-| `<leader>dB` | Set conditional breakpoint (prompts for expression) |
-| `<leader>dr` | Open REPL |
-| `<leader>dl` | Re-run last debug session |
-| `<leader>du` | Toggle dap-ui manually |
+| `gd` | **Go to Definition**: Jump to where a variable/function is defined. |
+| `gr` | **References**: See every place this symbol is used in the project. |
+| `K`  | **Hover**: Show documentation for the symbol under cursor. |
+| `<leader>lr` | **Rename**: Rename a variable everywhere in the project safely. |
+| `<leader>la` | **Code Action**: Quick fixes (e.g., import a missing library). |
+| `<leader>lf` | **Format**: Clean up indentation and style. |
+| `<leader>lh` | **Inlay Hints**: Toggle inline parameter names. |
 
 ---
 
-## Testing (Neotest — pytest)
+## 3. Managing Errors (Diagnostics & Trouble)
+
+*When to use: When you see red/yellow underlines. "Trouble" provides a clean list of everything you need to fix.*
 
 | Key | Action |
 |-----|--------|
-| `<leader>tt` | Run nearest test |
-| `<leader>tT` | Run all tests in current file |
-| `<leader>tl` | Re-run last test |
-| `<leader>ts` | Toggle test summary panel |
-| `<leader>to` | Toggle test output panel |
-| `<leader>tn` / `<leader>tp` | Jump to next / prev test |
+| `]d` / `[d` | Jump to the next/previous error in the current file. |
+| `<leader>ld` | Show the full error message in a floating window. |
+| `<leader>xx` | **Trouble**: Open a panel at the bottom with all project errors. |
+| `<leader>xf` | **Buffer Diagnostics**: Only show errors for the current file. |
+| `<leader>xq` | **Quickfix**: Toggle the native quickfix list. |
 
 ---
 
-## Terminal (toggleterm)
+## 4. Structural Editing
+
+### Treesitter Objects
+*When to use: Don't select text character-by-character. Select "logical" blocks like whole functions or classes.*
+
+- Use with `v` (visual), `d` (delete), `c` (change), or `y` (yank).
+- `af` / `if` : **A**round / **I**nner **F**unction. (e.g., `vaf` selects the whole function).
+- `ac` / `ic` : **A**round / **I**nner **C**lass.
+
+### Folds (Treesitter)
+*When to use: Hiding large blocks of code you aren't working on.*
 
 | Key | Action |
 |-----|--------|
-| `<C-\>` | Toggle horizontal terminal (15 lines) |
-| `<leader>gg` | Open Lazygit in a floating terminal |
-
-Inside a toggleterm terminal, `<C-\>` closes it. You can open multiple terminals by calling `:ToggleTerm id=2` etc.
-
----
-
-## Session (persistence.nvim)
-
-Sessions are saved per working directory.
-
-| Key | Action |
-|-----|--------|
-| `<leader>qs` | Restore session for current directory |
-| `<leader>ql` | Restore the last session (regardless of directory) |
-| `<leader>qd` | Don't save a session when quitting |
-
----
-
-## Editing Utilities
+| `zc` / `zo` | **Close** / **Open** a fold. |
+| `za` | **Toggle** a fold. |
+| `zM` / `zR` | **Close All** / **Open All** folds. |
 
 ### Surround (nvim-surround)
+*Logic: `verb` + `target` + `surround-char`*
 
 | Key | Action |
 |-----|--------|
-| `ys{motion}{char}` | Add surround — e.g. `ysiw"` wraps word in `"` |
-| `cs{old}{new}` | Change surround — e.g. `cs"'` changes `"` to `'` |
-| `ds{char}` | Delete surround — e.g. `ds(` removes `()` |
-| `yss{char}` | Surround entire line |
-| `S{char}` (visual) | Surround selection |
-
-### Commenting (Comment.nvim)
-
-| Key | Action |
-|-----|--------|
-| `gcc` | Toggle line comment |
-| `gbc` | Toggle block comment |
-| `gc{motion}` | Comment over motion — e.g. `gcap` comments a paragraph |
-| `gcO` / `gco` / `gcA` | Add comment above / below / at end of line |
-
-### Pairs (nvim-autopairs)
-
-Pairs `(`, `[`, `{`, `"`, `'` automatically. In `.tex`/`.plaintex`, `$` auto-pairs for inline math (won't pair if already inside `$...$` or if next char is `$`).
+| `ysiw"` | **Add**: **Y**ou **S**urround **I**nner **W**ord with **"**. |
+| `cs"'` | **Change**: **C**hange **S**urround **"** to **'**. |
+| `ds"` | **Delete**: **D**elete **S**urround **"**. |
 
 ---
 
-## Treesitter — Text Objects & Selection
+## 5. Git & Workspace
 
-### Text Objects (use with `d`, `c`, `v`, `y`, etc.)
-
-| Key | Selects |
-|-----|---------|
-| `af` / `if` | Outer / inner function |
-| `ac` / `ic` | Outer / inner class |
-
-### Incremental Selection
+### Git Workflow
+*When to use: Use Gitsigns for small changes (hunks) and Lazygit for commits/pushes.*
 
 | Key | Action |
 |-----|--------|
-| `gnn` | Start selection at cursor node |
-| `grn` | Expand to next node |
-| `grc` | Expand to enclosing scope |
-| `grm` | Shrink selection back |
+| `<leader>gg` | **Lazygit**: Full terminal UI for staging, committing, and branching. |
+| `]c` / `[c` | Jump between changed chunks of code (hunks). |
+| `<leader>hp` | **Preview Hunk**: See what you changed in a small popup. |
+| `<leader>hs` | **Stage Hunk**: Stage only this specific change. |
+| `<leader>hr` | **Reset Hunk**: Undo the changes in this specific block. |
+| `<leader>hb` | **Blame**: See who last changed this line. |
 
-### Folds
-
-Uses native treesitter fold expression. Folds are off by default.
+### Session Management
+*When to use: To pick up exactly where you left off when you restart Neovim.*
 
 | Key | Action |
 |-----|--------|
-| `zc` | Close fold under cursor |
-| `zo` | Open fold under cursor |
-| `za` | Toggle fold |
-| `zM` | Close all folds |
-| `zR` | Open all folds |
-
-### Context
-
-`nvim-treesitter-context` shows the current function/class/block in a sticky header at the top of the window (max 3 lines).
+| `<leader>qs` | **Restore Session**: Reload all files/splits for this folder. |
+| `<leader>ql` | **Last Session**: Restore whatever you were doing last, anywhere. |
+| `<leader>qd` | **Don't Save**: Stop tracking session for this exit. |
 
 ---
 
-## LaTeX (vimtex — active in `.tex` / `.plaintex`)
+## 6. Language Specifics
 
-Compiler: latexmk → PDF, output in `./build/`. Viewer: zathura with SyncTeX (forward/inverse search).
-Spell checking (`en_gb`), soft-wrap, and `conceallevel=2` are set automatically.
+### LaTeX (Vimtex)
+- `<leader>vc`: Start **Continuous Compilation**. Saves trigger a PDF rebuild.
+- `<leader>vv`: **View**: Open the PDF at your current cursor location (SyncTeX).
+- `<leader>vt`: **Table of Contents**: Open a side panel with the document structure.
+- `<leader>lg`: Toggle **LTeX Grammar**: Real-time spell/grammar checking for prose.
 
-| Key | Action |
-|-----|--------|
-| `<leader>vc` | Start / stop continuous compilation |
-| `<leader>vv` | Forward-sync: open PDF at current cursor position |
-| `<leader>vt` | Open table of contents |
-| `<leader>vz` | Toggle conceal (0 ↔ 2) |
-| `<leader>lg` | Toggle LTeX grammar LSP |
+### Python
+- `<leader>r`: Run the current file immediately in a terminal.
+- `<leader>tt`: Run the **nearest test**.
+- `<leader>tT`: Run **all tests** in the current file.
+- `<leader>ts` / `<leader>to`: Toggle **Summary** / **Output** panel.
+- `<leader>tn` / `<leader>tp`: Jump to **Next** / **Previous** test.
 
 ---
 
-## UI & Miscellaneous
+## UI Toggles & Extras
 
 | Key | Action |
 |-----|--------|
-| `]]` / `[[` | Jump to next / prev occurrence of word under cursor (Snacks.words) |
-| `<leader>un` | Show notification history |
-| `<leader>ct` | Toggle Copilot on / off |
-| `<leader>r` | Run current Python file (`:!python %`) |
-| `<leader>m` | Markdown preview in terminal (Glow) |
-
-### which-key
-
-Press `<leader>` and wait — which-key shows all available bindings with group labels:
-
-| Prefix | Group |
-|--------|-------|
-| `<leader>c` | Copilot |
-| `<leader>d` | Debug |
-| `<leader>f` | Find |
-| `<leader>g` | Git |
-| `<leader>h` | Hunk |
-| `<leader>l` | LSP |
-| `<leader>q` | Session |
-| `<leader>t` | Test |
-| `<leader>u` | UI |
-| `<leader>v` | LaTeX |
-| `<leader>x` | Trouble |
+| `<leader>ct` | Toggle **Copilot** on/off. |
+| `<leader>un` | Show **Notification History** (via Snacks). |
+| `<leader>m`  | **Markdown Preview** (via Glow). |
+| `<C-\>` | Toggle a **Terminal** at the bottom. |
+| `]]` / `[[` | Jump to the next/prev occurrence of the word under cursor. |
