@@ -55,14 +55,17 @@ jobs:
       homeserver: ${{ steps.filter.outputs.homeserver }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
         with:
-          filters: |
-            homeserver:
-              - 'hosts/homeserver*/**'
-              - 'modules/**'
-              - 'lib/**'
+          fetch-depth: 0
+      - id: filter
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if git diff --name-only "$BASE_SHA" HEAD 2>/dev/null | grep -qE '^(hosts/homeserver|modules/|lib/)'; then
+            echo "homeserver=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "homeserver=false" >> "$GITHUB_OUTPUT"
+          fi
 
   smoke-test:
     needs: [flake-check, changes]
