@@ -354,5 +354,5 @@ To optimize CI runtime, the **Smoke Test** only executes when changes are detect
 
 The workflow uses **Cachix** (`filipnowakowicz`) to persist built artifacts. To enable pushing from CI, ensure `CACHIX_AUTH_TOKEN` is set in your repository secrets.
 
-> [!IMPORTANT]
-> **KVM Requirement**: NixOS integration tests require KVM virtualization. While GitHub-hosted `ubuntu-latest` runners provide `/dev/kvm` for public repositories, private or self-hosted runners must have KVM support enabled to prevent silent job timeouts.
+<!-- > [!IMPORTANT] -->
+<!-- > **KVM Requirement**: NixOS integration tests require KVM virtualization. While GitHub-hosted `ubuntu-latest` runners provide `/dev/kvm` for public repositories, private or self-hosted runners must have KVM support enabled to prevent silent job timeouts. -->
