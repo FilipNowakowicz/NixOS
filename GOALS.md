@@ -12,7 +12,9 @@ _Nothing in progress._
 
 ## Future Directions
 
-_Nothing in progress._
+- [ ] **Security hardening (phased)** — Apply defense-in-depth practices to main machine and systems. Start with main machine (kernel hardening, service isolation, reduced attack surface), then expand to VMs as needed. Document hardening rationale and learn through hands-on pentesting against hardened systems.
+- [ ] **Advanced Nix patterns & module ecosystem** — Deepen Nix expertise by extracting and generalizing patterns from the flake. Focus on: (1) data-driven configuration (extend VM registry to services, networking), (2) custom module DSLs (security hardening, service composition), (3) shareable modules for reuse or community contribution. Document patterns and extract 1-2 reusable modules.
+- [ ] **Quality of life on main** — Improve observability, reliability, and maintainability of main machine. Explore: monitoring & alerting, automated maintenance, resource optimization, update strategy, graceful failure handling. Discover what's worth improving as you go.
 
 ---
 
