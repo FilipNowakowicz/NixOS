@@ -25,6 +25,7 @@
     mpv
     wasistlos
     spotify
+    nautilus
 
     # ── Visuals / Toys ───────────────────────────────────────────────────────
     cava
