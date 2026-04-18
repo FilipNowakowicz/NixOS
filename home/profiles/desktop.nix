@@ -25,7 +25,6 @@
     mpv
     wasistlos
     spotify
-    nautilus
 
     # ── Visuals / Toys ───────────────────────────────────────────────────────
     cava
@@ -37,13 +36,7 @@
   ];
 
   # GTK theming
-  gtk = {
-    enable = true;
-    theme = {
-      name = "Adwaita-dark";
-      package = pkgs.gnome-themes-extra;
-    };
-  };
+  gtk.enable = true;
 
   # Cursor
   home.pointerCursor = {
