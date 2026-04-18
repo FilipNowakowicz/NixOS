@@ -20,8 +20,6 @@ in
 
   themes.active = (import ../../theme/active.nix).name;
 
-  gtk.gtk4.theme = null;
-
   # ── Git ────────────────────────────────────────────────────────────────
   programs.git = {
     enable = true;
