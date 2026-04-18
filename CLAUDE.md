@@ -11,6 +11,7 @@ approaches proactively. Explain why, not just what.
 - **Dev machine:** NixOS (main)
 - **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nh`, `nixd`, `statix`, `deadnix`, `sops`, `ssh-to-age`, `qemu`, `OVMF`
 - **Deploy (VM):** `deploy '.#vm'` or `deploy '.#homeserver-vm'`
+- **Deploy (WSL):** `home-manager switch --flake .#user@wsl`
 - **Deploy (main):** `nh os switch --hostname main .` (alias: `rebuild`)
 - **Validate flake:** `nix flake check`
 - **Lint:** `statix check .` and `deadnix .`
@@ -63,7 +64,7 @@ nix run '.#vm' -- <action> <name>
 - `home/profiles/` — home-manager profiles (base, desktop, workstation)
 - `home/theme/` — runtime-swappable themes and Home Manager module
 - `home/files/` — dotfiles and standalone scripts (NIX_REPO injected)
-- `home/users/user/` — user home-manager entry point
+- `home/users/user/` — user home-manager entry points (`home.nix`, `server.nix`, `wsl.nix`)
 
 ---
 

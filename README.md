@@ -91,7 +91,8 @@ The `main` host uses a secure, encrypted systemd-boot setup:
     ├── users/
     │   └── user/
     │       ├── home.nix
-    │       └── server.nix
+    │       ├── server.nix
+    │       └── wsl.nix                # Portable HM for Windows (WSL)
     └── files/                         # Static dotfiles and scripts
         ├── kitty/
         ├── nvim/
@@ -157,6 +158,7 @@ Multiple VMs can run simultaneously — each has its own disk image, OVMF vars, 
 | `homeserver` | `deploy '.#homeserver'` | Run from the `nix develop` shell. |
 | `vm` | `deploy '.#vm'` | After `nix run '.#vm' -- create vm`. |
 | `homeserver-vm` | `deploy '.#homeserver-vm'` | After `nix run '.#vm' -- create homeserver-vm`. |
+| `user@wsl` | `home-manager switch --flake .#user@wsl` | Portable Home Manager for WSL. |
 
 ---
 
