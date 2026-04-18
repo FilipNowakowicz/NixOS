@@ -223,6 +223,13 @@
             ./home/users/user/home.nix
           ];
         };
+        "user@wsl" = home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          extraSpecialArgs = { inherit inputs; };
+          modules = [
+            ./home/users/user/wsl.nix
+          ];
+        };
       };
 
       # ── Modules ─────────────────────────────────────────────────────────────

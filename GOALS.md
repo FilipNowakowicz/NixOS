@@ -12,7 +12,7 @@ _Nothing in progress._
 
 ## Future Directions
 
-- [ ] **Portable home-manager** — use the standalone `homeConfigurations.user` for non-NixOS machines (work laptop, WSL, Nix-on-Droid). The current structure already supports this.
+_Nothing in progress._
 
 ---
 
