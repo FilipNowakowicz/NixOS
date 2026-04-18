@@ -180,7 +180,7 @@ in
   };
 
   # ── Syncthing ──────────────────────────────────────────────────────────
-  services.syncthing.enable = true;
+  services.syncthing.enable = false;
 
   # ── Cliphist ────────────────────────────────────────────────────────────
   services.cliphist = {
@@ -228,7 +228,7 @@ in
       }
 
       listener {
-        on-timeout = loginctl lock-session
+        on-timeout = pidof hyprlock > /dev/null || ${pkgs.hyprlock}/bin/hyprlock
         timeout = 600
       }
 
