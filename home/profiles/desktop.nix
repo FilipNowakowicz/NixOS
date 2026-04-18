@@ -37,7 +37,13 @@
   ];
 
   # GTK theming
-  gtk.enable = true;
+  gtk = {
+    enable = true;
+    theme = {
+      name = "Adwaita-dark";
+      package = pkgs.gnome-themes-extra;
+    };
+  };
 
   # Cursor
   home.pointerCursor = {
