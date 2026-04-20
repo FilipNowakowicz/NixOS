@@ -74,7 +74,7 @@
     enableZshIntegration = false;
     settings = {
       add_newline = false;
-      format = "$hostname$directory$nix_shell$character";
+      format = "$hostname$directory$python$nix_shell$character";
       hostname = {
         ssh_only = true;
         format = "\\[[$hostname]($style)\\] ";
@@ -91,6 +91,11 @@
         format = "[\\($symbol\\)]($style) ";
         symbol = "nix";
         style = "fg:#83a598";
+      };
+      python = {
+        format = "[\\($symbol\\)]($style) ";
+        symbol = "venv";
+        style = "fg:#DAA520";
       };
       character = {
         success_symbol = "[%]()";
