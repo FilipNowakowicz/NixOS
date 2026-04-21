@@ -51,6 +51,78 @@ jobs:
       - name: Format check (treefmt)
         run: nix fmt -- --fail-on-change
 
+  closure-diff:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: flake-check
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Cachix
+        uses: cachix/cachix-action@v15
+        with:
+          name: filipnowakowicz
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Compute closure diffs
+        id: diff
+        run: |
+          mkdir -p /tmp/closure-reports
+
+          # Get base and target refs
+          BASE_REF="origin/${{ github.base_ref }}"
+          TARGET_REF="HEAD"
+
+          # Compute diffs for both hosts
+          {
+            echo "# Closure Size Report"
+            echo ""
+            bash scripts/closure-diff.sh "$BASE_REF" "$TARGET_REF" "main" || echo "Failed to diff main"
+            echo ""
+            bash scripts/closure-diff.sh "$BASE_REF" "$TARGET_REF" "homeserver" || echo "Failed to diff homeserver"
+            echo ""
+            echo "<details>"
+            echo "<summary>Full nvd output</summary>"
+            echo ""
+            echo "\`\`\`"
+            bash scripts/closure-diff.sh "$BASE_REF" "$TARGET_REF" "main" 2>&1 || true
+            bash scripts/closure-diff.sh "$BASE_REF" "$TARGET_REF" "homeserver" 2>&1 || true
+            echo "\`\`\`"
+            echo ""
+            echo "</details>"
+          } > /tmp/closure-reports/summary.md
+
+          # Store summary for comment step
+          {
+            echo "summary<<EOF"
+            cat /tmp/closure-reports/summary.md
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post closure diff comment
+        if: always() && github.event_name == 'pull_request'
+        env:
+          SUMMARY: ${{ steps.diff.outputs.summary }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const summary = process.env.SUMMARY;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary || 'Closure diff computation skipped or failed.'
+            });
+
   # Detect whether paths relevant to the homeserver-vm smoke test changed.
   changes:
     runs-on: ubuntu-latest
