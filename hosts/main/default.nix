@@ -33,6 +33,7 @@ in
   imports = [
     ./disko.nix
     ./hardware-configuration.nix
+    ../../modules/nixos/hardware/nvidia-prime.nix
   ];
 
   # ── Hardware ────────────────────────────────────────────────────────────────
@@ -45,22 +46,7 @@ in
     pkiBundle = "/var/lib/sbctl";
   };
 
-  # NVIDIA PRIME (Discrete GPU + Integrated)
-  modules.hardware.nvidia-prime = {
-    enable = true;
-    intelBusId = "PCI:0:2:0";
-    nvidiaBusId = "PCI:1:0:0";
-  };
-
   # ── Profiles ────────────────────────────────────────────────────────────────
-  modules.profiles = {
-    base.enable = true;
-    desktop.enable = true;
-    security.enable = true;
-    observability.enable = true;
-    user.enable = true;
-  };
-
   profiles.observability = {
     enable = true;
     # main doesn't host logs/metrics, just collects them.
@@ -93,8 +79,8 @@ in
     greetd.fprintAuth = true;
   };
 
-  # Backlight control
-  programs.light.enable = true;
+  # Backlight control (using brightnessctl)
+  hardware.acpilight.enable = true;
 
   systemd.services = {
     thermald.serviceConfig = hwDaemonSandbox;

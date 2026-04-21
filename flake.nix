@@ -55,7 +55,9 @@
       home-manager,
       deploy-rs,
       nixos-anywhere,
+      disko,
       sops-nix,
+      lanzaboote,
       pre-commit-hooks,
       treefmt-nix,
       ...
@@ -84,6 +86,11 @@
             ./hosts/${host}/default.nix
             home-manager.nixosModules.home-manager
             sops-nix.nixosModules.sops
+            lanzaboote.nixosModules.lanzaboote
+            disko.nixosModules.disko
+            {
+              imports = [ ./modules/nixos ];
+            }
           ];
         };
 

@@ -1,7 +1,6 @@
 {
   config,
   pkgs,
-  inputs,
   ...
 }:
 let
@@ -10,9 +9,6 @@ let
 in
 {
   imports = [
-    inputs.disko.nixosModules.disko
-    inputs.impermanence.nixosModules.impermanence
-    ./disko.nix
     ../../modules/nixos/profiles/base.nix
     ../../modules/nixos/profiles/observability.nix
     ../../modules/nixos/profiles/security.nix
@@ -117,7 +113,7 @@ in
         description = "Generate self-signed certificate for nginx";
         wantedBy = [ "multi-user.target" ];
         before = [ "nginx.service" ];
-        conditionPathExists = "!/persist/nginx/cert.pem";
+        unitConfig.ConditionPathExists = "!/persist/nginx/cert.pem";
         serviceConfig = {
           Type = "oneshot";
           ExecStart = "${pkgs.openssl}/bin/openssl req -x509 -newkey rsa:4096 -keyout /persist/nginx/key.pem -out /persist/nginx/cert.pem -sha256 -days 3650 -nodes -subj '/CN=localhost'";
@@ -167,25 +163,6 @@ in
 
   # ── Impermanence ────────────────────────────────────────────────────────────
   fileSystems."/persist".neededForBoot = true;
-
-  environment.persistence."/persist" = {
-    hideMounts = true;
-    directories = [
-      "/var/log"
-      "/var/lib/nixos"
-      "/var/lib/systemd/coredump"
-      "/var/lib/syncthing"
-      "/var/lib/vaultwarden"
-      "/var/lib/grafana"
-      "/var/lib/loki"
-      "/var/lib/prometheus2"
-    ];
-    files = [
-      "/etc/machine-id"
-      "/etc/ssh/ssh_host_ed25519_key"
-      "/etc/ssh/ssh_host_ed25519_key.pub"
-    ];
-  };
 
   # ── User ────────────────────────────────────────────────────────────────────
   users.users.user = {
