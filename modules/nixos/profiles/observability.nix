@@ -6,6 +6,9 @@
 }:
 let
   cfg = config.profiles.observability;
+  gen = import ../../../lib/generators.nix { inherit lib; };
+  dash = import ../../../lib/dashboards.nix { inherit lib; };
+
   shouldUseIngestAuth = cfg.ingestAuth.username != null && cfg.ingestAuth.passwordFile != null;
   metricsRemoteWriteAuth = lib.optionalAttrs shouldUseIngestAuth {
     basic_auth = {
@@ -13,112 +16,92 @@ let
       password_file = toString cfg.ingestAuth.passwordFile;
     };
   };
-  alloyBasicAuth =
-    if shouldUseIngestAuth then
-      ''
-        basic_auth {
-          username = "${cfg.ingestAuth.username}"
-          password_file = "${toString cfg.ingestAuth.passwordFile}"
-        }
-      ''
-    else
-      "";
-  alloyConfig = ''
-        loki.write "target" {
-          endpoint {
-            url = "${cfg.collectors.logs.pushURL}"
-    ${alloyBasicAuth}
-          }
-        }
 
-        loki.source.journal "systemd" {
-          max_age       = "12h"
-          labels = {
-            job  = "systemd-journal",
-            host = "${config.networking.hostName}",
+  alloyConfig = gen.toAlloyHCL [
+    {
+      type = "loki.write";
+      label = "target";
+      body = {
+        endpoint = gen.nestedBlock (
+          { url = cfg.collectors.logs.pushURL; }
+          // lib.optionalAttrs shouldUseIngestAuth {
+            basic_auth = gen.nestedBlock {
+              password_file = toString cfg.ingestAuth.passwordFile;
+              username = cfg.ingestAuth.username;
+            };
           }
-          forward_to = [loki.write.target.receiver]
-        }
-  '';
-  dashboardJson = builtins.toJSON {
-    id = null;
+        );
+      };
+    }
+    {
+      type = "loki.source.journal";
+      label = "systemd";
+      body = {
+        forward_to = [ (gen.ref "loki.write.target.receiver") ];
+        labels = {
+          host = config.networking.hostName;
+          job = "systemd-journal";
+        };
+        max_age = "12h";
+      };
+    }
+  ];
+
+  fleetDashboard = dash.mkDashboard {
     uid = "homeserver-fleet-overview";
     title = "Homeserver Fleet Overview";
-    timezone = "browser";
-    schemaVersion = 39;
-    version = 1;
-    refresh = "30s";
     panels = [
-      {
+      (dash.timeseriesPanel {
         id = 1;
         title = "CPU Usage %";
-        type = "timeseries";
-        datasource = {
-          type = "prometheus";
-          uid = "mimir";
-        };
-        gridPos = {
-          h = 8;
-          w = 12;
+        ds = dash.mimirDS;
+        gridPos = dash.gridPos {
           x = 0;
           y = 0;
+          w = 12;
+          h = 8;
         };
         targets = [
-          {
+          (dash.target {
             expr = "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)";
             legendFormat = "{{instance}}";
-            refId = "A";
-          }
+          })
         ];
-      }
-      {
+      })
+      (dash.logsPanel {
         id = 2;
         title = "Systemd Journal Logs";
-        type = "logs";
-        datasource = {
-          type = "loki";
-          uid = "loki";
-        };
-        gridPos = {
-          h = 8;
-          w = 24;
+        ds = dash.lokiDS;
+        gridPos = dash.gridPos {
           x = 0;
           y = 8;
+          w = 24;
+          h = 8;
         };
         targets = [
-          {
+          (dash.target {
             expr = "{job=\"systemd-journal\"}";
-            refId = "A";
-          }
+          })
         ];
-      }
-      {
+      })
+      (dash.timeseriesPanel {
         id = 3;
         title = "Memory Usage %";
-        type = "timeseries";
-        datasource = {
-          type = "prometheus";
-          uid = "mimir";
-        };
-        gridPos = {
-          h = 8;
-          w = 12;
+        ds = dash.mimirDS;
+        gridPos = dash.gridPos {
           x = 12;
           y = 0;
+          w = 12;
+          h = 8;
         };
         targets = [
-          {
+          (dash.target {
             expr = "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100";
             legendFormat = "{{instance}}";
-            refId = "A";
-          }
+          })
         ];
-      }
+      })
     ];
-    time = {
-      from = "now-1h";
-      to = "now";
-    };
   };
 
 in
@@ -401,7 +384,7 @@ in
 
     environment.etc = lib.mkMerge [
       (lib.mkIf cfg.grafana.enable {
-        "grafana-dashboards/homeserver-fleet-overview.json".text = dashboardJson;
+        "grafana-dashboards/homeserver-fleet-overview.json".text = builtins.toJSON fleetDashboard;
       })
       (lib.mkIf cfg.collectors.logs.enable {
         "alloy/config.alloy".text = alloyConfig;
