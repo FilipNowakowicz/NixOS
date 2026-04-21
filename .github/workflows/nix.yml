@@ -43,7 +43,7 @@ jobs:
         run: nix build .#nixosConfigurations.homeserver-vm.config.system.build.toplevel --no-link --show-trace
 
       - name: Lint (statix)
-        run: statix check .
+        run: nix run nixpkgs#statix -- check .
 
       - name: Dead code (deadnix)
         run: nix run nixpkgs#deadnix -- --fail .
