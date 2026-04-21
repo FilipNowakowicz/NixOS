@@ -74,6 +74,8 @@
 
       hostRegistry = import ./lib/hosts.nix;
 
+      invariants = import ./lib/invariants.nix { inherit lib pkgs; };
+
       # VMs only — for the VM management script
       vmRegistry = lib.filterAttrs (_: cfg: cfg ? sshPort && cfg ? diskSize) hostRegistry;
 
@@ -140,6 +142,37 @@
       };
 
       treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
+
+      # ── Configuration Invariant Checks ──────────────────────────────────
+      invariantChecks = {
+        invariants-main = invariants.mkInvariantCheck "main" [
+          {
+            name = "has stateVersion";
+            check = cfg: cfg.system.stateVersion != null;
+          }
+        ] allNixosConfigs.main.config;
+
+        invariants-vm = invariants.mkInvariantCheck "vm" [
+          {
+            name = "has stateVersion";
+            check = cfg: cfg.system.stateVersion != null;
+          }
+        ] allNixosConfigs.vm.config;
+
+        invariants-homeserver-vm = invariants.mkInvariantCheck "homeserver-vm" [
+          {
+            name = "has stateVersion";
+            check = cfg: cfg.system.stateVersion != null;
+          }
+        ] allNixosConfigs.homeserver-vm.config;
+
+        invariants-homeserver = invariants.mkInvariantCheck "homeserver" [
+          {
+            name = "has stateVersion";
+            check = cfg: cfg.system.stateVersion != null;
+          }
+        ] allNixosConfigs.homeserver.config;
+      };
     in
     {
       # ── Apps ────────────────────────────────────────────────────────────────
@@ -230,14 +263,17 @@
       # ── Deploy-RS ───────────────────────────────────────────────────────────
       deploy.nodes = allDeployNodes;
 
-      checks.${system} = deploy-rs.lib.${system}.deployChecks self.deploy // {
-        homeserver-vm-smoke = import ./tests/nixos/homeserver-vm-smoke.nix {
-          inherit nixpkgs system inputs;
+      checks.${system} =
+        deploy-rs.lib.${system}.deployChecks self.deploy
+        // invariantChecks
+        // {
+          homeserver-vm-smoke = import ./tests/nixos/homeserver-vm-smoke.nix {
+            inherit nixpkgs system inputs;
+          };
+          lib-generators = import ./tests/lib/generators.nix {
+            inherit nixpkgs system;
+          };
         };
-        lib-generators = import ./tests/lib/generators.nix {
-          inherit nixpkgs system;
-        };
-      };
 
       # ── Home Manager Configurations ─────────────────────────────────────────
       homeConfigurations = {

@@ -10,7 +10,7 @@
       # Run each assertion and collect failures
       results = map (a: {
         inherit (a) name;
-        passed = try (a.check config) false;
+        passed = a.check config;
       }) assertions;
 
       failures = lib.filter (r: !r.passed) results;
