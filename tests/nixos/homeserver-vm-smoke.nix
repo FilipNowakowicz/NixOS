@@ -16,7 +16,7 @@ in
     name = "homeserver-vm-smoke";
     node.specialArgs = { inherit inputs; };
 
-    nodes.machine =
+    nodes.homeserver =
       { lib, config, ... }:
       {
         imports = [
@@ -46,30 +46,30 @@ in
     testScript = ''
       start_all()
 
-      machine.wait_for_unit("multi-user.target")
-      machine.wait_for_unit("vaultwarden.service")
-      machine.wait_for_unit("nginx.service")
-      machine.wait_for_unit("syncthing.service")
-      machine.wait_for_unit("grafana.service")
-      machine.wait_for_unit("loki.service")
-      machine.wait_for_unit("tempo.service")
-      machine.wait_for_unit("mimir.service")
-      machine.wait_for_unit("prometheus.service")
-      machine.wait_for_unit("prometheus-node-exporter.service")
-      machine.wait_for_unit("alloy.service")
-      machine.wait_for_unit("opentelemetry-collector.service")
+      homeserver.wait_for_unit("multi-user.target")
+      homeserver.wait_for_unit("vaultwarden.service")
+      homeserver.wait_for_unit("nginx.service")
+      homeserver.wait_for_unit("syncthing.service")
+      homeserver.wait_for_unit("grafana.service")
+      homeserver.wait_for_unit("loki.service")
+      homeserver.wait_for_unit("tempo.service")
+      homeserver.wait_for_unit("mimir.service")
+      homeserver.wait_for_unit("prometheus.service")
+      homeserver.wait_for_unit("prometheus-node-exporter.service")
+      homeserver.wait_for_unit("alloy.service")
+      homeserver.wait_for_unit("opentelemetry-collector.service")
 
       # Validate nginx TLS proxy to Vaultwarden.
-      machine.succeed("curl -kfsS https://127.0.0.1:8443/ | grep -Eqi 'vaultwarden|bitwarden'")
+      homeserver.succeed("curl -kfsS https://127.0.0.1:8443/ | grep -Eqi 'vaultwarden|bitwarden'")
 
       # Validate Syncthing GUI bind.
-      machine.succeed("ss -ltn '( sport = :8384 )' | grep -q 127.0.0.1:8384")
+      homeserver.succeed("ss -ltn '( sport = :8384 )' | grep -q 127.0.0.1:8384")
 
       # Validate observability endpoints.
-      machine.wait_until_succeeds("curl -fsS http://127.0.0.1:3000/api/health | grep -q '\"database\"[[:space:]]*:[[:space:]]*\"ok\"'")
-      machine.wait_until_succeeds("curl -fsS http://127.0.0.1:3100/ready")
-      machine.wait_until_succeeds("curl -fsS http://127.0.0.1:3200/ready")
-      machine.wait_until_succeeds("curl -fsS http://127.0.0.1:9009/ready")
-      machine.wait_until_succeeds("curl -fsS http://127.0.0.1:9090/-/ready")
+      homeserver.wait_until_succeeds("curl -fsS http://127.0.0.1:3000/api/health | grep -q '\"database\"[[:space:]]*:[[:space:]]*\"ok\"'")
+      homeserver.wait_until_succeeds("curl -fsS http://127.0.0.1:3100/ready")
+      homeserver.wait_until_succeeds("curl -fsS http://127.0.0.1:3200/ready")
+      homeserver.wait_until_succeeds("curl -fsS http://127.0.0.1:9009/ready")
+      homeserver.wait_until_succeeds("curl -fsS http://127.0.0.1:9090/-/ready")
     '';
   }
