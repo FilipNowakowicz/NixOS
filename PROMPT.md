@@ -5,3 +5,10 @@ I did a lot of changes to my config I want you to walk through it verify that al
 - Typed Alloy & Grafana generators (quick). modules/nixos/profiles/observability.nix currently builds Alloy via string heredoc and Grafana dashboards via inline JSON. Replace with Nix attrsets → lib.generators.toAlloyHCL + provisioned dashboards-as-Nix. Type-safe, diffable, testable. Quick, and it removes one of the uglier corners of the repo. (This was extended to include more)
 
 - Pre-commit hooks (quick) — git-hooks.nix or pre-commit-hooks.nix running nixfmt, statix, deadnix, and a "no plaintext secret" guard. Cheaper than finding issues in CI.
+
+- treefmt-nix (quick) — unify nixfmt + shfmt + prettier for scripts/markdown behind nix fmt.
+
+- statix check to CI
+
+- Closure-size diff in CI (quick) — comment nvd diff output on PRs. Catches surprise pulls of bloated deps.
+
