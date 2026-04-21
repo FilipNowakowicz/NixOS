@@ -46,6 +46,16 @@ in
     pkiBundle = "/var/lib/sbctl";
   };
 
+  # ── Nix Store ───────────────────────────────────────────────────────────────
+  nix = {
+    gc = {
+      automatic = true;
+    };
+    optimise = {
+      automatic = true;
+    };
+  };
+
   # ── Profiles ────────────────────────────────────────────────────────────────
   profiles.observability = {
     enable = true;
