@@ -104,7 +104,7 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 
 ## VM Management
 
-All VMs are managed through a single unified command. The VM registry (`lib/vm.nix`) is the single source of truth — SSH ports, disk sizes, deploy-rs nodes, and QEMU config are all derived from it.
+All VMs are managed through a single unified command. The VM registry (`lib/hosts.nix`) is the single source of truth — SSH ports, disk sizes, deploy-rs nodes, and QEMU config are all derived from it.
 
 ```bash
 nix run '.#vm' -- <action> <name>
@@ -123,7 +123,7 @@ nix run '.#vm' -- <action> <name>
 
 ### Adding a new VM
 
-1. Add an entry to `lib/vm.nix` (name, SSH port, disk size)
+1. Add an entry to `lib/hosts.nix` (name, SSH port, disk size)
 2. Create `hosts/<name>/default.nix` (import `modules/nixos/profiles/vm.nix` + host-specific config)
 3. Generate sops secrets: `nix run '.#vm' -- init <name>`
 4. Create the VM: `nix run '.#vm' -- create <name>`

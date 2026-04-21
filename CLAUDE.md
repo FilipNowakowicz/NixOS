@@ -38,7 +38,7 @@ nix run '.#vm' -- <action> <name>
 | `list` | Show all VMs with status |
 | `init <name>` | Generate sops secrets for a new VM |
 
-**VM registry** (`lib/vm.nix`) is the single source of truth — SSH ports, disk sizes, deploy-rs nodes, and QEMU config are all derived from it.
+**VM registry** (`lib/hosts.nix`) is the single source of truth — SSH ports, disk sizes, deploy-rs nodes, and QEMU config are all derived from it.
 
 **Shared VM module** (`modules/nixos/profiles/vm.nix`) provides hardware, disko, impermanence base, passwordless sudo, and SSH for all VMs.
 
@@ -47,7 +47,7 @@ nix run '.#vm' -- <action> <name>
 ## Repository Structure
 
 - `flake.nix` — entry point, defines hosts, home-manager, deploy-rs nodes, VM app
-- `lib/vm.nix` — VM registry (single source of truth for all VMs)
+- `lib/hosts.nix` — host registry (single source of truth for all hosts)
 - `lib/pubkeys.nix` — centralized SSH public keys
 - `lib/syncthing.nix` — shared Syncthing device/folder registry
 - `lib/sandbox.nix` — common systemd service sandbox options

@@ -46,7 +46,7 @@ nix run '.#vm' -- create vm
 ## Architecture
 
 - **Config**: `hosts/vm/default.nix` — imports shared `modules/nixos/profiles/vm.nix` (hardware, disko, impermanence base, sudo, SSH)
-- **Registry**: `lib/vm.nix` — defines SSH port (2222) and disk size (40G)
+- **Registry**: `lib/hosts.nix` — defines SSH port (2222) and disk size (40G)
 - **Secrets**: `hosts/vm/secrets/` — sops-encrypted host keys and secrets
 - **Disk images**: `~/.local/share/nixos-vms/vm.qcow2`
 

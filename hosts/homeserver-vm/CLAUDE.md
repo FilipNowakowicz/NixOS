@@ -35,7 +35,7 @@ ssh homeserver-vm                         # SSH into the VM (port 2223)
 ## Architecture
 
 - **Config**: `hosts/homeserver-vm/default.nix` — imports shared `modules/nixos/profiles/vm.nix`
-- **Registry**: `lib/vm.nix` — SSH port 2223, disk size 20G
+- **Registry**: `lib/hosts.nix` — SSH port 2223, disk size 20G
 - **Secrets**: `hosts/homeserver-vm/secrets/` — own host key, separate from `vm`
 - **Disk images**: `~/.local/share/nixos-vms/homeserver-vm.qcow2`
 

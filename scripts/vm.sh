@@ -65,7 +65,7 @@ vm_is_created() {
 }
 
 require_vm() {
-  vm_exists_in_registry "$1" || die "unknown VM '$1' — not in lib/vm.nix"
+  vm_exists_in_registry "$1" || die "unknown VM '$1' — not in lib/hosts.nix"
 }
 
 require_created() {
