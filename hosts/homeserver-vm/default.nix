@@ -17,6 +17,7 @@ in
   ];
 
   networking.hostName = "homeserver-vm";
+  system.stateVersion = "24.11";
 
   profiles.observability = {
     enable = true;
@@ -126,7 +127,7 @@ in
 
     tmpfiles.rules = [
       "d /persist/nginx 0700 nginx nginx -"
-      "d /persist/sync 0755 user user -"
+      "d /persist/sync 0755 user users -"
     ];
   };
 

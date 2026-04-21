@@ -38,6 +38,7 @@ in
 
   # ── Hardware ────────────────────────────────────────────────────────────────
   networking.hostName = "main";
+  system.stateVersion = "24.11";
 
   # Lanzaboote (Secure Boot)
   boot.loader.systemd-boot.enable = lib.mkForce false;

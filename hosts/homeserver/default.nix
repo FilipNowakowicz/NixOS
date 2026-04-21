@@ -104,7 +104,7 @@ in
     };
 
     tmpfiles.rules = [
-      "d /persist/sync 0755 user user -"
+      "d /persist/sync 0755 user users -"
     ];
   };
 
