@@ -5,7 +5,7 @@
 #   deploy      — presence generates a deploy-rs node; absence = local-only (main)
 #   sshPort     — VM-only; used to filter hosts for the VM script
 #   diskSize    — VM-only; used by nixos-anywhere and qemu-img
-#   tailnetFQDN — per-host Tailscale FQDN
+#   tailnetFQDN — per-host Tailscale FQDN; unused metadata for now (host configs read lib/network.nix directly)
 #   backup      — metadata; ready to drive a backup module later
 {
   main = {
