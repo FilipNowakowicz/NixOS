@@ -41,6 +41,11 @@
       url = "github:cachix/pre-commit-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -52,6 +57,7 @@
       nixos-anywhere,
       sops-nix,
       pre-commit-hooks,
+      treefmt-nix,
       ...
     }:
     let
@@ -125,6 +131,8 @@
           system
           ;
       };
+
+      treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
     in
     {
       # ── Apps ────────────────────────────────────────────────────────────────
@@ -154,7 +162,7 @@
       };
 
       # ── Formatter ───────────────────────────────────────────────────────────
-      formatter.${system} = pkgs.nixfmt;
+      formatter.${system} = treefmtEval.config.build.wrapper;
 
       # ── Shells ──────────────────────────────────────────────────────────────
       devShells.${system} = {

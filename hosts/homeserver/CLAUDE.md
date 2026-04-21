@@ -35,4 +35,4 @@ Syncthing devices/folders are declarative and shared with `homeserver-vm` via `l
 - **TLS cert is not ACME** — `tailscale-cert.service` fetches it; nginx depends on that service. Don't configure `enableACME`.
 - **nginx starts after tailscale-cert** — first boot may take a minute for cert to be provisioned.
 - **Impermanence** — `/var/lib/vaultwarden`, `/var/lib/syncthing`, `/var/lib/tailscale` are persisted; everything else resets on reboot.
-- **Sops decryption requires host key** — host's SSH key must be added to `.sops.yaml` *before* secrets can be decrypted on boot. The reinstall script injects a pre-generated host key to ensure this from first boot.
+- **Sops decryption requires host key** — host's SSH key must be added to `.sops.yaml` _before_ secrets can be decrypted on boot. The reinstall script injects a pre-generated host key to ensure this from first boot.

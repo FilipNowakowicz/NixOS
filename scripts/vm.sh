@@ -35,23 +35,26 @@ SOPS_BIN="${SOPS_BIN:-}"
 SSH_TO_AGE_BIN="${SSH_TO_AGE_BIN:-}"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
-die() { echo "error: $*" >&2; exit 1; }
+die() {
+  echo "error: $*" >&2
+  exit 1
+}
 
 vm_attr() {
   local name="$1" attr="$2"
-  "$JQ_BIN" -r --arg n "$name" --arg a "$attr" '.[$n][$a] // empty' <<< "$VM_REGISTRY"
+  "$JQ_BIN" -r --arg n "$name" --arg a "$attr" '.[$n][$a] // empty' <<<"$VM_REGISTRY"
 }
 
 vm_exists_in_registry() {
-  "$JQ_BIN" -e --arg n "$1" 'has($n)' <<< "$VM_REGISTRY" > /dev/null 2>&1
+  "$JQ_BIN" -e --arg n "$1" 'has($n)' <<<"$VM_REGISTRY" >/dev/null 2>&1
 }
 
 all_vm_names() {
-  "$JQ_BIN" -r 'keys[]' <<< "$VM_REGISTRY"
+  "$JQ_BIN" -r 'keys[]' <<<"$VM_REGISTRY"
 }
 
-vm_disk()    { echo "$VM_DIR/$1.qcow2"; }
-vm_vars()    { echo "$VM_DIR/$1-vars.fd"; }
+vm_disk() { echo "$VM_DIR/$1.qcow2"; }
+vm_vars() { echo "$VM_DIR/$1-vars.fd"; }
 vm_pidfile() { echo "$VM_DIR/$1.pid"; }
 
 vm_is_running() {
@@ -90,7 +93,7 @@ ssh_config_add() {
     return
   fi
 
-  cat >> "$SSH_CONFIG" << EOF
+  cat >>"$SSH_CONFIG" <<EOF
 
 Host ${name}
     HostName localhost
@@ -126,7 +129,7 @@ wait_for_ssh() {
   echo "Waiting for SSH on localhost:${port}..."
   while [ "$elapsed" -lt "$SSH_WAIT_TIMEOUT" ]; do
     if ssh -o ConnectTimeout=2 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-         -o LogLevel=ERROR -p "$port" "${ssh_user}@localhost" true 2>/dev/null; then
+      -o LogLevel=ERROR -p "$port" "${ssh_user}@localhost" true 2>/dev/null; then
       echo "SSH is ready"
       return 0
     fi
@@ -214,9 +217,9 @@ action_create() {
 
   mkdir -p "$tmpdir/persist/etc/ssh"
   "$SOPS_BIN" --decrypt "${secrets_dir}/ssh_host_ed25519_key.enc" \
-    > "$tmpdir/persist/etc/ssh/ssh_host_ed25519_key"
+    >"$tmpdir/persist/etc/ssh/ssh_host_ed25519_key"
   "$SOPS_BIN" --decrypt "${secrets_dir}/ssh_host_ed25519_key.pub.enc" \
-    > "$tmpdir/persist/etc/ssh/ssh_host_ed25519_key.pub"
+    >"$tmpdir/persist/etc/ssh/ssh_host_ed25519_key.pub"
   chmod 600 "$tmpdir/persist/etc/ssh/ssh_host_ed25519_key"
 
   "$NIXOS_ANYWHERE_BIN" \
@@ -282,7 +285,7 @@ action_stop() {
   local port
   port="$(vm_attr "$name" sshPort)"
   if ssh -o ConnectTimeout=3 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-       -o LogLevel=ERROR -p "$port" user@localhost sudo poweroff 2>/dev/null; then
+    -o LogLevel=ERROR -p "$port" user@localhost sudo poweroff 2>/dev/null; then
     # Wait for process to exit
     local i=0
     while [ "$i" -lt 15 ] && kill -0 "$pid" 2>/dev/null; do
@@ -350,9 +353,9 @@ action_reinstall() {
 
   mkdir -p "$tmpdir/persist/etc/ssh"
   "$SOPS_BIN" --decrypt "${secrets_dir}/ssh_host_ed25519_key.enc" \
-    > "$tmpdir/persist/etc/ssh/ssh_host_ed25519_key"
+    >"$tmpdir/persist/etc/ssh/ssh_host_ed25519_key"
   "$SOPS_BIN" --decrypt "${secrets_dir}/ssh_host_ed25519_key.pub.enc" \
-    > "$tmpdir/persist/etc/ssh/ssh_host_ed25519_key.pub"
+    >"$tmpdir/persist/etc/ssh/ssh_host_ed25519_key.pub"
   chmod 600 "$tmpdir/persist/etc/ssh/ssh_host_ed25519_key"
 
   "$NIXOS_ANYWHERE_BIN" \
@@ -418,7 +421,7 @@ action_ssh() {
 
   shift
   exec ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-       -o LogLevel=ERROR -p "$port" user@localhost "$@"
+    -o LogLevel=ERROR -p "$port" user@localhost "$@"
 }
 
 action_list() {
@@ -469,22 +472,22 @@ action_init() {
 
   # Convert to age key
   local age_key
-  age_key="$("$SSH_TO_AGE_BIN" < "$tmpdir/ssh_host_ed25519_key.pub")"
+  age_key="$("$SSH_TO_AGE_BIN" <"$tmpdir/ssh_host_ed25519_key.pub")"
   echo "Age public key: $age_key"
 
   # Encrypt host keys with sops (user key only — host key will be added to .sops.yaml)
   "$SOPS_BIN" --encrypt --age "$(grep -oP 'public key: \K.*' ~/.config/sops/age/keys.txt 2>/dev/null || echo "$age_key")" \
-    "$tmpdir/ssh_host_ed25519_key" > "${secrets_dir}/ssh_host_ed25519_key.enc"
+    "$tmpdir/ssh_host_ed25519_key" >"${secrets_dir}/ssh_host_ed25519_key.enc"
   "$SOPS_BIN" --encrypt --age "$(grep -oP 'public key: \K.*' ~/.config/sops/age/keys.txt 2>/dev/null || echo "$age_key")" \
-    "$tmpdir/ssh_host_ed25519_key.pub" > "${secrets_dir}/ssh_host_ed25519_key.pub.enc"
+    "$tmpdir/ssh_host_ed25519_key.pub" >"${secrets_dir}/ssh_host_ed25519_key.pub.enc"
   echo "Encrypted host keys to ${secrets_dir}/"
 
   # Create secrets.yaml if it doesn't exist
   if [ ! -f "${secrets_dir}/secrets.yaml" ]; then
-    echo "# Secrets for ${name} — edit with: sops ${secrets_dir}/secrets.yaml" > "$tmpdir/secrets_template.yaml"
-    echo "user_password: ''" >> "$tmpdir/secrets_template.yaml"
+    echo "# Secrets for ${name} — edit with: sops ${secrets_dir}/secrets.yaml" >"$tmpdir/secrets_template.yaml"
+    echo "user_password: ''" >>"$tmpdir/secrets_template.yaml"
     "$SOPS_BIN" --encrypt --age "$(grep -oP 'public key: \K.*' ~/.config/sops/age/keys.txt 2>/dev/null || echo "$age_key")" \
-      "$tmpdir/secrets_template.yaml" > "${secrets_dir}/secrets.yaml"
+      "$tmpdir/secrets_template.yaml" >"${secrets_dir}/secrets.yaml"
     echo "Created ${secrets_dir}/secrets.yaml"
   fi
 
@@ -512,7 +515,7 @@ action_init() {
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 usage() {
-  cat << 'EOF'
+  cat <<'EOF'
 Usage: nix run '.#vm' -- <action> [name] [args...]
 
 Actions:
@@ -532,17 +535,17 @@ action="${1:-}"
 [ -n "$action" ] || usage
 
 case "$action" in
-  list)
-    action_list
-    ;;
-  create|start|stop|reinstall|destroy|ssh|init)
-    name="${2:-}"
-    [ -n "$name" ] || die "missing VM name — usage: nix run '.#vm' -- $action <name>"
-    require_vm "$name"
-    shift 2
-    "action_${action}" "$name" "$@"
-    ;;
-  *)
-    die "unknown action '$action'"
-    ;;
+list)
+  action_list
+  ;;
+create | start | stop | reinstall | destroy | ssh | init)
+  name="${2:-}"
+  [ -n "$name" ] || die "missing VM name — usage: nix run '.#vm' -- $action <name>"
+  require_vm "$name"
+  shift 2
+  "action_${action}" "$name" "$@"
+  ;;
+*)
+  die "unknown action '$action'"
+  ;;
 esac

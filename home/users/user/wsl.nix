@@ -1,8 +1,16 @@
 { config, ... }:
 {
-  home.username = "user";
-  home.homeDirectory = "/home/user";
-  home.stateVersion = "24.11";
+  home = {
+    username = "user";
+    homeDirectory = "/home/user";
+    stateVersion = "24.11";
+
+    # ── PATH ───────────────────────────────────────────────────────────────
+    sessionPath = [
+      "${config.home.homeDirectory}/.local/bin"
+      "${config.home.homeDirectory}/.npm-global/bin"
+    ];
+  };
 
   imports = [
     ../../profiles/base.nix
@@ -15,12 +23,6 @@
     settings.user.email = "filip.nowakowicz@gmail.com";
     signing.format = null;
   };
-
-  # ── PATH ───────────────────────────────────────────────────────────────
-  home.sessionPath = [
-    "${config.home.homeDirectory}/.local/bin"
-    "${config.home.homeDirectory}/.npm-global/bin"
-  ];
 
   # ── Zsh ────────────────────────────────────────────────────────────────
   programs.zsh = {

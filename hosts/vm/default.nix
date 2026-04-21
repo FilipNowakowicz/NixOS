@@ -54,11 +54,15 @@ in
   # ── Sops ────────────────────────────────────────────────────────────────────
   sops = {
     defaultSopsFile = ./secrets/secrets.yaml;
-    secrets.example_secret = { };
-    secrets.user_password.neededForUsers = true;
-    secrets.observability_ingest_password = { };
+    secrets = {
+      example_secret = { };
+      user_password.neededForUsers = true;
+      observability_ingest_password = { };
+    };
   };
 
   # ── Home Manager ────────────────────────────────────────────────────────────
-  home-manager.users.user.imports = [ ../../home/users/user/home.nix ];
+  home-manager.users.user = {
+    imports = [ ../../home/users/user/home.nix ];
+  };
 }

@@ -3,7 +3,7 @@ name: Nix flake check
 on:
   pull_request:
   push:
-    branches: [ main ]
+    branches: [main]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -45,8 +45,8 @@ jobs:
       - name: Dead code (deadnix)
         run: nix run nixpkgs#deadnix -- --fail .
 
-      - name: Format check (nixfmt)
-        run: nix run nixpkgs#nixfmt-tree -- --fail-on-change .
+      - name: Format check (treefmt)
+        run: nix fmt -- --fail-on-change
 
   # Detect whether paths relevant to the homeserver-vm smoke test changed.
   changes:

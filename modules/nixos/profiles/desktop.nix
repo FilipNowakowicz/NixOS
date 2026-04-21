@@ -4,17 +4,30 @@
   programs.hyprland.enable = true;
   programs.dconf.enable = true;
 
-  # ── Input ──────────────────────────────────────────────────────────────
-  services.libinput.enable = true;
+  services = {
+    # ── Input ──────────────────────────────────────────────────────────────
+    libinput.enable = true;
 
-  # ── Audio ──────────────────────────────────────────────────────────────
-  services.pipewire = {
-    enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
+    # ── Audio ──────────────────────────────────────────────────────────────
+    pipewire = {
+      enable = true;
+      alsa.enable = true;
+      alsa.support32Bit = true;
+      pulse.enable = true;
+    };
+    pulseaudio.enable = false;
+
+    # ── Display Manager ────────────────────────────────────────────────────
+    greetd = {
+      enable = true;
+      settings = {
+        default_session = {
+          command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --cmd ${pkgs.hyprland}/bin/start-hyprland";
+          user = "greeter";
+        };
+      };
+    };
   };
-  services.pulseaudio.enable = false;
 
   # ── XDG Portals ────────────────────────────────────────────────────────
   xdg.portal = {
@@ -24,17 +37,6 @@
       xdg-desktop-portal-gtk
     ];
     config.common.default = "*";
-  };
-
-  # ── Display Manager ────────────────────────────────────────────────────
-  services.greetd = {
-    enable = true;
-    settings = {
-      default_session = {
-        command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --cmd ${pkgs.hyprland}/bin/start-hyprland";
-        user = "greeter";
-      };
-    };
   };
 
   # ── System Packages ────────────────────────────────────────────────────

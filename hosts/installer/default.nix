@@ -11,5 +11,5 @@
     settings.PermitRootLogin = "yes";
   };
 
-  users.users.root.openssh.authorizedKeys.keys = (import ../../lib/pubkeys.nix);
+  users.users.root.openssh.authorizedKeys.keys = import ../../lib/pubkeys.nix;
 }

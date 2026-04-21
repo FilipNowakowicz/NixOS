@@ -18,7 +18,7 @@ Your role is supporting work — reading, checking, and updating documentation.
 
 - Never modify any .nix files
 - Never modify flake.lock
-- Never touch sops secrets or encrypted files (*.yaml in secrets/, *.enc files)
+- Never touch sops secrets or encrypted files (_.yaml in secrets/, _.enc files)
 - Never run git commands (no git add, commit, push, tag, etc.)
 - Never run nixos-rebuild, deploy, or nix build commands
 - Never modify .sops.yaml

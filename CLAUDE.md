@@ -28,16 +28,16 @@ All VMs are managed through a single unified command:
 nix run '.#vm' -- <action> <name>
 ```
 
-| Action | Description |
-|--------|-------------|
-| `create <name>` | Full setup: disk + ISO + nixos-anywhere + boot |
-| `start <name>` | Launch existing VM |
-| `stop <name>` | Graceful shutdown |
-| `reinstall <name>` | Wipe and reinstall |
-| `destroy <name>` | Delete all VM artifacts |
-| `ssh <name>` | SSH into the VM |
-| `list` | Show all VMs with status |
-| `init <name>` | Generate sops secrets for a new VM |
+| Action             | Description                                    |
+| ------------------ | ---------------------------------------------- |
+| `create <name>`    | Full setup: disk + ISO + nixos-anywhere + boot |
+| `start <name>`     | Launch existing VM                             |
+| `stop <name>`      | Graceful shutdown                              |
+| `reinstall <name>` | Wipe and reinstall                             |
+| `destroy <name>`   | Delete all VM artifacts                        |
+| `ssh <name>`       | SSH into the VM                                |
+| `list`             | Show all VMs with status                       |
+| `init <name>`      | Generate sops secrets for a new VM             |
 
 **VM registry** (`lib/hosts.nix`) is the single source of truth — SSH ports, disk sizes, deploy-rs nodes, and QEMU config are all derived from it.
 

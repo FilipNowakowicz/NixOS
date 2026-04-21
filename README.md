@@ -110,16 +110,16 @@ All VMs are managed through a single unified command. The VM registry (`lib/host
 nix run '.#vm' -- <action> <name>
 ```
 
-| Action | Description |
-|--------|-------------|
-| `create <name>` | Full setup: disk image + ISO boot + nixos-anywhere install + boot |
-| `start <name>` | Launch an existing VM |
-| `stop <name>` | Graceful shutdown (SSH poweroff, falls back to SIGTERM) |
-| `reinstall <name>` | Wipe and reinstall (for disko changes or broken state) |
-| `destroy <name>` | Delete all VM artifacts (disk, OVMF vars, SSH config) |
-| `ssh <name> [cmd]` | SSH into the VM |
-| `list` | Show all registered VMs with status |
-| `init <name>` | Generate SSH host key and sops secrets for a new VM |
+| Action             | Description                                                       |
+| ------------------ | ----------------------------------------------------------------- |
+| `create <name>`    | Full setup: disk image + ISO boot + nixos-anywhere install + boot |
+| `start <name>`     | Launch an existing VM                                             |
+| `stop <name>`      | Graceful shutdown (SSH poweroff, falls back to SIGTERM)           |
+| `reinstall <name>` | Wipe and reinstall (for disko changes or broken state)            |
+| `destroy <name>`   | Delete all VM artifacts (disk, OVMF vars, SSH config)             |
+| `ssh <name> [cmd]` | SSH into the VM                                                   |
+| `list`             | Show all registered VMs with status                               |
+| `init <name>`      | Generate SSH host key and sops secrets for a new VM               |
 
 ### Adding a new VM
 
@@ -142,23 +142,23 @@ Multiple VMs can run simultaneously — each has its own disk image, OVMF vars, 
 
 ## Hosts
 
-| Host | Description |
-|------|-------------|
-| `main` | Primary workstation, running a full desktop environment with NVIDIA PRIME support. |
-| `homeserver` | Headless server for self-hosted services with an ephemeral root filesystem. |
-| `vm` | QEMU/KVM dev/test VM with desktop profile. Port 2222. |
-| `homeserver-vm` | QEMU/KVM VM running homeserver services for development. Port 2223. |
-| `installer` | Minimal ISO configuration used to bootstrap new installations. |
+| Host            | Description                                                                        |
+| --------------- | ---------------------------------------------------------------------------------- |
+| `main`          | Primary workstation, running a full desktop environment with NVIDIA PRIME support. |
+| `homeserver`    | Headless server for self-hosted services with an ephemeral root filesystem.        |
+| `vm`            | QEMU/KVM dev/test VM with desktop profile. Port 2222.                              |
+| `homeserver-vm` | QEMU/KVM VM running homeserver services for development. Port 2223.                |
+| `installer`     | Minimal ISO configuration used to bootstrap new installations.                     |
 
 ### Deployment
 
-| Host | Command | Notes |
-|---|---|---|
-| `main` | `nh os switch --hostname main .` | Modern Nix helper (`nh`) for fast rebuilds. |
-| `homeserver` | `deploy '.#homeserver'` | Run from the `nix develop` shell. |
-| `vm` | `deploy '.#vm'` | After `nix run '.#vm' -- create vm`. |
-| `homeserver-vm` | `deploy '.#homeserver-vm'` | After `nix run '.#vm' -- create homeserver-vm`. |
-| `user@wsl` | `home-manager switch --flake .#user@wsl` | Portable Home Manager for WSL. |
+| Host            | Command                                  | Notes                                           |
+| --------------- | ---------------------------------------- | ----------------------------------------------- |
+| `main`          | `nh os switch --hostname main .`         | Modern Nix helper (`nh`) for fast rebuilds.     |
+| `homeserver`    | `deploy '.#homeserver'`                  | Run from the `nix develop` shell.               |
+| `vm`            | `deploy '.#vm'`                          | After `nix run '.#vm' -- create vm`.            |
+| `homeserver-vm` | `deploy '.#homeserver-vm'`               | After `nix run '.#vm' -- create homeserver-vm`. |
+| `user@wsl`      | `home-manager switch --flake .#user@wsl` | Portable Home Manager for WSL.                  |
 
 ---
 
@@ -191,12 +191,12 @@ A `theme-switch` script is available in the shell to list and apply themes. It u
 
 The `homeserver` is configured to run the following services, accessible via Tailscale:
 
-| Service | Purpose | Access |
-|---|---|---|
-| **Tailscale** | Zero-config VPN for secure remote access. | Connect from any Tailscale client. |
-| **Nginx** | Reverse proxy with automatic Tailscale TLS certs. | `https://homeserver.<tailnet-name>.ts.net` |
-| **Vaultwarden** | Self-hosted Bitwarden-compatible password manager. | `https://homeserver...` (via Nginx) |
-| **Syncthing** | Continuous, peer-to-peer file synchronization. | `http://localhost:8384` (via SSH tunnel) |
+| Service         | Purpose                                            | Access                                     |
+| --------------- | -------------------------------------------------- | ------------------------------------------ |
+| **Tailscale**   | Zero-config VPN for secure remote access.          | Connect from any Tailscale client.         |
+| **Nginx**       | Reverse proxy with automatic Tailscale TLS certs.  | `https://homeserver.<tailnet-name>.ts.net` |
+| **Vaultwarden** | Self-hosted Bitwarden-compatible password manager. | `https://homeserver...` (via Nginx)        |
+| **Syncthing**   | Continuous, peer-to-peer file synchronization.     | `http://localhost:8384` (via SSH tunnel)   |
 
 ---
 
@@ -204,15 +204,15 @@ The `homeserver` is configured to run the following services, accessible via Tai
 
 `homeserver` now hosts the shared LGTM stack. `main` and `vm` ship logs/metrics/traces to it over authenticated Tailscale HTTPS ingest paths.
 
-| Component | Purpose | Homeserver local endpoint |
-|---|---|---|
-| **Grafana** | Dashboards and datasource UI | `http://127.0.0.1:3000` |
-| **Loki** | Log storage and querying | `http://127.0.0.1:3100` |
-| **Tempo** | Trace storage/query backend | `http://127.0.0.1:3200` |
-| **Mimir** | Metrics storage/query backend | `http://127.0.0.1:9009` |
-| **Prometheus** | Scraping + remote write to Mimir | `http://127.0.0.1:9090` |
-| **Grafana Alloy** | Journald log shipping to Loki | local systemd service |
-| **OpenTelemetry Collector** | Trace pipeline to Tempo | receivers on `127.0.0.1:14317/14318` |
+| Component                   | Purpose                          | Homeserver local endpoint            |
+| --------------------------- | -------------------------------- | ------------------------------------ |
+| **Grafana**                 | Dashboards and datasource UI     | `http://127.0.0.1:3000`              |
+| **Loki**                    | Log storage and querying         | `http://127.0.0.1:3100`              |
+| **Tempo**                   | Trace storage/query backend      | `http://127.0.0.1:3200`              |
+| **Mimir**                   | Metrics storage/query backend    | `http://127.0.0.1:9009`              |
+| **Prometheus**              | Scraping + remote write to Mimir | `http://127.0.0.1:9090`              |
+| **Grafana Alloy**           | Journald log shipping to Loki    | local systemd service                |
+| **OpenTelemetry Collector** | Trace pipeline to Tempo          | receivers on `127.0.0.1:14317/14318` |
 
 Authenticated ingest routes on `https://homeserver.<tailnet-name>.ts.net`:
 
@@ -242,13 +242,16 @@ Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) and [age]
 ### Setup
 
 1. **Generate your personal age key** (once):
+
    ```bash
    age-keygen -o ~/.config/sops/age/keys.txt
    ```
+
    Add the public key to `.sops.yaml` under the `&user` anchor.
 
 2. **Add a host's age key** after its first boot:
    On the new host, get its SSH public key, convert it to an age key, and add it to `.sops.yaml`.
+
    ```bash
    # On the new host (e.g., homeserver)
    cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age
@@ -270,13 +273,13 @@ Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) and [age]
 
 The flake provides several `devShells` and `apps` for development and maintenance.
 
-| Type | Name | Purpose |
-|------|------|---------|
-| `devShell` | `default` | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, `qemu`, `OVMF`, `nixd`, etc. |
-| `devShell` | `security`| Includes common security tools: `nmap`, `gobuster`, `sqlmap`, `hydra`, `john`, etc. |
-| `app` | `vm` | Unified VM management: `nix run '.#vm' -- <action> <name>` |
-| `app` | `reinstall-homeserver` | Runs `nixos-anywhere` for fresh homeserver install on real hardware. |
-| `package` | `installer-iso` | Minimal NixOS ISO: `nix build '.#installer-iso'` |
+| Type       | Name                   | Purpose                                                                                 |
+| ---------- | ---------------------- | --------------------------------------------------------------------------------------- |
+| `devShell` | `default`              | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, `qemu`, `OVMF`, `nixd`, etc. |
+| `devShell` | `security`             | Includes common security tools: `nmap`, `gobuster`, `sqlmap`, `hydra`, `john`, etc.     |
+| `app`      | `vm`                   | Unified VM management: `nix run '.#vm' -- <action> <name>`                              |
+| `app`      | `reinstall-homeserver` | Runs `nixos-anywhere` for fresh homeserver install on real hardware.                    |
+| `package`  | `installer-iso`        | Minimal NixOS ISO: `nix build '.#installer-iso'`                                        |
 
 ---
 
@@ -284,14 +287,14 @@ The flake provides several `devShells` and `apps` for development and maintenanc
 
 A performance-focused configuration built around the Neovim 0.11+ native LSP API and `lazy.nvim`. It prioritizes speed, minimal wrappers, and a keyboard-driven workflow.
 
-| Category | Powered By | Description |
-| :--- | :--- | :--- |
-| **Completion** | `blink.cmp` | Fast completion engine with built-in Copilot integration. |
-| **Filesystem** | `oil.nvim` | Edit the filesystem as a text buffer to rename, move, or delete files. |
-| **Navigation** | `leap.nvim` | 2-character jumps to any visible text on screen. |
-| **LSP** | Native 0.11 | Minimal setup for `nixd`, `clangd`, `basedpyright`, and `ltex`. |
-| **UI** | `snacks.nvim` | Notifications, bigfile support, and a startup dashboard. |
-| **Search** | `telescope.nvim` | Fuzzy finding for files, live grep, and LSP symbols. |
+| Category       | Powered By       | Description                                                            |
+| :------------- | :--------------- | :--------------------------------------------------------------------- |
+| **Completion** | `blink.cmp`      | Fast completion engine with built-in Copilot integration.              |
+| **Filesystem** | `oil.nvim`       | Edit the filesystem as a text buffer to rename, move, or delete files. |
+| **Navigation** | `leap.nvim`      | 2-character jumps to any visible text on screen.                       |
+| **LSP**        | Native 0.11      | Minimal setup for `nixd`, `clangd`, `basedpyright`, and `ltex`.        |
+| **UI**         | `snacks.nvim`    | Notifications, bigfile support, and a startup dashboard.               |
+| **Search**     | `telescope.nvim` | Fuzzy finding for files, live grep, and LSP symbols.                   |
 
 ### Highlights
 
@@ -309,14 +312,14 @@ Detailed keymaps are documented in the [**Neovim Cheat Sheet**](home/files/nvim/
 
 ### Formatting
 
-All Nix files are formatted with `nixfmt` for consistency:
+Formatting is unified behind `nix fmt` via `treefmt-nix`:
 
 ```bash
-# Format all Nix files in the repo
-nix run 'nixpkgs#nixfmt-tree' -- .
+# Format Nix + shell scripts + Markdown
+nix fmt
 
-# Check formatting without modifying
-nix run 'nixpkgs#nixfmt-tree' -- --fail-on-change .
+# Check formatting without modifying files
+nix fmt -- --fail-on-change
 ```
 
 ### Pre-commit hooks
@@ -361,14 +364,14 @@ nix build '.#nixosConfigurations.homeserver-vm.config.system.build.toplevel' --n
 
 The repository uses GitHub Actions (`.github/workflows/nix.yml`) for automated validation on every push to `main` and for all pull requests.
 
-| Job | Description |
-| :--- | :--- |
-| **Flake Check** | Runs `nix flake check`, evaluates all host configurations, checks for dead code (`deadnix`), and verifies formatting (`nixfmt`). |
-| **Smoke Test** | Executes the `homeserver-vm` integration test, booting a full NixOS environment to validate all services. |
+| Job             | Description                                                                                                                           |
+| :-------------- | :------------------------------------------------------------------------------------------------------------------------------------ |
+| **Flake Check** | Runs `nix flake check`, evaluates all host configurations, checks for dead code (`deadnix`), and verifies formatting (`treefmt-nix`). |
+| **Smoke Test**  | Executes the `homeserver-vm` integration test, booting a full NixOS environment to validate all services.                             |
 
 ### Path Filtering & Performance
 
-To optimize CI runtime, the **Smoke Test** only executes when changes are detected in paths that affect the server configuration (`hosts/homeserver*/**`, `modules/**`, `lib/**`). 
+To optimize CI runtime, the **Smoke Test** only executes when changes are detected in paths that affect the server configuration (`hosts/homeserver*/**`, `modules/**`, `lib/**`).
 
 The workflow uses **Cachix** (`filipnowakowicz`) to persist built artifacts. To enable pushing from CI, ensure `CACHIX_AUTH_TOKEN` is set in your repository secrets.
 

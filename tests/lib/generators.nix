@@ -4,7 +4,7 @@
   ...
 }:
 let
-  lib = nixpkgs.lib;
+  inherit (nixpkgs) lib;
   pkgs = nixpkgs.legacyPackages.${system};
   gen = import ../../lib/generators.nix { inherit lib; };
 
@@ -81,8 +81,20 @@ let
 
     testMultipleComponents = {
       expr = gen.toAlloyHCL [
-        { type = "a"; label = "1"; body = { x = "1"; }; }
-        { type = "b"; label = "2"; body = { y = "2"; }; }
+        {
+          type = "a";
+          label = "1";
+          body = {
+            x = "1";
+          };
+        }
+        {
+          type = "b";
+          label = "2";
+          body = {
+            y = "2";
+          };
+        }
       ];
       expected = "a \"1\" {\n  x = \"1\"\n}\n\nb \"2\" {\n  y = \"2\"\n}";
     };

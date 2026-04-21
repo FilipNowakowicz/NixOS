@@ -35,15 +35,21 @@ let
       lib.mapAttrsToList (
         name: value:
         if isBlock value then
-          let body = lib.removeAttrs value [ "__alloyBlock" ];
-          in "${indentStr depth}${name} {\n${renderBody (depth + 1) body}\n${indentStr depth}}"
+          let
+            body = lib.removeAttrs value [ "__alloyBlock" ];
+          in
+          "${indentStr depth}${name} {\n${renderBody (depth + 1) body}\n${indentStr depth}}"
         else
           "${indentStr depth}${name} = ${renderValue depth value}"
       ) attrs
     );
 
   renderComponent =
-    { type, label, body }:
+    {
+      type,
+      label,
+      body,
+    }:
     "${type} \"${label}\" {\n${renderBody 1 body}\n}";
 
 in

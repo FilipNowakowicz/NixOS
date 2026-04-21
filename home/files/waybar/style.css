@@ -1,14 +1,14 @@
 @import "colors.css";
 
 * {
-    font-family: "Inter", "JetBrainsMono Nerd Font", sans-serif;
-    font-size: 12px;
-    min-height: 0;
+  font-family: "Inter", "JetBrainsMono Nerd Font", sans-serif;
+  font-size: 12px;
+  min-height: 0;
 }
 
 window#waybar {
-    background: transparent;
-    color: @text;
+  background: transparent;
+  color: @text;
 }
 
 /* ── Pill base ────────────────────────────────────────── */
@@ -16,47 +16,47 @@ window#waybar {
 #workspaces,
 #clock,
 .modules-right {
-    background: alpha(@bg, 0.75);
-    border-radius: 12px;
-    margin: 6px 3px;
-    border: 1px solid alpha(@orange, 0.25);
+  background: alpha(@bg, 0.75);
+  border-radius: 12px;
+  margin: 6px 3px;
+  border: 1px solid alpha(@orange, 0.25);
 }
 
 /* ── Workspaces ───────────────────────────────────────── */
 
 #workspaces {
-    padding: 0 4px;
+  padding: 0 4px;
 }
 
 #workspaces button {
-    padding:    0 5px;
-    color:      @text;
-    background: transparent;
-    font-size:  10px;
-    transition: color 150ms ease;
-    box-shadow: none;
+  padding: 0 5px;
+  color: @text;
+  background: transparent;
+  font-size: 10px;
+  transition: color 150ms ease;
+  box-shadow: none;
 }
 
 #workspaces button.empty {
-    color: alpha(@text, 0.25);
+  color: alpha(@text, 0.25);
 }
 
 #workspaces button.active {
-    color: @amber;
+  color: @amber;
 }
 
 #workspaces button:hover {
-    color:      @text;
-    background: transparent;
-    box-shadow: none;
+  color: @text;
+  background: transparent;
+  box-shadow: none;
 }
 
 /* ── Clock ────────────────────────────────────────────── */
 
 #clock {
-    padding:     0 18px;
-    font-size:   13px;
-    font-weight: 500;
+  padding: 0 18px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 /* ── Right modules ────────────────────────────────────── */
@@ -65,31 +65,35 @@ window#waybar {
 #bluetooth,
 #pulseaudio,
 #battery {
-    padding: 0 12px;
+  padding: 0 12px;
 }
 
 #custom-chevron {
-    padding: 0 6px 0 10px;
-    color: @text;
-    opacity: 0.4;
-    font-size: 13px;
+  padding: 0 6px 0 10px;
+  color: @text;
+  opacity: 0.4;
+  font-size: 13px;
 }
 
 #tray {
-    padding: 0 8px 0 4px;
+  padding: 0 8px 0 4px;
 }
 
 /* ── Bluetooth ────────────────────────────────────────── */
 
 #bluetooth {
-    opacity: 0.4;
+  opacity: 0.4;
 }
 
 #bluetooth.connected {
-    opacity: 1;
+  opacity: 1;
 }
 
 /* ── Status ───────────────────────────────────────────── */
 
-#battery.warning  { color: @orange; }
-#battery.critical { color: @amber;  }
+#battery.warning {
+  color: @orange;
+}
+#battery.critical {
+  color: @amber;
+}
