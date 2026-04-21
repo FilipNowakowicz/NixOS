@@ -94,7 +94,9 @@ in
         CapabilityBoundingSet = "";
         AmbientCapabilities = "";
         ProtectSystem = "full";
+        ProtectHome = false;
         ReadWritePaths = [
+          "/home/user"
           "/var/lib/syncthing"
           "/persist/sync"
         ];
