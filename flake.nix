@@ -150,6 +150,10 @@
             name = "has stateVersion";
             check = cfg: cfg.system.stateVersion != null;
           }
+          {
+            name = "no passwordless sudo";
+            check = cfg: cfg.security.sudo.wheelNeedsPassword;
+          }
         ] allNixosConfigs.main.config;
 
         invariants-vm = invariants.mkInvariantCheck "vm" [
@@ -157,12 +161,20 @@
             name = "has stateVersion";
             check = cfg: cfg.system.stateVersion != null;
           }
+          {
+            name = "passwordless sudo enabled";
+            check = cfg: !cfg.security.sudo.wheelNeedsPassword;
+          }
         ] allNixosConfigs.vm.config;
 
         invariants-homeserver-vm = invariants.mkInvariantCheck "homeserver-vm" [
           {
             name = "has stateVersion";
             check = cfg: cfg.system.stateVersion != null;
+          }
+          {
+            name = "passwordless sudo enabled";
+            check = cfg: !cfg.security.sudo.wheelNeedsPassword;
           }
         ] allNixosConfigs.homeserver-vm.config;
 
