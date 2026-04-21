@@ -58,7 +58,10 @@
 
       inherit (nixpkgs) lib;
 
-      vmRegistry = import ./lib/vm.nix;
+      hostRegistry = import ./lib/hosts.nix;
+
+      # VMs only — for the VM management script
+      vmRegistry = lib.filterAttrs (_: cfg: cfg ? sshPort && cfg ? diskSize) hostRegistry;
 
       mkNixos =
         host:
@@ -72,19 +75,21 @@
           ];
         };
 
-      # ── VM-derived infrastructure ────────────────────────────────────────
-      vmDeployNodes = lib.mapAttrs (name: _: {
+      # ── Host-derived infrastructure ──────────────────────────────────────
+      allNixosConfigs = lib.mapAttrs (name: _: mkNixos name) hostRegistry;
+
+      deployableHosts = lib.filterAttrs (_: cfg: cfg ? deploy) hostRegistry;
+
+      allDeployNodes = lib.mapAttrs (name: cfg: {
         hostname = name;
-        sshUser = "user";
+        sshUser = cfg.deploy.sshUser;
         magicRollback = false;
         autoRollback = false;
         profiles.system = {
           user = "root";
           path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.${name};
         };
-      }) vmRegistry;
-
-      vmNixosConfigs = lib.mapAttrs (name: _: mkNixos name) vmRegistry;
+      }) deployableHosts;
 
       # VM management script — unified entry point
       vmApp = {
@@ -189,24 +194,10 @@
       };
 
       # ── NixOS Configurations ────────────────────────────────────────────────
-      nixosConfigurations = vmNixosConfigs // {
-        main = mkNixos "main";
-        homeserver = mkNixos "homeserver";
-      };
+      nixosConfigurations = allNixosConfigs;
 
       # ── Deploy-RS ───────────────────────────────────────────────────────────
-      deploy.nodes = vmDeployNodes // {
-        homeserver = {
-          hostname = "homeserver";
-          sshUser = "user";
-          magicRollback = false;
-          autoRollback = false;
-          profiles.system = {
-            user = "root";
-            path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.homeserver;
-          };
-        };
-      };
+      deploy.nodes = allDeployNodes;
 
       checks.${system} = deploy-rs.lib.${system}.deployChecks self.deploy // {
         homeserver-vm-smoke = import ./tests/nixos/homeserver-vm-smoke.nix {
