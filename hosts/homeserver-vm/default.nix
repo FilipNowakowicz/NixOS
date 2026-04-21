@@ -128,6 +128,7 @@ in
     tmpfiles.rules = [
       "d /persist/nginx 0700 nginx nginx -"
       "d /persist/sync 0755 user users -"
+      "d /var/lib/syncthing 0700 user users -"
     ];
   };
 

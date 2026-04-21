@@ -4,9 +4,6 @@
 
 2. Quick wins (hours, not days)
 
-- treefmt-nix (quick) — unify nixfmt + shfmt + prettier for scripts/markdown behind nix fmt.
-- Closure-size diff in CI (quick) — comment nvd diff output on PRs. Catches surprise pulls of bloated deps.
-- Scheduled GC + auto-optimise-store on main (quick) — nix.gc.automatic + nix.optimise.automatic. Free disk wins.
 - nix flake check gains a module-eval test per host (quick) — pkgs.nixosTest stubs that assert invariants ("main has no passwordless sudo", "homeserver has firewall enabled"). Fast, and it closes the intent/reality gap below.
 
 3. Security — natural continuation
@@ -64,14 +61,3 @@ Genuinely new capabilities, not extensions.
 - "Security hardening in progress" — 25 lines of profile vs. broad stated ambition.
 - "Graceful failure handling" — main has zero monitoring.
 - Alloy/Grafana use untyped strings for config — fragile in a repo that otherwise prizes type-safety.
-
-Suggested order if you want one
-
-If I had to pick a sequence that compounds:
-
-1. Generalize host registry (leverage)
-2. Typed observability generators + ship main → LGTM (removes ugly + closes biggest QoL gap)
-3. Systemd hardening DSL (satisfies goal #1, extracts a reusable module, satisfies goal #2)
-4. nixosTest per profile (locks in the gains, catches drift)
-5. GCP homeserver (unlocks deferred pile: automated deploy, B2, DNS)
-6. Quick wins sprinkled throughout whenever they annoy you that week.

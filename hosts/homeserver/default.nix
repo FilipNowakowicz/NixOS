@@ -105,6 +105,7 @@ in
 
     tmpfiles.rules = [
       "d /persist/sync 0755 user users -"
+      "d /var/lib/syncthing 0700 user users -"
     ];
   };
 
