@@ -44,7 +44,10 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 ├── flake.nix                          # Flake entry point
 ├── .sops.yaml                         # SOPS configuration for secret management
 ├── lib/
-│   ├── vm.nix                         # VM registry (single source of truth)
+│   ├── hosts.nix                      # Host registry (single source of truth for all hosts)
+│   ├── generators.nix                 # Typed Alloy HCL generators
+│   ├── dashboards.nix                 # Typed Grafana dashboard builders
+│   ├── invariants.nix                 # Configuration invariant check builders
 │   ├── pubkeys.nix                    # Centralized SSH public keys
 │   ├── syncthing.nix                  # Shared Syncthing device/folder registry
 │   ├── sandbox.nix                    # Common systemd service sandbox options
@@ -104,7 +107,7 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 
 ## VM Management
 
-All VMs are managed through a single unified command. The VM registry (`lib/hosts.nix`) is the single source of truth — SSH ports, disk sizes, deploy-rs nodes, and QEMU config are all derived from it.
+All VMs are managed through a single unified command. The host registry (`lib/hosts.nix`) is the single source of truth for all machines — SSH ports, disk sizes, deploy-rs nodes, and QEMU config are all derived from it.
 
 ```bash
 nix run '.#vm' -- <action> <name>
@@ -121,12 +124,11 @@ nix run '.#vm' -- <action> <name>
 | `list`             | Show all registered VMs with status                               |
 | `init <name>`      | Generate SSH host key and sops secrets for a new VM               |
 
-### Adding a new VM
+### Adding a new host
 
-1. Add an entry to `lib/hosts.nix` (name, SSH port, disk size)
-2. Create `hosts/<name>/default.nix` (import `modules/nixos/profiles/vm.nix` + host-specific config)
-3. Generate sops secrets: `nix run '.#vm' -- init <name>`
-4. Create the VM: `nix run '.#vm' -- create <name>`
+1. Add an entry to `lib/hosts.nix` (role, and if it's a VM: SSH port, disk size)
+2. Create `hosts/<name>/default.nix` (import `modules/nixos/profiles/vm.nix` for VMs or appropriate profiles for real hosts)
+3. Generate sops secrets: `nix run '.#vm' -- init <name>` (for VMs) or manual setup for real hosts.
 
 ### Example: homeserver-vm end-to-end
 
@@ -348,6 +350,13 @@ If the secret detector flags an intentional value, add a narrow path or glob to 
 # Run the homeserver VM integration smoke test
 nix build '.#checks.x86_64-linux.homeserver-vm-smoke'
 
+# Run library unit tests (generators, etc.)
+nix build '.#checks.x86_64-linux.lib-generators'
+
+# Run configuration invariant checks (assertions for every host)
+# e.g., "main has no passwordless sudo", "homeserver has firewall enabled"
+nix build '.#checks.x86_64-linux.invariants-main'
+
 # Check for flake inputs, formatting, and unused variables
 nix flake check
 
@@ -364,10 +373,12 @@ nix build '.#nixosConfigurations.homeserver-vm.config.system.build.toplevel' --n
 
 The repository uses GitHub Actions (`.github/workflows/nix.yml`) for automated validation on every push to `main` and for all pull requests.
 
-| Job             | Description                                                                                                                           |
-| :-------------- | :------------------------------------------------------------------------------------------------------------------------------------ |
-| **Flake Check** | Runs `nix flake check`, evaluates all host configurations, checks for dead code (`deadnix`), and verifies formatting (`treefmt-nix`). |
-| **Smoke Test**  | Executes the `homeserver-vm` integration test, booting a full NixOS environment to validate all services.                             |
+| Job                 | Description                                                                                                                           |
+| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------ |
+| **Flake Check**     | Runs `nix flake check`, evaluates all host configurations, checks for dead code (`deadnix`), and verifies formatting (`treefmt-nix`). |
+| **Invariant Check** | Evaluates configuration assertions per host to close the intent/reality gap.                                                          |
+| **Closure Diff**    | Automatically computes and comments the `nvd` diff of package closures on PRs.                                                        |
+| **Smoke Test**      | Executes the `homeserver-vm` integration test, booting a full NixOS environment to validate all services.                             |
 
 ### Path Filtering & Performance
 

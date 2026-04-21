@@ -25,10 +25,14 @@ Hardware not yet provisioned. Steps in order:
    `sops updatekeys hosts/homeserver/secrets/secrets.yaml`
 5. **Create Vaultwarden account** — temporarily set `SIGNUPS_ALLOWED = true`, deploy, create account at `https://homeserver.filip-nowakowicz.ts.net`, set back to `false`, deploy again
 
-## Syncthing Configuration
+## Architecture
 
-Syncthing devices/folders are declarative and shared with `homeserver-vm` via `lib/syncthing.nix`.
-`overrideDevices` and `overrideFolders` are enabled so the host always converges to that validated config.
+- **Config**: `hosts/homeserver/default.nix` — imports `modules/nixos/profiles/observability.nix` (full stack)
+- **Registry**: `lib/hosts.nix` — single source of truth for role, tailnet FQDN, and backup class
+- **Secrets**: `hosts/homeserver/secrets/secrets.yaml` — decrypted using host SSH key
+- **Observability**: `lib/generators.nix` and `lib/dashboards.nix` drive Alloy and Grafana config
+- **Syncthing Configuration**: Syncthing devices/folders are declarative and shared with `homeserver-vm` via `lib/syncthing.nix`.
+  `overrideDevices` and `overrideFolders` are enabled so the host always converges to that validated config.
 
 ## Gotchas
 

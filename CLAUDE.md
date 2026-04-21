@@ -14,6 +14,7 @@ approaches proactively. Explain why, not just what.
 - **Deploy (WSL):** `home-manager switch --flake .#user@wsl`
 - **Deploy (main):** `nh os switch --hostname main .` (alias: `rebuild`)
 - **Validate flake:** `nix flake check`
+- **Validate invariants:** `nix build '.#checks.x86_64-linux.invariants-<host>'`
 - **Lint:** `statix check .` and `deadnix .`
 - **Pre-commit (manual run):** `pre-commit run --all-files`
 - **Git** is for version control only, not deployment
@@ -49,6 +50,9 @@ nix run '.#vm' -- <action> <name>
 
 - `flake.nix` — entry point, defines hosts, home-manager, deploy-rs nodes, VM app
 - `lib/hosts.nix` — host registry (single source of truth for all hosts)
+- `lib/generators.nix` — typed Alloy HCL generators
+- `lib/dashboards.nix` — typed Grafana dashboard builders
+- `lib/invariants.nix` — configuration invariant check builders
 - `lib/pubkeys.nix` — centralized SSH public keys
 - `lib/syncthing.nix` — shared Syncthing device/folder registry
 - `lib/sandbox.nix` — common systemd service sandbox options
@@ -59,6 +63,7 @@ nix run '.#vm' -- <action> <name>
 - `hosts/homeserver/` — real hardware homeserver (same services + Tailscale, Nginx, TLS)
 - `hosts/installer/` — minimal NixOS ISO config for fresh installs
 - `scripts/vm.sh` — unified VM management script
+- `scripts/closure-diff.sh` — compute closure diffs in CI
 - `scripts/reinstall-homeserver.sh` — real homeserver reinstall (separate workflow)
 - `modules/nixos/profiles/` — system profiles (base, desktop, security, observability, vm)
 - `modules/nixos/hardware/` — hardware drivers and graphics (NVIDIA PRIME)

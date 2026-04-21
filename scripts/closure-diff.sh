@@ -11,7 +11,7 @@ BASE_REF="${1:-}"
 TARGET_REF="${2:-}"
 HOST="${3:-}"
 
-if [[ -z "$BASE_REF" ]] || [[ -z "$TARGET_REF" ]] || [[ -z "$HOST" ]]; then
+if [[ -z $BASE_REF ]] || [[ -z $TARGET_REF ]] || [[ -z $HOST ]]; then
   echo "Usage: $0 <base_ref> <target_ref> <host>" >&2
   exit 1
 fi
@@ -21,7 +21,7 @@ build_closure() {
   local host=$2
   local output_dir="/tmp/closure-${sha:0:8}-${host}"
 
-  if [[ -d "$output_dir" ]]; then
+  if [[ -d $output_dir ]]; then
     echo "$output_dir/result"
     return 0
   fi
@@ -57,7 +57,7 @@ format_diff_table() {
     local new_size=$(echo "$line" | sed -E 's/.*-> ([0-9.]+[KMG]?B?) .*/\1/')
 
     # Skip if we couldn't parse
-    if [[ -z "$old_size" ]] || [[ -z "$new_size" ]]; then
+    if [[ -z $old_size ]] || [[ -z $new_size ]]; then
       continue
     fi
 
@@ -68,7 +68,7 @@ format_diff_table() {
     local delta_pct=0
 
     if [[ $old_bytes -gt 0 ]]; then
-      delta_pct=$(( (delta_bytes * 100) / old_bytes ))
+      delta_pct=$(((delta_bytes * 100) / old_bytes))
     fi
 
     local delta_str
@@ -88,13 +88,13 @@ BASE_SHA=$(git rev-parse "$BASE_REF")
 TARGET_SHA=$(git rev-parse "$TARGET_REF")
 
 BASE_CLOSURE=$(build_closure "$BASE_SHA" "$HOST")
-if [[ -z "$BASE_CLOSURE" ]]; then
+if [[ -z $BASE_CLOSURE ]]; then
   echo "Failed to build base closure for $HOST" >&2
   exit 1
 fi
 
 TARGET_CLOSURE=$(build_closure "$TARGET_SHA" "$HOST")
-if [[ -z "$TARGET_CLOSURE" ]]; then
+if [[ -z $TARGET_CLOSURE ]]; then
   echo "Failed to build target closure for $HOST" >&2
   exit 1
 fi
