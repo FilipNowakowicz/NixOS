@@ -176,12 +176,20 @@
             name = "passwordless sudo enabled";
             check = cfg: !cfg.security.sudo.wheelNeedsPassword;
           }
+          {
+            name = "firewall enabled";
+            check = cfg: cfg.networking.firewall.enable;
+          }
         ] allNixosConfigs.homeserver-vm.config;
 
         invariants-homeserver = invariants.mkInvariantCheck "homeserver" [
           {
             name = "has stateVersion";
             check = cfg: cfg.system.stateVersion != null;
+          }
+          {
+            name = "firewall enabled";
+            check = cfg: cfg.networking.firewall.enable;
           }
         ] allNixosConfigs.homeserver.config;
       };
