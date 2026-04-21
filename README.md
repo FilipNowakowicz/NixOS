@@ -333,7 +333,7 @@ pre-commit run --all-files
 
 Included quick checks:
 
-- `nixfmt-rfc-style` (Nix formatting)
+- `nixfmt` (Nix formatting)
 - `statix` (Nix lint)
 - `deadnix` (dead code)
 - `no-plaintext-secrets` (high-signal plaintext secret detector)
