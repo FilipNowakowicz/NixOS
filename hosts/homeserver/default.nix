@@ -102,6 +102,10 @@ in
         ];
       };
     };
+
+    tmpfiles.rules = [
+      "d /persist/sync 0755 user user -"
+    ];
   };
 
   profiles.observability = {

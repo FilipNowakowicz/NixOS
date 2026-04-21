@@ -126,6 +126,7 @@ in
 
     tmpfiles.rules = [
       "d /persist/nginx 0700 nginx nginx -"
+      "d /persist/sync 0755 user user -"
     ];
   };
 
