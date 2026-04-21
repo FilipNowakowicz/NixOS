@@ -1,13 +1,7 @@
 . Leverage points (small change → outsized benefit)                                                                                                                                       
-                                                                                                                                                                                             
   These multiply the value of everything else. Do them first if anything at all.                                                                                                             
-                                                                                                                                                                                             
-  - Generalize lib/vm.nix into a host registry (medium). You already have data-driven VMs. Extend the same pattern to main and homeserver: hostname, tailnet FQDN, role, enabled services,   
-  SSH port, backup class. Most future threads become "add a field" rather than "touch three hosts." This is the single biggest structural move. Dependency: unlocks #3, #6, #9.
   - Service composition DSL (medium → substantial). A module like services.app.<name> = { package, port, backup, observe, harden } that auto-wires sandboxing (lib/sandbox.nix), systemd     
   hardening, log shipping, and restic targets. Eliminates the "add a service → remember to also wire 5 cross-cutting things" tax. Depends on the host registry being worth anything.         
-  - Typed Alloy & Grafana generators (quick). modules/nixos/profiles/observability.nix currently builds Alloy via string heredoc and Grafana dashboards via inline JSON. Replace with Nix
-  attrsets → lib.generators.toAlloyHCL + provisioned dashboards-as-Nix. Type-safe, diffable, testable. Quick, and it removes one of the uglier corners of the repo.                          
                            
   2. Quick wins (hours, not days)                                                                                                                                                            
                            
