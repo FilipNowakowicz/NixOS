@@ -36,6 +36,11 @@
       url = "github:nix-community/lanzaboote";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    pre-commit-hooks = {
+      url = "github:cachix/pre-commit-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -46,6 +51,7 @@
       deploy-rs,
       nixos-anywhere,
       sops-nix,
+      pre-commit-hooks,
       ...
     }:
     let
@@ -82,7 +88,7 @@
 
       allDeployNodes = lib.mapAttrs (name: cfg: {
         hostname = name;
-        sshUser = cfg.deploy.sshUser;
+        inherit (cfg.deploy) sshUser;
         magicRollback = false;
         autoRollback = false;
         profiles.system = {
@@ -110,6 +116,14 @@
           ''
         );
         meta.description = "Manage QEMU/KVM virtual machines";
+      };
+
+      preCommitCheck = import ./pre-commit-hooks.nix {
+        inherit
+          pkgs
+          pre-commit-hooks
+          system
+          ;
       };
     in
     {
@@ -158,8 +172,10 @@
             ++ [
               deploy-rs.packages.${system}.deploy-rs
               nixos-anywhere.packages.${system}.nixos-anywhere
-            ];
+            ]
+            ++ preCommitCheck.enabledPackages;
           shellHook = ''
+            ${preCommitCheck.shellHook}
             # Make 'vm' command available directly in the dev shell
             alias vm="nix run '.#vm' --"
             exec ${pkgs.zsh}/bin/zsh

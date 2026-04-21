@@ -9,12 +9,13 @@ approaches proactively. Explain why, not just what.
 ## Environment
 
 - **Dev machine:** NixOS (main)
-- **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nh`, `nixd`, `statix`, `deadnix`, `sops`, `ssh-to-age`, `qemu`, `OVMF`
+- **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nh`, `nixd`, `statix`, `deadnix`, `pre-commit`, `sops`, `ssh-to-age`, `qemu`, `OVMF`
 - **Deploy (VM):** `deploy '.#vm'` or `deploy '.#homeserver-vm'`
 - **Deploy (WSL):** `home-manager switch --flake .#user@wsl`
 - **Deploy (main):** `nh os switch --hostname main .` (alias: `rebuild`)
 - **Validate flake:** `nix flake check`
 - **Lint:** `statix check .` and `deadnix .`
+- **Pre-commit (manual run):** `pre-commit run --all-files`
 - **Git** is for version control only, not deployment
 
 ---

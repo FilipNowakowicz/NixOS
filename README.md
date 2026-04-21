@@ -319,6 +319,24 @@ nix run 'nixpkgs#nixfmt-tree' -- .
 nix run 'nixpkgs#nixfmt-tree' -- --fail-on-change .
 ```
 
+### Pre-commit hooks
+
+Pre-commit hooks are configured in [`pre-commit-hooks.nix`](./pre-commit-hooks.nix) and auto-installed when entering `nix develop`.
+
+```bash
+# Run the full hook set manually
+pre-commit run --all-files
+```
+
+Included quick checks:
+
+- `nixfmt-rfc-style` (Nix formatting)
+- `statix` (Nix lint)
+- `deadnix` (dead code)
+- `no-plaintext-secrets` (high-signal plaintext secret detector)
+
+If the secret detector flags an intentional value, add a narrow path or glob to `.plaintext-secrets-allowlist` and justify it in the commit/PR.
+
 ---
 
 ## Validation
