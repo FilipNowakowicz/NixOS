@@ -203,6 +203,9 @@
         homeserver-vm-smoke = import ./tests/nixos/homeserver-vm-smoke.nix {
           inherit nixpkgs system inputs;
         };
+        lib-generators = import ./tests/lib/generators.nix {
+          inherit nixpkgs system;
+        };
       };
 
       # ── Home Manager Configurations ─────────────────────────────────────────
