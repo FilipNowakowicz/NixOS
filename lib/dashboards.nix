@@ -1,5 +1,4 @@
 # Builder helpers for Grafana dashboards as typed Nix attrsets.
-{ lib }:
 
 {
   # Grid position builder
@@ -10,12 +9,28 @@
       w ? 12,
       h ? 8,
     }:
-    { inherit x y w h; };
+    {
+      inherit
+        x
+        y
+        w
+        h
+        ;
+    };
 
   # Standard datasource references
-  mimirDS = { uid = "mimir"; type = "prometheus"; };
-  lokiDS  = { uid = "loki";  type = "loki"; };
-  tempoDS = { uid = "tempo"; type = "tempo"; };
+  mimirDS = {
+    uid = "mimir";
+    type = "prometheus";
+  };
+  lokiDS = {
+    uid = "loki";
+    type = "loki";
+  };
+  tempoDS = {
+    uid = "tempo";
+    type = "tempo";
+  };
 
   # Generic datasource reference
   datasource = uid: type: { inherit uid type; };
@@ -27,7 +42,9 @@
       legendFormat ? "",
       refId ? "A",
     }:
-    { inherit expr legendFormat refId; };
+    {
+      inherit expr legendFormat refId;
+    };
 
   # Timeseries panel builder
   timeseriesPanel =
@@ -39,7 +56,12 @@
       gridPos,
     }:
     {
-      inherit id title targets gridPos;
+      inherit
+        id
+        title
+        targets
+        gridPos
+        ;
       type = "timeseries";
       datasource = ds;
     };
@@ -54,7 +76,12 @@
       gridPos,
     }:
     {
-      inherit id title targets gridPos;
+      inherit
+        id
+        title
+        targets
+        gridPos
+        ;
       type = "logs";
       datasource = ds;
     };
@@ -71,7 +98,12 @@
     }:
     {
       id = null;
-      inherit uid title panels refresh;
+      inherit
+        uid
+        title
+        panels
+        refresh
+        ;
       timezone = "browser";
       schemaVersion = 39;
       version = 1;
