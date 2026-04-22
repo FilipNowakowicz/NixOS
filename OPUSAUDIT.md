@@ -1,11 +1,3 @@
-1. Leverage points (small change → outsized benefit)
-
-- Service composition DSL (medium → substantial). A module like services.app.<name> = { package, port, backup, observe, harden } that auto-wires sandboxing (lib/sandbox.nix), systemd hardening, log shipping, and restic targets. Eliminates the "add a service → remember to also wire 5 cross-cutting things" tax. Depends on the host registry being worth anything.
-
-2. Quick wins (hours, not days)
-
-- nix flake check gains a module-eval test per host (quick) — pkgs.nixosTest stubs that assert invariants ("main has no passwordless sudo", "homeserver has firewall enabled"). Fast, and it closes the intent/reality gap below.
-
 3. Security — natural continuation
 
 Your security profile is ~25 lines of sysctl + SSH. Intent >> reality. Natural path:
@@ -27,22 +19,11 @@ Your real-hardware homeserver is blocked, but homeserver-vm and homeserver modul
   - Local DNS / AdGuard (deferred) — Tailscale MagicDNS + AdGuard container/module on the GCE instance.
 - Substantial only if you include IaC + CI deploy. Without that, it's medium.
 
-5. Main-machine QoL (directly named in GOALS.md #3)
-
-Your daily driver has no observability. The irony is thick.
-
-- Ship main's metrics/logs to homeserver(-vm) (quick once registry exists) — enable profiles.observability.collectors on main pointing at the ingest URL. You already wrote the plumbing. Then dashboards/alerts for main's disk, thermals, battery if laptop, kernel errors, systemd unit failures. This is the single change that most improves daily life.
-- Automated flake.lock updates (quick) — GitHub Action running nix flake update weekly, opens PR, CI validates. Pair with the closure-diff bot.
-- Desktop notifications from systemd failures (quick) — systemd.services.<name>.onFailure → notify-send wrapper. Catches silent failures.
-- Remote LUKS unlock via initrd SSH (quick) — dropbear/systemd-boot SSH; nice when the machine reboots and you're not at it.
-- nh scheduled rebuild with changelog diff (quick) — weekly auto-switch with rollback on failure.
-
 6. Testing & validation — the biggest unstated gap
 
 You write that reproducibility and security matter. CI builds closures, but almost nothing is functionally verified.
 
 - nixosTest per profile (medium) — one test asserting each profile's promise. Security profile → fail2ban blocks after N tries. Observability profile → Loki receives a log from Alloy. Hardening DSL → systemd-analyze security returns <2.0 for wrapped units.
-- Smoke test matrix (quick) — extend tests/nixos/ to cover main and vm, not just homeserver-vm.
 - Generator golden tests (quick, after thread #1's Alloy/Grafana generators) — snapshot the generated config; PRs that change it fail loud.
 
 7. Unexplored territory
