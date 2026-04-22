@@ -76,6 +76,8 @@
 
       invariants = import ./lib/invariants.nix { inherit lib pkgs; };
 
+      cveChecks = import ./lib/cve-checks.nix { inherit lib pkgs; };
+
       # VMs only — for the VM management script
       vmRegistry = lib.filterAttrs (_: cfg: cfg ? sshPort && cfg ? diskSize) hostRegistry;
 
@@ -194,6 +196,11 @@
           }
         ] allNixosConfigs.homeserver.config;
       };
+
+      # Generate CVE checks for all NixOS configs
+      cveCheckMap = lib.mapAttrs (hostName: config:
+        cveChecks.mkCveCheck hostName config.config.system.build.toplevel
+      ) allNixosConfigs;
     in
     {
       # ── Apps ────────────────────────────────────────────────────────────────
@@ -237,6 +244,7 @@
               ssh-to-age
               qemu
               OVMF
+              vulnix
             ])
             ++ [
               deploy-rs.packages.${system}.deploy-rs
@@ -287,6 +295,7 @@
       checks.${system} =
         deploy-rs.lib.${system}.deployChecks self.deploy
         // invariantChecks
+        // cveCheckMap
         // {
           vm-smoke = import ./tests/nixos/vm-smoke.nix {
             inherit nixpkgs system inputs;
