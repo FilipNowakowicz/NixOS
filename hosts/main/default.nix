@@ -39,19 +39,39 @@ in
   ];
 
   # ── Hardware ────────────────────────────────────────────────────────────────
-  networking.hostName = "main";
+  networking = {
+    hostName = "main";
+    networkmanager.enable = true;
+    # Required for Mullvad/Tailscale: prevents firewall from dropping VPN-routed packets
+    firewall.checkReversePath = "loose";
+  };
+
+  hardware.bluetooth.enable = true;
+
   system.stateVersion = "24.11";
+
+  environment.systemPackages = with pkgs; [ sbctl ];
 
   boot = {
     # Lanzaboote (Secure Boot)
     loader.systemd-boot.enable = lib.mkForce false;
+    loader.systemd-boot.configurationLimit = 5;
     lanzaboote = {
       enable = true;
       pkiBundle = "/var/lib/sbctl";
     };
 
-    # Initrd SSH (fallback LUKS unlock when TPM2 fails)
+    # IOMMU protection — blocks Thunderbolt/PCIe DMA attacks
+    kernelParams = [
+      "intel_iommu=on"
+      "iommu=force"
+    ];
+
     initrd = {
+      # Systemd in initrd (required for initrd SSH)
+      systemd.enable = true;
+
+      # Initrd SSH (fallback LUKS unlock when TPM2 fails)
       network = {
         enable = true;
         ssh = {
@@ -105,6 +125,25 @@ in
     thermald.enable = true;
     power-profiles-daemon.enable = true;
     fwupd.enable = true;
+
+    openssh = {
+      enable = true;
+      openFirewall = false; # Accessible via Tailscale only
+    };
+
+    tailscale = {
+      enable = true;
+      openFirewall = true;
+    };
+
+    mullvad-vpn.enable = true;
+
+    logind.settings.Login = {
+      HandleLidSwitch = "suspend";
+      IdleAction = "suspend";
+      IdleActionSec = "15min";
+    };
+
     fprintd = {
       enable = true;
       tod = {

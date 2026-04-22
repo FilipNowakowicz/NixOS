@@ -138,6 +138,7 @@ in
     tailscale = {
       enable = true;
       openFirewall = true; # Opens UDP port 41641
+      authKeyFile = config.sops.secrets.tailscale_auth_key.path;
     };
 
     # Password manager
