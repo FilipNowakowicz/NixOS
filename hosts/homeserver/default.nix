@@ -79,49 +79,6 @@ in
     ];
   };
 
-  services.hardened = {
-    tailscale-cert = {
-      extraConfig = {
-        ProtectHome = false;
-        ReadWritePaths = [ "/var/lib/tailscale" ];
-        RestrictAddressFamilies = [ "AF_UNIX" ];
-      };
-    };
-
-    nginx = {
-      extraConfig = {
-        CapabilityBoundingSet = "CAP_NET_BIND_SERVICE";
-        AmbientCapabilities = "CAP_NET_BIND_SERVICE";
-        ReadWritePaths = [
-          "/var/cache/nginx"
-          "/var/log/nginx"
-        ];
-      };
-    };
-
-    vaultwarden = {
-      extraConfig = {
-        CapabilityBoundingSet = "";
-        AmbientCapabilities = "";
-        ReadWritePaths = [ "/var/lib/vaultwarden" ];
-      };
-    };
-
-    syncthing = {
-      extraConfig = {
-        CapabilityBoundingSet = "";
-        AmbientCapabilities = "";
-        ProtectSystem = "full";
-        ProtectHome = false;
-        ReadWritePaths = [
-          "/home/user"
-          "/var/lib/syncthing"
-          "/persist/sync"
-        ];
-      };
-    };
-  };
-
   profiles.observability = {
     enable = true;
     grafana = {
@@ -142,6 +99,49 @@ in
   # ── Services ────────────────────────────────────────────────────────────────
   # Override the mkDefault false from security.nix — SSH is required on a headless server
   services = {
+    hardened = {
+      tailscale-cert = {
+        extraConfig = {
+          ProtectHome = false;
+          ReadWritePaths = [ "/var/lib/tailscale" ];
+          RestrictAddressFamilies = [ "AF_UNIX" ];
+        };
+      };
+
+      nginx = {
+        extraConfig = {
+          CapabilityBoundingSet = "CAP_NET_BIND_SERVICE";
+          AmbientCapabilities = "CAP_NET_BIND_SERVICE";
+          ReadWritePaths = [
+            "/var/cache/nginx"
+            "/var/log/nginx"
+          ];
+        };
+      };
+
+      vaultwarden = {
+        extraConfig = {
+          CapabilityBoundingSet = "";
+          AmbientCapabilities = "";
+          ReadWritePaths = [ "/var/lib/vaultwarden" ];
+        };
+      };
+
+      syncthing = {
+        extraConfig = {
+          CapabilityBoundingSet = "";
+          AmbientCapabilities = "";
+          ProtectSystem = "full";
+          ProtectHome = false;
+          ReadWritePaths = [
+            "/home/user"
+            "/var/lib/syncthing"
+            "/persist/sync"
+          ];
+        };
+      };
+    };
+
     openssh = {
       enable = true;
       openFirewall = true;
@@ -216,6 +216,26 @@ in
         };
       };
     };
+
+    restic.backups.local = {
+      paths = [
+        "/var/lib/vaultwarden"
+        "/var/lib/syncthing"
+        "/persist/sync"
+      ];
+      repository = "/persist/restic-repo";
+      passwordFile = config.sops.secrets.restic_password.path;
+      initialize = true;
+      timerConfig = {
+        OnCalendar = "daily";
+        Persistent = true;
+      };
+      pruneOpts = [
+        "--keep-daily 7"
+        "--keep-weekly 4"
+        "--keep-monthly 3"
+      ];
+    };
   };
 
   # Open firewall for HTTPS
@@ -240,30 +260,6 @@ in
       };
       restic_password = { };
     };
-  };
-
-  # ── Backups ──────────────────────────────────────────────────────────────────
-  # TODO: replace repository with B2 once bucket is provisioned:
-  #   repository = "b2:<bucket-name>:/homeserver";
-  #   environmentFile = config.sops.secrets.b2_env.path; # B2_ACCOUNT_ID + B2_ACCOUNT_KEY
-  services.restic.backups.local = {
-    paths = [
-      "/var/lib/vaultwarden"
-      "/var/lib/syncthing"
-      "/persist/sync"
-    ];
-    repository = "/persist/restic-repo";
-    passwordFile = config.sops.secrets.restic_password.path;
-    initialize = true;
-    timerConfig = {
-      OnCalendar = "daily";
-      Persistent = true;
-    };
-    pruneOpts = [
-      "--keep-daily 7"
-      "--keep-weekly 4"
-      "--keep-monthly 3"
-    ];
   };
 
   # ── Impermanence ────────────────────────────────────────────────────────────
