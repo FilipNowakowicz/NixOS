@@ -297,6 +297,9 @@
           profile-security = import ./tests/nixos/profile-security.nix {
             inherit nixpkgs system;
           };
+          profile-observability = import ./tests/nixos/profile-observability.nix {
+            inherit nixpkgs system;
+          };
           lib-generators = import ./tests/lib/generators.nix {
             inherit nixpkgs system;
           };
