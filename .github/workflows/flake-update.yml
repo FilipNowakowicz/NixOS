@@ -27,6 +27,11 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
 
+      - name: Configure git
+        run: |
+          git config user.email "noreply@github.com"
+          git config user.name "github-actions"
+
       - name: Reset flake-update branch to main
         run: |
           git fetch origin main
@@ -34,6 +39,9 @@ jobs:
 
       - name: Update flake.lock
         run: nix flake update
+
+      - name: Check for changes
+        run: git status
 
       - name: Create or update Pull Request
         uses: peter-evans/create-pull-request@v6
@@ -47,4 +55,3 @@ jobs:
           branch: flake-update
           base: main
           delete-branch: false
-          auto-merge-method: squash
