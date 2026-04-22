@@ -12,11 +12,52 @@ in
     ../../modules/nixos/profiles/observability.nix
     ../../modules/nixos/profiles/security.nix
     ../../modules/nixos/profiles/user.nix
-    ../../modules/nixos/profiles/vm.nix
+    ../../modules/nixos/profiles/microvm-guest.nix
   ];
 
   networking.hostName = "homeserver-vm";
   system.stateVersion = "24.11";
+
+  systemd.network.networks."20-eth" = {
+    matchConfig.Name = "eth*";
+    networkConfig = {
+      Address = "10.0.100.2/24";
+      Gateway = "10.0.100.1";
+      DNS = "1.1.1.1";
+    };
+  };
+
+  microvm = {
+    hypervisor = "cloud-hypervisor";
+
+    interfaces = [
+      {
+        type = "tap";
+        id = "vm-homeserver";
+        mac = "02:00:00:00:00:01";
+      }
+    ];
+
+    volumes = [
+      {
+        image = "persist.img";
+        mountPoint = "/persist";
+        size = 10240;
+        fsType = "ext4";
+        label = "persist";
+        autoCreate = true;
+      }
+    ];
+
+    shares = [
+      {
+        tag = "age-keys";
+        source = "/run/microvms/homeserver-vm/age-keys";
+        mountPoint = "/run/age-keys";
+        proto = "virtiofs";
+      }
+    ];
+  };
 
   profiles.observability = {
     enable = true;
@@ -142,7 +183,7 @@ in
   sops = {
     defaultSopsFile = ./secrets/secrets.yaml;
     defaultSopsFormat = "yaml";
-    age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+    age.keyFile = "/run/age-keys/homeserver-vm.txt";
     secrets = {
       user_password.neededForUsers = true;
       restic_password = { };

@@ -47,6 +47,7 @@
   sops = {
     defaultSopsFormat = "yaml";
     age.sshKeyPaths = lib.mkForce [ ];
+    # age.keyFile is set per-host pointing to the virtiofs-injected key
   };
 
   # ── Networking base (static; hosts configure addresses) ───────────────────
