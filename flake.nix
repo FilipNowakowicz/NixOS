@@ -288,6 +288,9 @@
         deploy-rs.lib.${system}.deployChecks self.deploy
         // invariantChecks
         // {
+          vm-smoke = import ./tests/nixos/vm-smoke.nix {
+            inherit nixpkgs system inputs;
+          };
           homeserver-vm-smoke = import ./tests/nixos/homeserver-vm-smoke.nix {
             inherit nixpkgs system inputs;
           };

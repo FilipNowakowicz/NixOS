@@ -142,9 +142,35 @@ jobs:
             echo "homeserver=false" >> "$GITHUB_OUTPUT"
           fi
 
+  # Invariant checks for real hardware configs
+  invariants:
+    needs: flake-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Cachix
+        uses: cachix/cachix-action@v15
+        with:
+          name: filipnowakowicz
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Check main invariants
+        run: nix build .#checks.x86_64-linux.invariants-main --show-trace
+
+      - name: Check homeserver invariants
+        run: nix build .#checks.x86_64-linux.invariants-homeserver --show-trace
+
   smoke-test:
     needs: [flake-check, changes]
-    if: needs.changes.outputs.homeserver == 'true'
+    if: needs.changes.outputs.homeserver == 'true' || needs.changes.outputs.vm == 'true'
     # NixOS tests require KVM. GitHub-hosted ubuntu-latest runners expose
     # /dev/kvm on public repositories. For private repos or self-hosted runners,
     # verify that KVM is available before relying on this job — it will silently
@@ -167,5 +193,10 @@ jobs:
           name: filipnowakowicz
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
+      - name: vm smoke test
+        if: needs.changes.outputs.vm == 'true'
+        run: nix build .#checks.x86_64-linux.vm-smoke --show-trace
+
       - name: homeserver-vm smoke test
+        if: needs.changes.outputs.homeserver == 'true'
         run: nix build .#checks.x86_64-linux.homeserver-vm-smoke --show-trace
