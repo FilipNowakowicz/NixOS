@@ -273,6 +273,22 @@ in
     };
   };
 
+  # ── USB Device Control ─────────────────────────────────────────────────────
+  services.usbguard = {
+    enable = true;
+    rules = ''
+      # Default policy: block all USB devices
+      # Devices must be explicitly whitelisted below
+
+      # Allow Logitech USB Receiver (mouse)
+      # ID: 046d:c54d
+      allow id 046d:c54d
+
+      # Reject everything else
+      reject
+    '';
+  };
+
   sops = {
     defaultSopsFile = ./secrets/secrets.yaml;
     defaultSopsFormat = "yaml";
