@@ -133,15 +133,16 @@
         meta.description = "Manage QEMU/KVM virtual machines";
       };
 
+      treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
+
       preCommitCheck = import ./pre-commit-hooks.nix {
         inherit
           pkgs
           pre-commit-hooks
           system
+          treefmtEval
           ;
       };
-
-      treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
 
       # ── Configuration Invariant Checks ──────────────────────────────────
       invariantChecks = {

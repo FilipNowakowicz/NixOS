@@ -2,8 +2,14 @@
   pkgs,
   pre-commit-hooks,
   system,
+  treefmtEval,
 }:
 let
+  treefmtWrapper = pkgs.writeShellScript "treefmt-wrapper" ''
+    set -euo pipefail
+    exec ${treefmtEval.config.build.wrapper}/bin/treefmt "$@"
+  '';
+
   statixStaged = pkgs.writeShellScript "statix-staged" ''
     set -euo pipefail
 
@@ -64,7 +70,13 @@ pre-commit-hooks.lib.${system}.run {
   src = ./.;
 
   hooks = {
-    nixfmt.enable = true;
+    treefmt = {
+      enable = true;
+      entry = "${treefmtWrapper}";
+      language = "system";
+      pass_filenames = false;
+      files = "";
+    };
     deadnix.enable = true;
 
     statix-staged = {
