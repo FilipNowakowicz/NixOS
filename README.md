@@ -206,6 +206,15 @@ The `homeserver` is configured to run the following services, accessible via Tai
 
 `homeserver` now hosts the shared LGTM stack. `main` and `vm` ship logs/metrics/traces to it over authenticated Tailscale HTTPS ingest paths.
 
+### Infrastructure Dashboards
+
+The stack includes pre-configured dashboards for fleet overview and deep-dives into the `main` machine:
+
+- **Main Machine**: Real-time monitoring of disk usage, CPU/Memory load, thermal zones, battery health, failed systemd units, and kernel error logs.
+- **Fleet Overview**: Aggregated view of CPU and memory usage across all hosts, combined with centralized systemd journal logs.
+
+### LGTM Stack Components
+
 | Component                   | Purpose                          | Homeserver local endpoint            |
 | --------------------------- | -------------------------------- | ------------------------------------ |
 | **Grafana**                 | Dashboards and datasource UI     | `http://127.0.0.1:3000`              |
@@ -335,7 +344,7 @@ pre-commit run --all-files
 
 Included quick checks:
 
-- `nixfmt` (Nix formatting)
+- `treefmt` (Unified formatting for Nix, shell, Markdown)
 - `statix` (Nix lint)
 - `deadnix` (dead code)
 - `no-plaintext-secrets` (high-signal plaintext secret detector)
@@ -371,11 +380,12 @@ nix build '.#nixosConfigurations.homeserver-vm.config.system.build.toplevel' --n
 
 ## Continuous Integration
 
-The repository uses GitHub Actions (`.github/workflows/nix.yml`) for automated validation on every push to `main` and for all pull requests.
+The repository uses GitHub Actions (`.github/workflows/nix.yml` and `flake-update.yml`) for automated validation and maintenance.
 
 | Job                 | Description                                                                                                                           |
 | :------------------ | :------------------------------------------------------------------------------------------------------------------------------------ |
 | **Flake Check**     | Runs `nix flake check`, evaluates all host configurations, checks for dead code (`deadnix`), and verifies formatting (`treefmt-nix`). |
+| **Flake Update**    | Automated weekly `flake.lock` updates via GitHub Action, opening a PR for review.                                                     |
 | **Invariant Check** | Evaluates configuration assertions per host to close the intent/reality gap.                                                          |
 | **Closure Diff**    | Automatically computes and comments the `nvd` diff of package closures on PRs.                                                        |
 | **Smoke Test**      | Executes the `homeserver-vm` integration test, booting a full NixOS environment to validate all services.                             |

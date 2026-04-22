@@ -14,6 +14,7 @@ approaches proactively. Explain why, not just what.
 - **Deploy (WSL):** `home-manager switch --flake .#user@wsl`
 - **Deploy (main):** `nh os switch --hostname main .` (alias: `rebuild`)
 - **Validate flake:** `nix flake check`
+- **Automated updates:** GitHub Action runs weekly (`flake-update.yml`), creating a PR with closure-diffs.
 - **Validate invariants:** `nix build '.#checks.x86_64-linux.invariants-<host>'`
 - **Lint:** `statix check .` and `deadnix .`
 - **Pre-commit (manual run):** `pre-commit run --all-files`
