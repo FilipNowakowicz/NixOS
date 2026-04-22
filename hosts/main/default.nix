@@ -42,11 +42,29 @@ in
   networking.hostName = "main";
   system.stateVersion = "24.11";
 
-  # Lanzaboote (Secure Boot)
-  boot.loader.systemd-boot.enable = lib.mkForce false;
-  boot.lanzaboote = {
-    enable = true;
-    pkiBundle = "/var/lib/sbctl";
+  boot = {
+    # Lanzaboote (Secure Boot)
+    loader.systemd-boot.enable = lib.mkForce false;
+    lanzaboote = {
+      enable = true;
+      pkiBundle = "/var/lib/sbctl";
+    };
+
+    # Initrd SSH (fallback LUKS unlock when TPM2 fails)
+    initrd = {
+      network = {
+        enable = true;
+        ssh = {
+          enable = true;
+          port = 2222;
+          authorizedKeys = import ../../lib/pubkeys.nix;
+          hostKeys = [ "/etc/secrets/initrd/ssh_host_ed25519_key" ];
+        };
+      };
+      secrets = {
+        "/etc/secrets/initrd/ssh_host_ed25519_key" = lib.mkForce ./initrd-ssh-host-key;
+      };
+    };
   };
 
   # ── Nix Store ───────────────────────────────────────────────────────────────
@@ -109,6 +127,18 @@ in
 
   services.prometheus.globalConfig.external_labels = {
     host = "main";
+  };
+
+  # ── Systemd Failure Notifications ──────────────────────────────────────────
+  services.systemd-failure-notify = {
+    enable = true;
+    services = [
+      "prometheus"
+      "opentelemetry-collector"
+      "restic-backups-local"
+      "thermald"
+      "power-profiles-daemon"
+    ];
   };
 
   systemd.services = {
