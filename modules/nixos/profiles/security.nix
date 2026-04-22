@@ -13,6 +13,15 @@
     };
   };
 
+  # ── Intrusion Prevention ───────────────────────────────────────────────
+  services.fail2ban = {
+    enable = true;
+    maxretry = 5;
+    bantime = "10m";
+    banaction = lib.mkDefault "nftables-multiport";
+    banaction-allports = lib.mkDefault "nftables-allports";
+  };
+
   # ── Kernel Hardening ───────────────────────────────────────────────────
   boot.kernel.sysctl = {
     "kernel.unprivileged_bpf_disabled" = 1;
