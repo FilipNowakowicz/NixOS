@@ -49,6 +49,147 @@ let
     }
   ];
 
+  mainMachineDashboard = dash.mkDashboard {
+    uid = "main-machine";
+    title = "Main Machine";
+    panels = [
+      (dash.timeseriesPanel {
+        id = 10;
+        title = "Disk Usage %";
+        ds = dash.mimirDS;
+        gridPos = dash.gridPos {
+          x = 0;
+          y = 0;
+          w = 12;
+          h = 8;
+        };
+        targets = [
+          (dash.target {
+            expr = "(node_filesystem_size_bytes{host=\"main\",fstype!~\"tmpfs|efivarfs|overlay\"} - node_filesystem_avail_bytes{host=\"main\",fstype!~\"tmpfs|efivarfs|overlay\"}) / node_filesystem_size_bytes{host=\"main\",fstype!~\"tmpfs|efivarfs|overlay\"} * 100";
+            legendFormat = "{{device}}";
+          })
+        ];
+      })
+      (dash.timeseriesPanel {
+        id = 11;
+        title = "CPU Usage %";
+        ds = dash.mimirDS;
+        gridPos = dash.gridPos {
+          x = 12;
+          y = 0;
+          w = 12;
+          h = 8;
+        };
+        targets = [
+          (dash.target {
+            expr = "100 - (avg(rate(node_cpu_seconds_total{host=\"main\",mode=\"idle\"}[5m])) * 100)";
+            legendFormat = "CPU";
+          })
+        ];
+      })
+      (dash.timeseriesPanel {
+        id = 12;
+        title = "Memory Usage %";
+        ds = dash.mimirDS;
+        gridPos = dash.gridPos {
+          x = 0;
+          y = 8;
+          w = 8;
+          h = 8;
+        };
+        targets = [
+          (dash.target {
+            expr = "(1 - (node_memory_MemAvailable_bytes{host=\"main\"} / node_memory_MemTotal_bytes{host=\"main\"})) * 100";
+            legendFormat = "Memory";
+          })
+        ];
+      })
+      (dash.timeseriesPanel {
+        id = 13;
+        title = "Thermal Zones";
+        ds = dash.mimirDS;
+        gridPos = dash.gridPos {
+          x = 8;
+          y = 8;
+          w = 8;
+          h = 8;
+        };
+        targets = [
+          (dash.target {
+            expr = "node_thermal_zone_temp{host=\"main\"}";
+            legendFormat = "{{zone}}";
+          })
+        ];
+      })
+      (dash.timeseriesPanel {
+        id = 14;
+        title = "Battery %";
+        ds = dash.mimirDS;
+        gridPos = dash.gridPos {
+          x = 16;
+          y = 8;
+          w = 8;
+          h = 8;
+        };
+        targets = [
+          (dash.target {
+            expr = "node_power_supply_capacity{host=\"main\"}";
+            legendFormat = "{{power_supply}}";
+          })
+        ];
+      })
+      (dash.timeseriesPanel {
+        id = 15;
+        title = "Failed Systemd Units";
+        ds = dash.mimirDS;
+        gridPos = dash.gridPos {
+          x = 0;
+          y = 16;
+          w = 12;
+          h = 8;
+        };
+        targets = [
+          (dash.target {
+            expr = "node_systemd_unit_state{host=\"main\",state=\"failed\"} == 1";
+            legendFormat = "{{unit}}";
+          })
+        ];
+      })
+      (dash.logsPanel {
+        id = 16;
+        title = "Kernel Errors";
+        ds = dash.lokiDS;
+        gridPos = dash.gridPos {
+          x = 12;
+          y = 16;
+          w = 12;
+          h = 8;
+        };
+        targets = [
+          (dash.target {
+            expr = "{host=\"main\",job=\"systemd-journal\"} |= \"kernel\" |~ \"(error|fail|oops|panic)\"";
+          })
+        ];
+      })
+      (dash.logsPanel {
+        id = 17;
+        title = "Systemd Journal Errors";
+        ds = dash.lokiDS;
+        gridPos = dash.gridPos {
+          x = 0;
+          y = 24;
+          w = 24;
+          h = 8;
+        };
+        targets = [
+          (dash.target {
+            expr = "{host=\"main\",job=\"systemd-journal\"} |= \"Failed\"";
+          })
+        ];
+      })
+    ];
+  };
+
   fleetDashboard = dash.mkDashboard {
     uid = "homeserver-fleet-overview";
     title = "Homeserver Fleet Overview";
@@ -293,6 +434,7 @@ in
             "netdev"
             "systemd"
             "thermal_zone"
+            "power_supply"
           ];
         };
 
@@ -442,6 +584,7 @@ in
     environment.etc = lib.mkMerge [
       (lib.mkIf cfg.grafana.enable {
         "grafana-dashboards/homeserver-fleet-overview.json".text = builtins.toJSON fleetDashboard;
+        "grafana-dashboards/main-machine.json".text = builtins.toJSON mainMachineDashboard;
       })
       (lib.mkIf cfg.collectors.logs.enable {
         "alloy/config.alloy".text = alloyConfig;

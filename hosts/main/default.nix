@@ -5,6 +5,8 @@
   ...
 }:
 let
+  network = import ../../lib/network.nix;
+  inherit (network) tailnetFQDN;
   hwDaemonSandbox = {
     # System hardening for hardware daemons (thermald, ppd). These need access
     # to /sys (writes) and dbus, but shouldn't touch user files or network.
@@ -60,11 +62,23 @@ in
   # ── Profiles ────────────────────────────────────────────────────────────────
   profiles.observability = {
     enable = true;
-    # main doesn't host logs/metrics, just collects them.
     collectors = {
-      metrics.enable = true;
-      logs.enable = true;
-      traces.enable = true;
+      metrics = {
+        enable = true;
+        remoteWriteURL = "https://${tailnetFQDN}/obs/mimir/api/v1/push";
+      };
+      logs = {
+        enable = true;
+        pushURL = "https://${tailnetFQDN}/obs/loki/loki/api/v1/push";
+      };
+      traces = {
+        enable = true;
+        exportURL = "https://${tailnetFQDN}/obs/otlp/v1/traces";
+      };
+    };
+    ingestAuth = {
+      username = "admin";
+      passwordFile = config.sops.secrets.observability_ingest_password.path;
     };
   };
 
@@ -92,6 +106,10 @@ in
 
   # Backlight control (using brightnessctl)
   hardware.acpilight.enable = true;
+
+  services.prometheus.globalConfig.external_labels = {
+    host = "main";
+  };
 
   systemd.services = {
     thermald.serviceConfig = hwDaemonSandbox;
