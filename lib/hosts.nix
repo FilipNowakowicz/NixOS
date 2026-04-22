@@ -28,8 +28,6 @@
 
   homeserver-vm = {
     role = "homeserver-vm";
-    sshPort = 2223;
-    diskSize = "20G";
-    deploy.sshUser = "user";
+    ip = "10.0.100.2";
   };
 }
