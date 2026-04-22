@@ -42,7 +42,7 @@ jobs:
           commit-message: 'chore: update flake.lock (weekly)'
           title: '[bot] weekly flake update'
           body: 'Automated weekly update of flake.lock. This PR auto-merges if all checks pass. Review the closure-diff comment below for impact on system size.'
-          branch: flake-update
+          branch: automated/flake-update
           base: main
-          delete-branch: false
+          delete-branch: true
 
