@@ -434,7 +434,6 @@ in
             "netdev"
             "systemd"
             "thermal_zone"
-            "power_supply"
           ];
         };
 
