@@ -30,6 +30,9 @@ in
   microvm = {
     hypervisor = "cloud-hypervisor";
 
+    # Share host's Nix store via virtiofs — avoids building a slow erofs image.
+    storeOnDisk = false;
+
     interfaces = [
       {
         type = "tap";
@@ -50,6 +53,12 @@ in
     ];
 
     shares = [
+      {
+        tag = "ro-store";
+        source = "/nix/store";
+        mountPoint = "/nix/.ro-store";
+        proto = "virtiofs";
+      }
       {
         tag = "age-keys";
         source = "/run/microvms/homeserver-vm/age-keys";
