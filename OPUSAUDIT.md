@@ -1,21 +1,17 @@
 1. Security — natural continuation
 
-Your security profile is ~25 lines of sysctl + SSH. Intent >> reality. Natural path:
-
 - Systemd hardening DSL (medium) — extract from lib/sandbox.nix into a proper module (services.hardened.<name> with ProtectSystem=strict, NoNewPrivileges, RestrictNamespaces, SystemCallFilter=@system-service, etc.). Apply to every service you ship. Becomes your first candidate for extraction as a shareable module (goal #2 in GOALS.md).
 - Host introspection → LGTM (medium) — auditd + osquery or lynis timer → logs to Loki → dashboards. Pairs perfectly with the observability stack you already have. Proves the LGTM investment for something other than infra metrics.
 - Pentesting learning loop — the security devShell exists. Pair with a microvm.nix-based purple-team target: spin up a deliberately-misconfigured VM to attack, with OSQuery/auditd feeding your real LGTM. This is how you get signal that hardening actually works.
 
 2. Unexplored territory
 
-Genuinely new capabilities, not extensions.
-
 - Dev environment templates (quick each) — nix flake init -t templates for your common project types. nix-direnv across the board. Makes this flake the source of all your per-project shells, not just system config.
 - microvm.nix (medium) — run multiple lightweight NixOS VMs from main without QEMU orchestration. Replaces much of scripts/vm.sh for fast-iteration workflows and enables the purple-team target above.
 - Container image builds via dockerTools (medium) — produce OCI images for your services from the same module definitions; gives you a deploy path that isn't tied to nixos-anywhere.
 - Tailscale ACLs as Nix (medium, depends on host registry) — generate acl.hujson from the registry. Single source of truth for who-can-reach-what.
 
-1. GCP homeserver — unlocks the deferred pile
+3. GCP homeserver — unlocks the deferred pile
 
 Your real-hardware homeserver is blocked, but homeserver-vm and homeserver modules are already decoupled from hardware. One move unlocks several deferred items:
 
@@ -25,7 +21,7 @@ Your real-hardware homeserver is blocked, but homeserver-vm and homeserver modul
   - Local DNS / AdGuard (deferred) — Tailscale MagicDNS + AdGuard container/module on the GCE instance.
 - Substantial only if you include IaC + CI deploy. Without that, it's medium.
 
-2. Intent-vs-reality gaps (worth a line each)
+4. Intent-vs-reality gaps (worth a line each)
 
 - "Passwordless sudo for VMs only" — no test enforces this.
 - "Reproducibility" — no flake update automation, no reproducibility-check in CI (nix build --rebuild twice and compare hashes).
