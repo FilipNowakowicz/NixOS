@@ -31,6 +31,9 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 ## Features
 
 - **Runtime Theming**: A runtime-swappable color system allows changing themes without a full NixOS rebuild.
+- **USB Device Control**: USBGuard enabled on `main` with an implicit deny policy to block unauthorized devices.
+- **Systemd Hardening**: A custom DSL (`services.hardened`) applies a high-security sandbox baseline to critical services (Vaultwarden, Nginx, Syncthing).
+- **Intrusion Prevention**: Fail2ban integrated into the security profile with automated E2E testing.
 - **Idle Policy (desktop)**: Hypridle locks at 10 minutes of inactivity and suspends at 15 minutes.
 - **Centralized Keys**: SSH public keys are managed in `lib/pubkeys.nix` for easy access across the flake.
 - **Shared SSH Agent**: Home Manager runs a single user `ssh-agent` service; shells use one shared socket, so loaded keys are reused across terminals.
@@ -51,7 +54,6 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 │   ├── cve-checks.nix                 # CVE scanning check builders
 │   ├── pubkeys.nix                    # Centralized SSH public keys
 │   ├── syncthing.nix                  # Shared Syncthing device/folder registry
-│   ├── sandbox.nix                    # Common systemd service sandbox options
 │   └── network.nix                    # Centralized network identifiers (tailnet FQDN)
 ├── hosts/
 │   ├── main/                          # Primary workstation
@@ -75,13 +77,17 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 ├── modules/
 │   └── nixos/
 │       ├── hardware/                  # Hardware-specific modules (NVIDIA PRIME)
-│       └── profiles/
-│           ├── base.nix               # Base system settings (Nix, locale)
-│           ├── desktop.nix            # Desktop environment (Hyprland, PipeWire)
-│           ├── security.nix           # Security hardening (Firewall, SSH)
-│           ├── observability.nix      # LGTM observability stack (Grafana, Loki, Tempo, Mimir)
-│           ├── user.nix               # User account and home-manager base
-│           └── vm.nix                 # Shared VM module (hardware, disko, impermanence)
+│       ├── microvms/                  # microvm.nix VM definitions (homeserver-vm)
+│       ├── profiles/
+│       │   ├── base.nix               # Base system settings (Nix, locale)
+│       │   ├── desktop.nix            # Desktop environment (Hyprland, PipeWire)
+│       │   ├── security.nix           # Security hardening (Firewall, SSH)
+│       │   ├── observability.nix      # LGTM observability stack (Grafana, Loki, Tempo, Mimir)
+│       │   ├── user.nix               # User account and home-manager base
+│       │   └── vm.nix                 # Shared VM module (hardware, disko, impermanence)
+│       └── services/
+│           ├── hardened.nix           # Systemd service hardening DSL (sandbox extraction)
+│           └── systemd-failure-notify.nix
 └── home/
     ├── profiles/                      # User-level profiles (home-manager)
     │   ├── base.nix
@@ -108,7 +114,17 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 
 ## VM Management
 
-All VMs are managed through a single unified command. The host registry (`lib/hosts.nix`) is the single source of truth for all machines — SSH ports, disk sizes, deploy-rs nodes, and QEMU config are all derived from it.
+### homeserver-vm (Primary)
+
+The `homeserver-vm` runs as a lightweight microvm on the `main` host via `microvm.nix`. It uses `cloud-hypervisor`, shares the host's Nix store via `virtiofs` for near-instant boots (~7s), and receives secrets through a secure `virtiofs` share.
+
+- **Deploy**: `nh os switch --hostname main .`
+- **Control**: `sudo systemctl [start|stop|status] microvm@homeserver-vm.service`
+- **Logs**: `sudo journalctl -u microvm@homeserver-vm.service -f`
+
+### QEMU Development VMs (Secondary)
+
+Traditional QEMU/KVM VMs for testing desktop environments, bootloaders, or full disk encryption. These are managed through a unified command derived from the host registry.
 
 ```bash
 nix run '.#vm' -- <action> <name>
@@ -127,19 +143,11 @@ nix run '.#vm' -- <action> <name>
 
 ### Adding a new host
 
-1. Add an entry to `lib/hosts.nix` (role, and if it's a VM: SSH port, disk size)
-2. Create `hosts/<name>/default.nix` (import `modules/nixos/profiles/vm.nix` for VMs or appropriate profiles for real hosts)
-3. Generate sops secrets: `nix run '.#vm' -- init <name>` (for VMs) or manual setup for real hosts.
+1. Add an entry to `lib/hosts.nix` (role, and if it's a QEMU VM: SSH port, disk size)
+2. Create `hosts/<name>/default.nix` (import `modules/nixos/profiles/vm.nix` for QEMU VMs or appropriate profiles for real hosts)
+3. Generate sops secrets: `nix run '.#vm' -- init <name>` (for QEMU VMs) or manual setup for real hosts.
 
-### Example: homeserver-vm end-to-end
-
-```bash
-nix run '.#vm' -- create homeserver-vm
-deploy '.#homeserver-vm'
-ssh homeserver-vm curl http://127.0.0.1:8222    # Vaultwarden responds
-```
-
-Multiple VMs can run simultaneously — each has its own disk image, OVMF vars, and SSH port.
+Multiple VMs can run simultaneously — each has its own disk image, OVMF vars, and SSH port (for QEMU).
 
 ---
 

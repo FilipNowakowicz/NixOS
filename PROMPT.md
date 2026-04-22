@@ -3,3 +3,12 @@ I made some changes to my config I want you to walk through it verify that all t
 - USBGuard (quick); AppArmor profiles for exposed services (medium); fail2ban (quick, homeserver when it lands).
 - Systemd hardening DSL (medium) — extract from lib/sandbox.nix into a proper module (services.hardened.<name> with ProtectSystem=strict, NoNewPrivileges, RestrictNamespaces, SystemCallFilter=@system-service, etc.). Apply to every service you ship. Becomes your first candidate for extraction as a shareable module (goal #2 in GOALS.md).
 - microvm.nix (medium) — run multiple lightweight NixOS VMs from main without QEMU orchestration. Replaces much of scripts/vm.sh for fast-iteration workflows and enables the purple-team target above. (scriptts/vm.sh marked as deprecated could be used for futureif testing disk arrangements)
+
+* - homeserver-vm now runs as microvm@homeserver-vm.service on main via cloud-hypervisor
+
+- Boots in ~7s, virtiofs store sharing (no slow erofs build)
+- Age key injected via virtiofs share — solves the first-boot secrets bootstrap
+- Bridge networking (microvm-br0, 10.0.100.0/24) with NAT via WiFi
+- Vaultwarden + Syncthing + full observability stack confirmed running
+- scripts/vm.sh archived, CLAUDE.md updated
+- All checks pass: invariants, flake check, smoke tests

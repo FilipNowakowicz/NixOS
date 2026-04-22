@@ -6,7 +6,8 @@ This document tracks the evolution of this NixOS configuration, from immediate n
 
 ## Active
 
-- [ ] **Security hardening (phased)** — Apply defense-in-depth practices to main machine and systems. Start with main machine (kernel hardening, service isolation, reduced attack surface), then expand to VMs as needed. Document hardening rationale and learn through hands-on pentesting against hardened systems.
+- [x] **Security hardening (phased)** — Apply defense-in-depth practices. Extracted systemd hardening DSL into `services.hardened` module. USBGuard enabled on main. Fail2ban active.
+- [x] **microvm migration** — `homeserver-vm` migrated from QEMU to `microvm.nix` for fast iteration and secure secret injection.
 
 ---
 
