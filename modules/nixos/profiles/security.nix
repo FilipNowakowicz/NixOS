@@ -2,6 +2,7 @@
 {
   # ── Firewall ───────────────────────────────────────────────────────────
   networking.firewall.enable = true;
+  networking.nftables.enable = true;
 
   # ── SSH ────────────────────────────────────────────────────────────────
   services.openssh = {
@@ -18,8 +19,6 @@
     enable = true;
     maxretry = 5;
     bantime = "10m";
-    banaction = lib.mkDefault "nftables-multiport";
-    banaction-allports = lib.mkDefault "nftables-allports";
   };
 
   # ── Kernel Hardening ───────────────────────────────────────────────────
