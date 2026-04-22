@@ -16,6 +16,9 @@ approaches proactively. Explain why, not just what.
 - **Validate flake:** `nix flake check`
 - **Automated updates:** GitHub Action runs weekly (`flake-update.yml`), creating a PR with closure-diffs.
 - **Validate invariants:** `nix build '.#checks.x86_64-linux.invariants-<host>'`
+- **Validate profile:** `nix build '.#checks.x86_64-linux.profile-<name>'`
+- **Golden tests:** `nix build '.#checks.x86_64-linux.lib-generators-golden'`
+- **CVE scan:** `nix build '.#checks.x86_64-linux.cve-check-<host>'`
 - **Lint:** `statix check .` and `deadnix .`
 - **Pre-commit (manual run):** `pre-commit run --all-files`
 - **Git** is for version control only, not deployment
@@ -54,6 +57,7 @@ nix run '.#vm' -- <action> <name>
 - `lib/generators.nix` — typed Alloy HCL generators
 - `lib/dashboards.nix` — typed Grafana dashboard builders
 - `lib/invariants.nix` — configuration invariant check builders
+- `lib/cve-checks.nix` — CVE scanning check builders
 - `lib/pubkeys.nix` — centralized SSH public keys
 - `lib/syncthing.nix` — shared Syncthing device/folder registry
 - `lib/sandbox.nix` — common systemd service sandbox options

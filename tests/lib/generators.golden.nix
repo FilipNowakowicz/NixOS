@@ -1,3 +1,4 @@
+# Snapshot tests for Alloy and Grafana configuration generators.
 {
   nixpkgs,
   system,

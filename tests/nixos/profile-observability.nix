@@ -1,3 +1,4 @@
+# E2E test for the observability profile (Alloy -> Loki pipeline).
 { nixpkgs, system }:
 let
   pkgs = import nixpkgs { inherit system; };

@@ -1,3 +1,4 @@
+# E2E test for the systemd sandbox hardening score.
 { nixpkgs, system }:
 let
   pkgs = import nixpkgs { inherit system; };

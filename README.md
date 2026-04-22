@@ -48,6 +48,7 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 │   ├── generators.nix                 # Typed Alloy HCL generators
 │   ├── dashboards.nix                 # Typed Grafana dashboard builders
 │   ├── invariants.nix                 # Configuration invariant check builders
+│   ├── cve-checks.nix                 # CVE scanning check builders
 │   ├── pubkeys.nix                    # Centralized SSH public keys
 │   ├── syncthing.nix                  # Shared Syncthing device/folder registry
 │   ├── sandbox.nix                    # Common systemd service sandbox options
@@ -359,21 +360,30 @@ If the secret detector flags an intentional value, add a narrow path or glob to 
 # Run the homeserver VM integration smoke test
 nix build '.#checks.x86_64-linux.homeserver-vm-smoke'
 
+# Run the standard VM desktop smoke test
+nix build '.#checks.x86_64-linux.vm-smoke'
+
+# Run profile-specific E2E tests
+nix build '.#checks.x86_64-linux.profile-security'       # fail2ban blocks attacker
+nix build '.#checks.x86_64-linux.profile-observability'  # Alloy ships journal logs to Loki
+nix build '.#checks.x86_64-linux.profile-hardening'      # systemd sandbox score < 2.0
+
 # Run library unit tests (generators, etc.)
 nix build '.#checks.x86_64-linux.lib-generators'
+
+# Run generator golden tests (snapshot testing for Alloy/Grafana)
+nix build '.#checks.x86_64-linux.lib-generators-golden'
 
 # Run configuration invariant checks (assertions for every host)
 # e.g., "main has no passwordless sudo", "homeserver has firewall enabled"
 nix build '.#checks.x86_64-linux.invariants-main'
 
+# View CVE scanning reports for each host (outputs a text file)
+nix build '.#checks.x86_64-linux.homeserver' --print-out-paths | xargs cat
+nix build '.#checks.x86_64-linux.main' --print-out-paths | xargs cat
+
 # Check for flake inputs, formatting, and unused variables
 nix flake check
-
-# Build all host configurations to ensure they evaluate correctly
-nix build '.#nixosConfigurations.vm.config.system.build.toplevel' --no-link
-nix build '.#nixosConfigurations.main.config.system.build.toplevel' --no-link
-nix build '.#nixosConfigurations.homeserver.config.system.build.toplevel' --no-link
-nix build '.#nixosConfigurations.homeserver-vm.config.system.build.toplevel' --no-link
 ```
 
 ---
@@ -387,8 +397,11 @@ The repository uses GitHub Actions (`.github/workflows/nix.yml` and `flake-updat
 | **Flake Check**     | Runs `nix flake check`, evaluates all host configurations, checks for dead code (`deadnix`), and verifies formatting (`treefmt-nix`). |
 | **Flake Update**    | Automated weekly `flake.lock` updates via GitHub Action, opening a PR for review.                                                     |
 | **Invariant Check** | Evaluates configuration assertions per host to close the intent/reality gap.                                                          |
+| **CVE Scanning**    | Runs `vulnix` against every host closure to report open vulnerabilities without blocking CI.                                          |
+| **Golden Tests**    | Verifies that generated configuration files (Alloy/Grafana) match committed snapshots.                                                |
+| **Smoke Test**      | Executes integration tests (`vm-smoke`, `homeserver-vm-smoke`) booting full NixOS environments.                                       |
+| **Profile Tests**   | Runs specialized NixOS tests for Security, Observability, and Hardening profiles.                                                     |
 | **Closure Diff**    | Automatically computes and comments the `nvd` diff of package closures on PRs.                                                        |
-| **Smoke Test**      | Executes the `homeserver-vm` integration test, booting a full NixOS environment to validate all services.                             |
 
 ### Path Filtering & Performance
 

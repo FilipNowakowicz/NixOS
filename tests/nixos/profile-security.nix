@@ -1,3 +1,4 @@
+# E2E test for the security profile (fail2ban functionality).
 { nixpkgs, system }:
 let
   pkgs = import nixpkgs { inherit system; };

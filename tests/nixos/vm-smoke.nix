@@ -1,3 +1,4 @@
+# Smoke test for the standard desktop VM.
 {
   nixpkgs,
   system,

@@ -1,3 +1,4 @@
+# Smoke test for the homeserver services in a VM environment.
 {
   nixpkgs,
   system,

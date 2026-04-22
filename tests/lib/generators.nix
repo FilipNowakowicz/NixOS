@@ -1,3 +1,4 @@
+# Unit tests for Alloy HCL generator logic.
 {
   nixpkgs,
   system,
