@@ -50,8 +50,6 @@ jobs:
             --base main \
             --head flake-update \
             --title "[bot] weekly flake update" \
-            --body "Automated weekly update of flake.lock.
-
-This PR auto-merges if all checks pass. Review the closure-diff comment below for impact on system size." \
+            --body "Automated weekly update of flake.lock. This PR auto-merges if all checks pass. Review the closure-diff comment below for impact on system size." \
             --repo ${{ github.repository }} || true
 
