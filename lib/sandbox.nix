@@ -10,7 +10,11 @@
   ProtectControlGroups = true;
   ProtectKernelTunables = true;
   ProtectKernelModules = true;
+  ProtectKernelLogs = true;
+  ProtectHostname = true;
+  ProtectClock = true;
   LockPersonality = true;
+  MemoryDenyWriteExecute = true;
   RestrictSUIDSGID = true;
   RestrictRealtime = true;
   RestrictNamespaces = true;
