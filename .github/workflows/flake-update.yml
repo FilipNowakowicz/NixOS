@@ -45,5 +45,6 @@ jobs:
 
             This PR auto-merges if all checks pass. Review the closure-diff comment below for impact on system size.
           branch: flake-update
+          base: main
           delete-branch: false
           auto-merge-method: squash
