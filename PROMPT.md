@@ -13,3 +13,4 @@ I have recently updated the NixOS configuration with the changes listed below. P
 **The main changes are:**
 
 - Dev environment templates (quick each) — nix flake init -t templates for your common project types. nix-direnv across the board. Makes this flake the source of all your per-project shells, not just system config.
+- Tailscale ACLs as Nix (medium, depends on host registry) — generate acl.hujson from the registry. Single source of truth for who-can-reach-what.

@@ -228,12 +228,15 @@
 
       # ── Packages ────────────────────────────────────────────────────────────
       packages.${system} = {
-        tailscale-acl = pkgs.runCommand "tailscale-acl" {
-          aclJson = builtins.toJSON (aclGen.mkAcl hostRegistry);
-          passAsFile = [ "aclJson" ];
-        } ''
-          cp "$aclJsonPath" "$out"
-        '';
+        tailscale-acl =
+          pkgs.runCommand "tailscale-acl"
+            {
+              aclJson = builtins.toJSON (aclGen.mkAcl hostRegistry);
+              passAsFile = [ "aclJson" ];
+            }
+            ''
+              cp "$aclJsonPath" "$out"
+            '';
 
         installer-iso =
           (nixpkgs.lib.nixosSystem {

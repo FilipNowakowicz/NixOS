@@ -4,17 +4,23 @@
 let
   tailscaleHosts = hosts: lib.filterAttrs (_: cfg: cfg ? tailscale) hosts;
 
-  collectTagNames = hosts:
-    lib.unique (map (cfg: cfg.tailscale.tag) (lib.attrValues (tailscaleHosts hosts)));
+  collectTagNames =
+    hosts: lib.unique (map (cfg: cfg.tailscale.tag) (lib.attrValues (tailscaleHosts hosts)));
 
-  mkTagOwners = tags:
+  mkTagOwners =
+    tags:
     lib.listToAttrs (
-      map (tag: { name = "tag:${tag}"; value = [ "autogroup:admin" ]; }) tags
+      map (tag: {
+        name = "tag:${tag}";
+        value = [ "autogroup:admin" ];
+      }) tags
     );
 
-  mkHostAliases = hosts:
-    lib.mapAttrs' (name: cfg: lib.nameValuePair name cfg.tailscale.fqdn)
-      (lib.filterAttrs (_: cfg: cfg ? tailscale && cfg.tailscale ? fqdn) hosts);
+  mkHostAliases =
+    hosts:
+    lib.mapAttrs' (name: cfg: lib.nameValuePair name cfg.tailscale.fqdn) (
+      lib.filterAttrs (_: cfg: cfg ? tailscale && cfg.tailscale ? fqdn) hosts
+    );
 
 in
 {
