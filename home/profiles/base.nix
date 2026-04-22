@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ config, pkgs, ... }:
 {
   # ── Packages ────────────────────────────────────────────────────────────────
   home.packages = with pkgs; [
@@ -129,4 +129,76 @@
 
   # ── SSH Agent ──────────────────────────────────────────────────────────────
   services.ssh-agent.enable = true;
+
+  # ── Zsh ────────────────────────────────────────────────────────────────────
+  programs.zsh = {
+    enable = true;
+    dotDir = "${config.xdg.configHome}/zsh";
+    autosuggestion.enable = true;
+    syntaxHighlighting.enable = true;
+    enableCompletion = true;
+
+    history = {
+      size = 10000;
+      save = 10000;
+      ignoreAllDups = true;
+      share = true;
+      append = true;
+    };
+
+    initContent = ''
+      # Options
+      setopt autocd correct extendedglob noclobber
+      setopt interactivecomments nobeep
+      setopt autopushd pushdignoredups
+      setopt nohup nocheckjobs
+
+      # Vi mode + edit in $EDITOR
+      bindkey -v
+      autoload -Uz edit-command-line; zle -N edit-command-line
+      bindkey -M vicmd 'v' edit-command-line
+
+      # History-prefix search on arrows
+      autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+      zle -N up-line-or-beginning-search
+      zle -N down-line-or-beginning-search
+      bindkey '^[[A' up-line-or-beginning-search
+      bindkey '^[[B' down-line-or-beginning-search
+
+      # Completion styling
+      zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
+      zstyle ':completion:*' menu select
+      zstyle ':completion:*' use-cache on
+      zstyle ':completion:*' cache-path "''${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
+      zstyle ':completion:*' rehash true
+
+      # Use the shared systemd-managed SSH agent in every shell.
+      export SSH_AUTH_SOCK="''${XDG_RUNTIME_DIR:-/run/user/$UID}/ssh-agent"
+      if [[ -S "$SSH_AUTH_SOCK" ]]; then
+        ssh-add -l >/dev/null 2>&1
+        if [[ $? -eq 1 && -r "$HOME/.ssh/id_ed25519" ]]; then
+          ssh-add -q "$HOME/.ssh/id_ed25519"
+        fi
+      fi
+
+      # Accept autosuggestion with Ctrl+Space
+      (( ''${+widgets[autosuggest-accept]} )) && bindkey '^ ' autosuggest-accept
+      # Starship init
+      eval "$(starship init zsh)"
+    '';
+  };
+
+  # ── XDG User Dirs ──────────────────────────────────────────────────────────
+  xdg.userDirs = {
+    enable = true;
+    createDirectories = true;
+    download = "${config.home.homeDirectory}/downloads";
+    desktop = null;
+    documents = null;
+    music = null;
+    pictures = null;
+    publicShare = null;
+    templates = null;
+    videos = null;
+  };
 }
