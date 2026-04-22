@@ -1,5 +1,6 @@
 {
   config,
+  inputs,
   lib,
   pkgs,
   ...
@@ -13,6 +14,8 @@ in
     ./disko.nix
     ./hardware-configuration.nix
     ../../modules/nixos/hardware/nvidia-prime.nix
+    inputs.microvm.nixosModules.host
+    ../../modules/nixos/microvms/homeserver-vm.nix
   ];
 
   # ── Hardware ────────────────────────────────────────────────────────────────
