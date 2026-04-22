@@ -22,6 +22,7 @@ in
       {
         imports = [
           ../../hosts/homeserver-vm/default.nix
+          ../../modules/nixos/services/hardened.nix
           inputs.home-manager.nixosModules.home-manager
           inputs.sops-nix.nixosModules.sops
         ];

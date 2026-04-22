@@ -66,9 +66,18 @@ in
     lib.mapAttrsToList (
       name: serviceCfg:
       lib.mkIf serviceCfg.enable {
-        ${name}.serviceConfig = lib.filterAttrs (_: v: v != null) (
-          baseHardening // serviceCfg.extraConfig
-        );
+        ${name}.serviceConfig =
+          let
+            extraKeys = lib.attrNames serviceCfg.extraConfig;
+            # Base options not touched by extraConfig: apply at mkDefault so nixpkgs modules win.
+            passiveBase = lib.filterAttrs (k: v: v != null && !(lib.elem k extraKeys)) baseHardening;
+            # extraConfig non-null values: apply at regular priority to override nixpkgs and base.
+            activeExtra = lib.filterAttrs (_: v: v != null) serviceCfg.extraConfig;
+          in
+          lib.mkMerge [
+            (lib.mapAttrs (_: lib.mkDefault) passiveBase)
+            activeExtra
+          ];
       }
     ) cfg
   );
