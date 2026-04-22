@@ -1,8 +1,7 @@
-# E2E test for the systemd sandbox hardening score.
+# E2E test for the systemd sandbox hardening score using the services.hardened module.
 { nixpkgs, system }:
 let
   pkgs = import nixpkgs { inherit system; };
-  sandbox = import ../../lib/sandbox.nix;
 in
 (import "${nixpkgs}/nixos/lib/testing-python.nix" {
   inherit system pkgs;
@@ -10,26 +9,33 @@ in
   {
     name = "profile-hardening-sandbox-score";
 
-    nodes.machine = _: {
-      systemd.services.test-sandboxed = {
-        description = "Sandbox hardening score test service";
-        wantedBy = [ "multi-user.target" ];
-        serviceConfig = sandbox // {
-          ExecStart = "${pkgs.coreutils}/bin/sleep infinity";
-          Type = "simple";
-          DynamicUser = true;
-          CapabilityBoundingSet = "";
-          AmbientCapabilities = "";
-          ReadWritePaths = [ ];
-          UMask = "0077";
-        };
-      };
+    nodes.machine =
+      { ... }:
+      {
+        imports = [ ../../modules/nixos/services/hardened.nix ];
 
-      environment.systemPackages = [
-        pkgs.systemd
-        pkgs.python3
-      ];
-    };
+        services.hardened.test-sandboxed = {
+          extraConfig = {
+            ExecStart = "${pkgs.coreutils}/bin/sleep infinity";
+            Type = "simple";
+            DynamicUser = true;
+            CapabilityBoundingSet = "";
+            AmbientCapabilities = "";
+            ReadWritePaths = [ ];
+            UMask = "0077";
+          };
+        };
+
+        systemd.services.test-sandboxed = {
+          description = "Sandbox hardening score test service";
+          wantedBy = [ "multi-user.target" ];
+        };
+
+        environment.systemPackages = [
+          pkgs.systemd
+          pkgs.python3
+        ];
+      };
 
     testScript = ''
       start_all()
