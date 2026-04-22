@@ -47,7 +47,7 @@
   networking.nat = {
     enable = true;
     internalInterfaces = [ "microvm-br0" ];
-    externalInterface = "wlo1";
+    externalInterface = "wlp0s20f3";
   };
 
   # ── Age key virtiofs share setup ───────────────────────────────────────────
