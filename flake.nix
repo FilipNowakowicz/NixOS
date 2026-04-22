@@ -81,6 +81,8 @@
 
       invariants = import ./lib/invariants.nix { inherit lib pkgs; };
 
+      aclGen = import ./lib/acl.nix { inherit lib; };
+
       cveChecks = import ./lib/cve-checks.nix { inherit pkgs; };
 
       # VMs only — for the VM management script
@@ -226,6 +228,13 @@
 
       # ── Packages ────────────────────────────────────────────────────────────
       packages.${system} = {
+        tailscale-acl = pkgs.runCommand "tailscale-acl" {
+          aclJson = builtins.toJSON (aclGen.mkAcl hostRegistry);
+          passAsFile = [ "aclJson" ];
+        } ''
+          cp "$aclJsonPath" "$out"
+        '';
+
         installer-iso =
           (nixpkgs.lib.nixosSystem {
             inherit system;
@@ -322,6 +331,9 @@
             inherit nixpkgs system;
           };
           lib-generators-golden = import ./tests/lib/generators.golden.nix {
+            inherit nixpkgs system;
+          };
+          lib-acl = import ./tests/lib/acl.nix {
             inherit nixpkgs system;
           };
         };
