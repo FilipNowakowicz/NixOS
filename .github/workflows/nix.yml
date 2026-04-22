@@ -31,6 +31,8 @@ jobs:
         run: nix flake check --show-trace
 
       - name: Build main host
+        env:
+          CI: "true"
         run: nix build .#nixosConfigurations.main.config.system.build.toplevel --no-link --show-trace
 
       - name: Build vm host
