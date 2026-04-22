@@ -90,6 +90,12 @@ in
       signing.format = null;
     };
 
+    # ── Direnv ─────────────────────────────────────────────────────────────
+    direnv = {
+      enable = true;
+      enableZshIntegration = true;
+    };
+
     # ── Zsh ────────────────────────────────────────────────────────────────
     # Base options, plugins, and vi-mode are set in home/profiles/base.nix
     zsh = {

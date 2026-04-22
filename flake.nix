@@ -250,6 +250,7 @@
               qemu
               OVMF
               vulnix
+              direnv
             ])
             ++ [
               deploy-rs.packages.${system}.deploy-rs

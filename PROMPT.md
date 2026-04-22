@@ -11,4 +11,5 @@ I have recently updated the NixOS configuration with the changes listed below. P
 4.  **Verification:** Cross-reference `flake.nix` with the documentation to ensure all new outputs or inputs are accounted for.
 
 **The main changes are:**
-[INSERT CHANGES HERE]
+
+- Dev environment templates (quick each) — nix flake init -t templates for your common project types. nix-direnv across the board. Makes this flake the source of all your per-project shells, not just system config.
