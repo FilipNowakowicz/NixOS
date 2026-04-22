@@ -44,6 +44,8 @@ in
     networkmanager.enable = true;
     # Required for Mullvad/Tailscale: prevents firewall from dropping VPN-routed packets
     firewall.checkReversePath = "loose";
+    # Point to systemd-resolved stub for split DNS (Tailscale tailnet hostnames)
+    nameservers = [ "127.0.0.53" ];
   };
 
   hardware.bluetooth.enable = true;
@@ -122,6 +124,11 @@ in
 
   # ── Services ────────────────────────────────────────────────────────────────
   services = {
+    resolved = {
+      enable = true;
+      dnssec = "false"; # Tailscale manages its own trust chain
+    };
+
     thermald.enable = true;
     power-profiles-daemon.enable = true;
     fwupd.enable = true;
@@ -153,6 +160,48 @@ in
     };
     # Bluetooth management (GUI)
     blueman.enable = true;
+
+    prometheus.globalConfig.external_labels = {
+      host = "main";
+    };
+
+    # ── Systemd Failure Notifications ────────────────────────────────────────
+    systemd-failure-notify = {
+      enable = true;
+      services = [
+        "prometheus"
+        "opentelemetry-collector"
+        "restic-backups-local"
+        "thermald"
+        "power-profiles-daemon"
+      ];
+    };
+
+    # ── Backups ────────────────────────────────────────────────────────────────
+    restic.backups.local = {
+      paths = [
+        "/home/user/.ssh"
+        "/home/user/.gnupg"
+        "/home/user/nix"
+        "/home/user/documents"
+      ];
+      exclude = [
+        "/home/user/nix/.direnv"
+        "/home/user/nix/result"
+      ];
+      repository = "/var/backup/restic-repo";
+      passwordFile = config.sops.secrets.restic_password.path;
+      initialize = true;
+      timerConfig = {
+        OnCalendar = "daily";
+        Persistent = true;
+      };
+      pruneOpts = [
+        "--keep-daily 7"
+        "--keep-weekly 4"
+        "--keep-monthly 3"
+      ];
+    };
   };
 
   # Fingerprint login
@@ -163,22 +212,6 @@ in
 
   # Backlight control (using brightnessctl)
   hardware.acpilight.enable = true;
-
-  services.prometheus.globalConfig.external_labels = {
-    host = "main";
-  };
-
-  # ── Systemd Failure Notifications ──────────────────────────────────────────
-  services.systemd-failure-notify = {
-    enable = true;
-    services = [
-      "prometheus"
-      "opentelemetry-collector"
-      "restic-backups-local"
-      "thermald"
-      "power-profiles-daemon"
-    ];
-  };
 
   systemd.services = {
     thermald.serviceConfig = hwDaemonSandbox;
@@ -254,32 +287,6 @@ in
   };
 
   users.groups.telemetry-ingest = { };
-
-  # ── Backups ──────────────────────────────────────────────────────────────────
-  services.restic.backups.local = {
-    paths = [
-      "/home/user/.ssh"
-      "/home/user/.gnupg"
-      "/home/user/nix"
-      "/home/user/documents"
-    ];
-    exclude = [
-      "/home/user/nix/.direnv"
-      "/home/user/nix/result"
-    ];
-    repository = "/var/backup/restic-repo";
-    passwordFile = config.sops.secrets.restic_password.path;
-    initialize = true;
-    timerConfig = {
-      OnCalendar = "daily";
-      Persistent = true;
-    };
-    pruneOpts = [
-      "--keep-daily 7"
-      "--keep-weekly 4"
-      "--keep-monthly 3"
-    ];
-  };
 
   users.users.user = {
     extraGroups = [ "video" ];
