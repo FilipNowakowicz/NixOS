@@ -126,7 +126,7 @@ in
   services = {
     resolved = {
       enable = true;
-      dnssec = "false"; # Tailscale manages its own trust chain
+      settings.Resolve.DNSSEC = "false"; # Tailscale manages its own trust chain
     };
 
     thermald.enable = true;
