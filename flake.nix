@@ -198,8 +198,8 @@
       };
 
       # Generate CVE checks for all NixOS configs
-      cveCheckMap = lib.mapAttrs (hostName: config:
-        cveChecks.mkCveCheck hostName config.config.system.build.toplevel
+      cveCheckMap = lib.mapAttrs (
+        hostName: config: cveChecks.mkCveCheck hostName config.config.system.build.toplevel
       ) allNixosConfigs;
     in
     {
