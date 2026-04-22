@@ -30,6 +30,11 @@ jobs:
       - name: Update flake.lock
         run: nix flake update
 
+      - name: Configure git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
