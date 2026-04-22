@@ -76,7 +76,7 @@
 
       invariants = import ./lib/invariants.nix { inherit lib pkgs; };
 
-      cveChecks = import ./lib/cve-checks.nix { inherit lib pkgs; };
+      cveChecks = import ./lib/cve-checks.nix { inherit pkgs; };
 
       # VMs only — for the VM management script
       vmRegistry = lib.filterAttrs (_: cfg: cfg ? sshPort && cfg ? diskSize) hostRegistry;
