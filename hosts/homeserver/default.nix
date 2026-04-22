@@ -12,7 +12,6 @@ let
   network = import ../../lib/network.nix;
   inherit (network) tailnetFQDN;
   syncthing = import ../../lib/syncthing.nix;
-  commonSandbox = import ../../lib/sandbox.nix;
 in
 {
   imports = [
@@ -61,12 +60,9 @@ in
           done
           ${pkgs.tailscale}/bin/tailscale cert --cert-file /var/lib/tailscale/certs/homeserver.crt --key-file /var/lib/tailscale/certs/homeserver.key ${tailnetFQDN}
         '';
-        serviceConfig = commonSandbox // {
+        serviceConfig = {
           Type = "oneshot";
           RemainAfterExit = true;
-          ProtectHome = false;
-          ReadWritePaths = [ "/var/lib/tailscale" ];
-          RestrictAddressFamilies = [ "AF_UNIX" ];
         };
       };
 
@@ -74,23 +70,45 @@ in
       nginx = {
         after = [ "tailscale-cert.service" ];
         requires = [ "tailscale-cert.service" ];
-        serviceConfig = commonSandbox // {
-          CapabilityBoundingSet = "CAP_NET_BIND_SERVICE";
-          AmbientCapabilities = "CAP_NET_BIND_SERVICE";
-          ReadWritePaths = [
-            "/var/cache/nginx"
-            "/var/log/nginx"
-          ];
-        };
       };
+    };
 
-      vaultwarden.serviceConfig = commonSandbox // {
+    tmpfiles.rules = [
+      "d /persist/sync 0755 user users -"
+      "d /var/lib/syncthing 0700 user users -"
+    ];
+  };
+
+  services.hardened = {
+    tailscale-cert = {
+      extraConfig = {
+        ProtectHome = false;
+        ReadWritePaths = [ "/var/lib/tailscale" ];
+        RestrictAddressFamilies = [ "AF_UNIX" ];
+      };
+    };
+
+    nginx = {
+      extraConfig = {
+        CapabilityBoundingSet = "CAP_NET_BIND_SERVICE";
+        AmbientCapabilities = "CAP_NET_BIND_SERVICE";
+        ReadWritePaths = [
+          "/var/cache/nginx"
+          "/var/log/nginx"
+        ];
+      };
+    };
+
+    vaultwarden = {
+      extraConfig = {
         CapabilityBoundingSet = "";
         AmbientCapabilities = "";
         ReadWritePaths = [ "/var/lib/vaultwarden" ];
       };
+    };
 
-      syncthing.serviceConfig = commonSandbox // {
+    syncthing = {
+      extraConfig = {
         CapabilityBoundingSet = "";
         AmbientCapabilities = "";
         ProtectSystem = "full";
@@ -102,11 +120,6 @@ in
         ];
       };
     };
-
-    tmpfiles.rules = [
-      "d /persist/sync 0755 user users -"
-      "d /var/lib/syncthing 0700 user users -"
-    ];
   };
 
   profiles.observability = {
