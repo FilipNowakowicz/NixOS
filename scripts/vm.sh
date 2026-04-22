@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# ARCHIVED — for impermanence/bootloader/LUKS testing on main hardware only.
+# Day-to-day homeserver-vm development uses microvm.nix (see hosts/main/default.nix).
+#
 # Unified VM management script.
 # All VM infrastructure is derived from the VM_REGISTRY JSON env var
 # (set by the Nix wrapper in flake.nix).

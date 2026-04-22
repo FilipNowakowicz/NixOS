@@ -10,7 +10,7 @@ approaches proactively. Explain why, not just what.
 
 - **Dev machine:** NixOS (main)
 - **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nh`, `nixd`, `statix`, `deadnix`, `pre-commit`, `sops`, `ssh-to-age`, `qemu`, `OVMF`
-- **Deploy (VM):** `deploy '.#vm'` or `deploy '.#homeserver-vm'`
+- **Deploy (VM):** `deploy '.#vm'` (homeserver-vm managed via main's microvm, see VM Management)
 - **Deploy (WSL):** `home-manager switch --flake .#user@wsl`
 - **Deploy (main):** `nh os switch --hostname main .` (alias: `rebuild`)
 - **Validate flake:** `nix flake check`
@@ -27,26 +27,36 @@ approaches proactively. Explain why, not just what.
 
 ## VM Management
 
-All VMs are managed through a single unified command:
+### homeserver-vm (microvm — primary workflow)
+
+homeserver-vm runs as a systemd service on `main` via microvm.nix.
 
 ```bash
-nix run '.#vm' -- <action> <name>
+nh os switch --hostname main .                       # deploy config changes (starts VM if not running)
+sudo systemctl start microvm@homeserver-vm.service   # start manually
+sudo systemctl stop microvm@homeserver-vm.service    # stop
+sudo journalctl -u microvm@homeserver-vm.service -f  # watch logs
+ssh user@10.0.100.2                                  # SSH into VM
 ```
 
-| Action             | Description                                    |
-| ------------------ | ---------------------------------------------- |
-| `create <name>`    | Full setup: disk + ISO + nixos-anywhere + boot |
-| `start <name>`     | Launch existing VM                             |
-| `stop <name>`      | Graceful shutdown                              |
-| `reinstall <name>` | Wipe and reinstall                             |
-| `destroy <name>`   | Delete all VM artifacts                        |
-| `ssh <name>`       | SSH into the VM                                |
-| `list`             | Show all VMs with status                       |
-| `init <name>`      | Generate sops secrets for a new VM             |
+Services are reachable from main at:
 
-**VM registry** (`lib/hosts.nix`) is the single source of truth — SSH ports, disk sizes, deploy-rs nodes, and QEMU config are all derived from it.
+- Vaultwarden: `https://10.0.100.2:8443`
+- Syncthing: `http://10.0.100.2:8384`
 
-**Shared VM module** (`modules/nixos/profiles/vm.nix`) provides hardware, disko, impermanence base, passwordless sudo, and SSH for all VMs.
+### nix run '.#vm' (QEMU — archived)
+
+`scripts/vm.sh` and `nix run '.#vm'` are archived for testing impermanence,
+bootloader, and LUKS on main hardware before real deployment. Not used for
+homeserver-vm day-to-day.
+
+```bash
+nix run '.#vm' -- create <name>   # Full setup (impermanence testing only)
+nix run '.#vm' -- start <name>    # Launch existing VM
+nix run '.#vm' -- ssh <name>      # SSH into VM
+```
+
+**VM registry** (`lib/hosts.nix`) is the single source of truth for all hosts.
 
 ---
 
@@ -93,7 +103,8 @@ Managed with sops-nix + age. Edit secrets with `sops <file>`.
 - **Age key:** `~/.config/sops/age/keys.txt`
 - **Adding a host key:** `ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub` → add result to `.sops.yaml`
 - **`.sops.yaml`:** repo root, defines key groups per path regex
-- **Each VM has its own host key** in `hosts/<name>/secrets/` — encrypted host keys are injected during `create`/`reinstall` so sops works from first boot
+- **vm host:** has its own SSH host key in `hosts/vm/secrets/` — injected during `create`/`reinstall`
+- **homeserver-vm:** uses a dedicated age key stored in main's sops secrets (`hosts/main/secrets/secrets.yaml`), injected into the VM via virtiofs at `/run/age-keys/`
 
 ---
 
