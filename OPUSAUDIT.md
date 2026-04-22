@@ -9,22 +9,11 @@ Your security profile is ~25 lines of sysctl + SSH. Intent >> reality. Natural p
 - USBGuard (quick); AppArmor profiles for exposed services (medium); fail2ban (quick, homeserver when it lands).
 - Pentesting learning loop — the security devShell exists. Pair with a microvm.nix-based purple-team target: spin up a deliberately-misconfigured VM to attack, with OSQuery/auditd feeding your real LGTM. This is how you get signal that hardening actually works.
 
-4. GCP homeserver — unlocks the deferred pile
-
-Your real-hardware homeserver is blocked, but homeserver-vm and homeserver modules are already decoupled from hardware. One move unlocks several deferred items:
-
-- Build a GCE image from the existing homeserver config (medium) — nixos-generators -f gce, push to GCS, boot via Terraform/OpenTofu. Tailscale subnet router role. Proves the module-per-host pattern under a third substrate and gives you a real target for:
-  - Automated deploy pipeline (deferred) — self-hosted runner as a service in the cloud VM.
-  - Off-site B2 backups (deferred) — credentials live in sops, restic module already exists.
-  - Local DNS / AdGuard (deferred) — Tailscale MagicDNS + AdGuard container/module on the GCE instance.
-- Substantial only if you include IaC + CI deploy. Without that, it's medium.
-
 6. Testing & validation — the biggest unstated gap
 
 You write that reproducibility and security matter. CI builds closures, but almost nothing is functionally verified.
 
 - nixosTest per profile (medium) — one test asserting each profile's promise. Security profile → fail2ban blocks after N tries. Observability profile → Loki receives a log from Alloy. Hardening DSL → systemd-analyze security returns <2.0 for wrapped units.
-- Generator golden tests (quick, after thread #1's Alloy/Grafana generators) — snapshot the generated config; PRs that change it fail loud.
 
 7. Unexplored territory
 
@@ -42,3 +31,13 @@ Genuinely new capabilities, not extensions.
 - "Security hardening in progress" — 25 lines of profile vs. broad stated ambition.
 - "Graceful failure handling" — main has zero monitoring.
 - Alloy/Grafana use untyped strings for config — fragile in a repo that otherwise prizes type-safety.
+
+1. GCP homeserver — unlocks the deferred pile
+
+Your real-hardware homeserver is blocked, but homeserver-vm and homeserver modules are already decoupled from hardware. One move unlocks several deferred items:
+
+- Build a GCE image from the existing homeserver config (medium) — nixos-generators -f gce, push to GCS, boot via Terraform/OpenTofu. Tailscale subnet router role. Proves the module-per-host pattern under a third substrate and gives you a real target for:
+  - Automated deploy pipeline (deferred) — self-hosted runner as a service in the cloud VM.
+  - Off-site B2 backups (deferred) — credentials live in sops, restic module already exists.
+  - Local DNS / AdGuard (deferred) — Tailscale MagicDNS + AdGuard container/module on the GCE instance.
+- Substantial only if you include IaC + CI deploy. Without that, it's medium.
