@@ -6,15 +6,23 @@
 #   sshPort     — VM-only; used to filter hosts for the VM script
 #   diskSize    — VM-only; used by nixos-anywhere and qemu-img
 #   tailnetFQDN — per-host Tailscale FQDN; unused metadata for now (host configs read lib/network.nix directly)
+#   tailscale   — Tailscale metadata; presence means host is on the tailnet
+#     .tag      — Tailscale tag assigned to this host (without "tag:" prefix)
+#     .fqdn     — tailnet FQDN (only for hosts with a stable tailnet identity)
 #   backup      — metadata; ready to drive a backup module later
 {
   main = {
     role = "workstation";
+    tailscale.tag = "workstation";
   };
 
   homeserver = {
     role = "homeserver";
     tailnetFQDN = "homeserver.filip-nowakowicz.ts.net";
+    tailscale = {
+      tag = "server";
+      fqdn = "homeserver.filip-nowakowicz.ts.net";
+    };
     deploy.sshUser = "user";
     backup.class = "critical";
   };
