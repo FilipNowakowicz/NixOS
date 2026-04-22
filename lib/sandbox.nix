@@ -19,6 +19,7 @@
   RestrictRealtime = true;
   RestrictNamespaces = true;
   SystemCallArchitectures = "native";
+  SystemCallFilter = [ "@system-service" ];
   RestrictAddressFamilies = [
     "AF_UNIX"
     "AF_INET"

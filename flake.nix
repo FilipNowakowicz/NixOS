@@ -300,6 +300,9 @@
           profile-observability = import ./tests/nixos/profile-observability.nix {
             inherit nixpkgs system;
           };
+          profile-hardening = import ./tests/nixos/profile-hardening.nix {
+            inherit nixpkgs system;
+          };
           lib-generators = import ./tests/lib/generators.nix {
             inherit nixpkgs system;
           };
