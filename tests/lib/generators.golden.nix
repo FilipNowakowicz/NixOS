@@ -95,7 +95,7 @@ let
   # Read golden files from repo
   goldenDir = ../../tests/lib/generators.golden.d;
   goldenAlloyBasic = builtins.readFile "${goldenDir}/alloy-basic.txt";
-  goldenDashboard = builtins.readFile "${goldenDir}/dashboard-example.json";
+  goldenDashboard = builtins.readFile "${goldenDir}/dashboard-example.golden";
 
   # Test: compare generated alloy config against golden
   testAlloyBasicSnapshot = {
