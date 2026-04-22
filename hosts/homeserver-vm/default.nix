@@ -5,7 +5,6 @@
 }:
 let
   syncthing = import ../../lib/syncthing.nix;
-  commonSandbox = import ../../lib/sandbox.nix;
 in
 {
   imports = [
@@ -82,15 +81,17 @@ in
     };
   };
 
-  systemd = {
-    services = {
-      vaultwarden.serviceConfig = commonSandbox // {
+  services.hardened = {
+    vaultwarden = {
+      extraConfig = {
         CapabilityBoundingSet = "";
         AmbientCapabilities = "";
         ReadWritePaths = [ "/var/lib/vaultwarden" ];
       };
+    };
 
-      nginx.serviceConfig = commonSandbox // {
+    nginx = {
+      extraConfig = {
         CapabilityBoundingSet = "";
         AmbientCapabilities = "";
         ReadWritePaths = [
@@ -99,8 +100,10 @@ in
           "/var/log/nginx"
         ];
       };
+    };
 
-      syncthing.serviceConfig = commonSandbox // {
+    syncthing = {
+      extraConfig = {
         CapabilityBoundingSet = "";
         AmbientCapabilities = "";
         ProtectSystem = "full";
@@ -111,7 +114,11 @@ in
           "/persist/sync"
         ];
       };
+    };
+  };
 
+  systemd = {
+    services = {
       nginx-selfsigned = {
         description = "Generate self-signed certificate for nginx";
         wantedBy = [ "multi-user.target" ];
