@@ -7,29 +7,6 @@
 let
   network = import ../../lib/network.nix;
   inherit (network) tailnetFQDN;
-  hwDaemonSandbox = {
-    # System hardening for hardware daemons (thermald, ppd). These need access
-    # to /sys (writes) and dbus, but shouldn't touch user files or network.
-    NoNewPrivileges = true;
-    PrivateTmp = true;
-    ProtectHome = true;
-    ProtectSystem = "strict";
-    ProtectKernelTunables = true;
-    ProtectKernelModules = true;
-    ProtectKernelLogs = true;
-    ProtectControlGroups = true;
-    ProtectHostname = true;
-    ProtectClock = true;
-    ProtectProc = "invisible";
-    ProcSubset = "pid";
-    MemoryDenyWriteExecute = true;
-    LockPersonality = true;
-    RestrictSUIDSGID = true;
-    RestrictRealtime = true;
-    RestrictNamespaces = true;
-    RestrictAddressFamilies = [ "AF_UNIX" ];
-    SystemCallArchitectures = "native";
-  };
 in
 {
   imports = [
@@ -204,6 +181,66 @@ in
     };
   };
 
+  services.hardened = {
+    # Hardware daemons: need /sys writes via dbus, no network, no private devices.
+    # Skip PrivateDevices (/sys access), SystemCallFilter (broad hw syscalls needed).
+    thermald = {
+      extraConfig = {
+        PrivateDevices = null;
+        SystemCallFilter = null;
+        ProtectProc = "invisible";
+        ProcSubset = "pid";
+        RestrictAddressFamilies = [ "AF_UNIX" ];
+      };
+    };
+
+    power-profiles-daemon = {
+      extraConfig = {
+        PrivateDevices = null;
+        SystemCallFilter = null;
+        ProtectProc = "invisible";
+        ProcSubset = "pid";
+        RestrictAddressFamilies = [ "AF_UNIX" ];
+      };
+    };
+
+    # fwupd: writes firmware to hardware and loads kernel modules.
+    # Skip ProtectSystem (firmware writes), PrivateDevices (/dev access),
+    # ProtectKernelModules/Tunables (capsule loading), ProtectClock (EFI time),
+    # MemoryDenyWriteExecute (plugin loading), SystemCallFilter (broad hw access).
+    fwupd = {
+      extraConfig = {
+        PrivateDevices = null;
+        ProtectSystem = null;
+        ProtectKernelTunables = null;
+        ProtectKernelModules = null;
+        ProtectClock = null;
+        MemoryDenyWriteExecute = null;
+        SystemCallFilter = null;
+        RestrictAddressFamilies = [
+          "AF_UNIX"
+          "AF_INET"
+          "AF_INET6"
+          "AF_NETLINK"
+        ];
+      };
+    };
+
+    # bluetoothd: needs AF_BLUETOOTH + AF_NETLINK for HCI management.
+    # Skip PrivateDevices (/dev/hci*), ProtectKernelModules (hci module loading).
+    bluetooth = {
+      extraConfig = {
+        PrivateDevices = null;
+        ProtectKernelModules = null;
+        RestrictAddressFamilies = [
+          "AF_UNIX"
+          "AF_BLUETOOTH"
+          "AF_NETLINK"
+        ];
+      };
+    };
+  };
+
   # Fingerprint login
   security.pam.services = {
     hyprlock.fprintAuth = true;
@@ -214,8 +251,6 @@ in
   hardware.acpilight.enable = true;
 
   systemd.services = {
-    thermald.serviceConfig = hwDaemonSandbox;
-    power-profiles-daemon.serviceConfig = hwDaemonSandbox;
     prometheus.serviceConfig = {
       TimeoutStopSec = "20s";
       SupplementaryGroups = [ "telemetry-ingest" ];
@@ -224,53 +259,6 @@ in
     "opentelemetry-collector".preStart =
       "${pkgs.bash}/bin/bash -c 'export BASICAUTH_PASSWORD=\"$(cat ${config.sops.secrets.observability_ingest_password.path})\" && echo BASICAUTH_PASSWORD=\"$BASICAUTH_PASSWORD\" > /tmp/otel-env'";
     "opentelemetry-collector".serviceConfig.EnvironmentFiles = [ "/tmp/otel-env" ];
-
-    # fwupd has almost no upstream hardening. Skip ProtectSystem/PrivateDevices (writes
-    # firmware to hardware), ProtectKernelModules (loads capsule/UEFI modules), ProtectClock
-    # (UEFI updates may touch EFI time), MemoryDenyWriteExecute (plugin loading), and
-    # CapabilityBoundingSet (needs CAP_SYS_ADMIN and others for UEFI/hardware access).
-    fwupd.serviceConfig = {
-      NoNewPrivileges = true;
-      PrivateTmp = true;
-      ProtectHome = true;
-      ProtectKernelLogs = true;
-      ProtectControlGroups = true;
-      ProtectHostname = true;
-      LockPersonality = true;
-      RestrictSUIDSGID = true;
-      RestrictRealtime = true;
-      RestrictNamespaces = true;
-      SystemCallArchitectures = "native";
-      RestrictAddressFamilies = [
-        "AF_UNIX"
-        "AF_INET"
-        "AF_INET6"
-        "AF_NETLINK"
-      ];
-    };
-
-    # bluetoothd (powers blueman). Needs AF_BLUETOOTH + AF_NETLINK for HCI management and
-    # CAP_NET_ADMIN/CAP_NET_RAW for BT interface control — those are left unrestricted.
-    # Skip PrivateDevices (/dev/hci*), ProtectKernelModules (hci module loading).
-    bluetooth.serviceConfig = {
-      NoNewPrivileges = true;
-      PrivateTmp = true;
-      ProtectHome = true;
-      ProtectClock = true;
-      ProtectKernelLogs = true;
-      ProtectControlGroups = true;
-      ProtectHostname = true;
-      LockPersonality = true;
-      RestrictSUIDSGID = true;
-      RestrictRealtime = true;
-      RestrictNamespaces = true;
-      SystemCallArchitectures = "native";
-      RestrictAddressFamilies = [
-        "AF_UNIX"
-        "AF_BLUETOOTH"
-        "AF_NETLINK"
-      ];
-    };
   };
 
   # ── USB Device Control ─────────────────────────────────────────────────────
