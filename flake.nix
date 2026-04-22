@@ -297,6 +297,9 @@
           lib-generators = import ./tests/lib/generators.nix {
             inherit nixpkgs system;
           };
+          lib-generators-golden = import ./tests/lib/generators.golden.nix {
+            inherit nixpkgs system;
+          };
         };
 
       # ── Home Manager Configurations ─────────────────────────────────────────

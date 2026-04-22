@@ -1,0 +1,14 @@
+loki.write "target" {
+  endpoint {
+    url = "http://loki:3100"
+  }
+}
+
+loki.source.journal "systemd" {
+  forward_to = [loki.write.target.receiver]
+  labels = {
+    host = "test-host",
+    job = "systemd-journal",
+  }
+  max_age = "12h"
+}
