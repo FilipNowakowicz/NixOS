@@ -220,9 +220,10 @@ in
       TimeoutStopSec = "20s";
       SupplementaryGroups = [ "telemetry-ingest" ];
     };
-    "opentelemetry-collector".serviceConfig.SupplementaryGroups = lib.mkAfter [
-      "telemetry-ingest"
-    ];
+    "opentelemetry-collector".serviceConfig.SupplementaryGroups = lib.mkAfter [ "telemetry-ingest" ];
+    "opentelemetry-collector".preStart =
+      "${pkgs.bash}/bin/bash -c 'export BASICAUTH_PASSWORD=\"$(cat ${config.sops.secrets.observability_ingest_password.path})\" && echo BASICAUTH_PASSWORD=\"$BASICAUTH_PASSWORD\" > /tmp/otel-env'";
+    "opentelemetry-collector".serviceConfig.EnvironmentFiles = [ "/tmp/otel-env" ];
 
     # fwupd has almost no upstream hardening. Skip ProtectSystem/PrivateDevices (writes
     # firmware to hardware), ProtectKernelModules (loads capsule/UEFI modules), ProtectClock

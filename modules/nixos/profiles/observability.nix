@@ -549,7 +549,7 @@ in
             "basicauth/client" = {
               client_auth = {
                 inherit (cfg.ingestAuth) username;
-                password_file = toString cfg.ingestAuth.passwordFile;
+                password = "\${env:BASICAUTH_PASSWORD}";
               };
             };
           };
