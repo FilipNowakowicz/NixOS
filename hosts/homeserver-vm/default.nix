@@ -19,7 +19,7 @@ in
   system.stateVersion = "24.11";
 
   systemd.network.networks."20-eth" = {
-    matchConfig.Name = "eth*";
+    matchConfig.MACAddress = "02:00:00:00:00:01";
     networkConfig = {
       Address = "10.0.100.2/24";
       Gateway = "10.0.100.1";
