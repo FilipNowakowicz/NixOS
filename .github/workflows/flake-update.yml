@@ -3,7 +3,7 @@ name: Flake update
 on:
   schedule:
     # Friday 6 PM UTC
-    - cron: '0 18 * * 5'
+    - cron: "0 18 * * 5"
   workflow_dispatch:
 
 env:
@@ -39,10 +39,9 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'chore: update flake.lock (weekly)'
-          title: '[bot] weekly flake update'
-          body: 'Automated weekly update of flake.lock. This PR auto-merges if all checks pass. Review the closure-diff comment below for impact on system size.'
+          commit-message: "chore: update flake.lock (weekly)"
+          title: "[bot] weekly flake update"
+          body: "Automated weekly update of flake.lock. This PR auto-merges if all checks pass. Review the closure-diff comment below for impact on system size."
           branch: automated/flake-update
           base: main
           delete-branch: true
-
