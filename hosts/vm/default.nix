@@ -43,6 +43,12 @@ in
     };
   };
 
+  # ── Systemd Failure Notifications ──────────────────────────────────────────
+  services.systemd-failure-notify = {
+    enable = true;
+    services = [ "NetworkManager" ];
+  };
+
   # ── User ────────────────────────────────────────────────────────────────────
   users.users.user = {
     home = "/home/user";

@@ -7,5 +7,6 @@
     ./profiles/observability.nix
     ./profiles/user.nix
     ./hardware/nvidia-prime.nix
+    ./services/systemd-failure-notify.nix
   ];
 }
