@@ -8,5 +8,6 @@
     ./profiles/user.nix
     ./hardware/nvidia-prime.nix
     ./services/systemd-failure-notify.nix
+    ./services/hardened.nix
   ];
 }
