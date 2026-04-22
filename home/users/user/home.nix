@@ -66,6 +66,8 @@ in
       })
 
       hypridle
+      opencode
+      opencode-claude-auth
     ];
   };
 
@@ -126,6 +128,8 @@ in
         theme = "theme-switch";
         # Clipboard
         cb = "clipboard-pick";
+        # AI
+        copilot = "steam-run gh copilot";
       };
 
       initContent = ''

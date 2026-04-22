@@ -27,4 +27,6 @@ This document tracks the evolution of this NixOS configuration, from immediate n
 
 - Service composition DSL (medium → substantial). A module like services.app.<name> = { package, port, backup, observe, harden } that auto-wires sandboxing (lib/sandbox.nix), systemd hardening, log shipping, and restic targets. Eliminates the "add a service → remember to also wire 5 cross-cutting things" tax. Depends on the host registry being worth anything.
 
+- Host introspection → LGTM (medium) — auditd + osquery or lynis timer → logs to Loki → dashboards. Pairs perfectly with the observability stack you already have. Proves the LGTM investment for something other than infra metrics.
+
 ---
