@@ -5,7 +5,7 @@ loki.write "target" {
 }
 
 loki.source.journal "systemd" {
-  forward_to = [loki.write.target.receiver]
+  forward_to = [loki.write.target.receiver,]
   labels = {
     host = "test-host",
     job = "systemd-journal",

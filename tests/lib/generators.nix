@@ -62,7 +62,7 @@ let
           };
         }
       ];
-      expected = "loki.source.journal \"systemd\" {\n  forward_to = [loki.write.target.receiver]\n}";
+      expected = "loki.source.journal \"systemd\" {\n  forward_to = [loki.write.target.receiver,]\n}";
     };
 
     testInlineObject = {
