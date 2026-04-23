@@ -61,7 +61,7 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
 - [ ] **Add explicit KVM availability fail-fast in smoke tests.**
   - **Context:** smoke relies on KVM; missing `/dev/kvm` can cause confusing failures/timeouts.
 
-- [ ] **Derive `scripts/closure-diff.sh` repo reference from `$GITHUB_REPOSITORY`.**
+- [x] **Derive `scripts/closure-diff.sh` repo reference from `$GITHUB_REPOSITORY`.**
   - **Context:** currently hardcoded owner/repo makes forks/renames fragile.
 
 - [ ] **Keep cold-install guidance explicit: `reinstall-homeserver.sh --no-substitute-on-destination` is install-only.**

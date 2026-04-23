@@ -10,9 +10,22 @@ set -euo pipefail
 BASE_REF="${1:-}"
 TARGET_REF="${2:-}"
 HOST="${3:-}"
+REPO="${GITHUB_REPOSITORY:-}"
 
 if [[ -z $BASE_REF ]] || [[ -z $TARGET_REF ]] || [[ -z $HOST ]]; then
   echo "Usage: $0 <base_ref> <target_ref> <host>" >&2
+  exit 1
+fi
+
+if [[ -z $REPO ]]; then
+  ORIGIN_URL="$(git config --get remote.origin.url || true)"
+  if [[ $ORIGIN_URL =~ github\.com[:/]([^[:space:]]+)$ ]]; then
+    REPO="${BASH_REMATCH[1]%.git}"
+  fi
+fi
+
+if [[ -z $REPO ]] || [[ $REPO != */* ]]; then
+  echo "Unable to determine GitHub repository. Set GITHUB_REPOSITORY=owner/repo." >&2
   exit 1
 fi
 
@@ -29,7 +42,7 @@ build_closure() {
   mkdir -p "$output_dir"
 
   echo "Building closure for $sha:$host..." >&2
-  if ! nix build "github:FilipNowakowicz/NixOS/$sha#nixosConfigurations.$host.config.system.build.toplevel" \
+  if ! nix build "github:$REPO/$sha#nixosConfigurations.$host.config.system.build.toplevel" \
     --out-link "$output_dir/result" --no-link 2>/dev/null; then
     echo "" # Return empty string on failure
     return 1
