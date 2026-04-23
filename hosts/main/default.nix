@@ -30,7 +30,10 @@ in
   networking = {
     hostName = "main";
     networkmanager.enable = true;
-    # Required for Mullvad/Tailscale: prevents firewall from dropping VPN-routed packets
+    # Required because Mullvad + Tailscale create asymmetric VPN routing on this host.
+    # Strict reverse-path filtering drops legitimate tunneled packets in that setup.
+    # "loose" keeps a weaker source-reachability check, but relaxes anti-spoofing
+    # protection compared with strict mode.
     firewall.checkReversePath = "loose";
     # Point to systemd-resolved stub for split DNS (Tailscale tailnet hostnames)
     nameservers = [ "127.0.0.53" ];
