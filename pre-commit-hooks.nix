@@ -30,14 +30,12 @@ let
 
     is_allowlisted() {
       local path="$1"
-      if [[ -f "$allowlist_file" ]]; then
-        while IFS= read -r line; do
-          [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
-          if [[ "$path" == $line ]]; then
-            return 0
-          fi
-        done < "$allowlist_file"
-      fi
+      while IFS= read -r line; do
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+        if [[ "$path" == $line ]]; then
+          return 0
+        fi
+      done < <(git show ":$allowlist_file" 2>/dev/null)
       return 1
     }
 
@@ -58,7 +56,7 @@ let
 
       if git show ":$path" | grep -Einq "$pattern"; then
         echo "Potential plaintext secret in staged file: $path" >&2
-        echo "Add a justified path to .plaintext-secrets-allowlist if this is intentional." >&2
+        echo "Stage an entry in .plaintext-secrets-allowlist and re-run the commit if this is intentional." >&2
         has_failed=1
       fi
     done

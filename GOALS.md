@@ -90,7 +90,7 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
   - **Follow-up (operational):** acquire a USB-C Ethernet dongle and test initrd SSH
     recovery end-to-end before relying on it in an emergency.
 
-- [ ] **Tighten pre-commit plaintext secret allowlist trust model.**
+- [x] **Tighten pre-commit plaintext secret allowlist trust model.**
   - **Context:** hook checks staged file content but reads allowlist from working tree, which can weaken trust in edge cases.
 
 - [x] **Add `shellcheck` to pre-commit hooks.**
