@@ -34,7 +34,7 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
   - **Context:** several services (`thermald`, `power-profiles-daemon`, `fwupd`, `bluetooth`) set `SystemCallFilter = null`, reducing baseline hardening value.
   - **Do this:** replace broad disablement with scoped allowlist profiles.
 
-- [ ] **Align ACL policy model with host metadata richness (or explicitly document minimal policy intent).**
+- [x] **Align ACL policy model with host metadata richness (or explicitly document minimal policy intent).**
   - **Context:** current ACL generation is intentionally simple; registry has richer metadata not yet consumed.
 
 - [ ] **Address reproducibility gray areas.**

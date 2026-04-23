@@ -1,5 +1,8 @@
 # Tailscale ACL generator — derives tag owners and base rules from the host
 # registry. Feed the output to builtins.toJSON for acl.hujson.
+# Intentionally narrow for now: only `tailscale.tag` drives ACL output.
+# Richer registry metadata like `role`, `tailnetFQDN`, and `backup.class`
+# stays out of the policy until host-specific rules are needed.
 { lib }:
 let
   tailscaleHosts = hosts: lib.filterAttrs (_: cfg: cfg ? tailscale) hosts;
@@ -20,6 +23,7 @@ in
 {
   # Generate a Tailscale ACL attrset from the host registry.
   # Hosts without a `tailscale` attribute are ignored.
+  # The output is intentionally minimal: tag owners plus fleet-wide base rules.
   # Serialize with builtins.toJSON to get acl.hujson content.
   mkAcl = hostRegistry: {
     tagOwners = mkTagOwners (collectTagNames hostRegistry);

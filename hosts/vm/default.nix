@@ -67,8 +67,4 @@ in
     };
   };
 
-  # ── Home Manager ────────────────────────────────────────────────────────────
-  home-manager.users.user = {
-    imports = [ ../../home/users/user/home.nix ];
-  };
 }

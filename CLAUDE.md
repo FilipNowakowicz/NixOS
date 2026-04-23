@@ -52,7 +52,8 @@ Services are reachable from main at:
 - **Tailscale** — used for secure remote access and service mesh.
 - **Tailscale ACLs** — generated declaratively from `lib/hosts.nix`.
   - Tags are assigned per-host in the registry (`tailscale.tag`).
-  - Rules are defined in `lib/acl.nix`.
+  - Current policy intent is minimal: `lib/acl.nix` consumes only tags and emits broad fleet-wide rules.
+  - Richer host metadata like `tailnetFQDN` stays outside the ACL output unless host-specific policy is added deliberately.
   - Build/inspect ACLs: `nix build '.#packages.x86_64-linux.tailscale-acl'`.
 - **Tailscale Certs** — `homeserver` uses `tailscale-cert.service` to fetch TLS certificates automatically.
 

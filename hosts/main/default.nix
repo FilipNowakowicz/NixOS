@@ -326,12 +326,4 @@ in
     hashedPasswordFile = config.sops.secrets.user_password.path;
   };
 
-  home-manager = {
-    users.user = {
-      imports = [
-        ../../home/users/user/home.nix
-        ../../home/profiles/workstation.nix
-      ];
-    };
-  };
 }

@@ -6,8 +6,13 @@
 #   sshPort     — VM-only; used to filter hosts for the VM script
 #   diskSize    — VM-only; used by nixos-anywhere and qemu-img
 #   tailnetFQDN — per-host Tailscale FQDN; lib/network.nix re-exports this for host configs
+#                 and the ACL generator intentionally ignores it for now
 #   tailscale   — Tailscale metadata; presence means host is on the tailnet
-#     .tag      — Tailscale tag assigned to this host (without "tag:" prefix)
+#     .tag      — Tailscale tag assigned to this host (without "tag:" prefix);
+#                 this is the only host field currently consumed by lib/acl.nix
+#   homeManager — primary-user Home Manager mapping for this host
+#     .role     — entrypoint module under home/users/user
+#     .profiles — extra profile modules under home/profiles
 #   backup      — drives modules/nixos/profiles/backup.nix retention policy
 #     .class    — "critical" (14d/8w/6m/2y) | "standard" (7d/4w/3m); absent = no backup module
 #   ip          — static IP (e.g. microvm guest)
@@ -19,8 +24,19 @@ let
     "diskSize"
     "tailnetFQDN"
     "tailscale"
+    "homeManager"
     "backup"
     "ip"
+  ];
+
+  knownHomeManagerRoles = [
+    "desktop"
+    "server"
+  ];
+
+  knownHomeManagerProfiles = [
+    "desktop"
+    "workstation"
   ];
 
   ok = cond: msg: if cond then true else throw msg;
@@ -57,6 +73,28 @@ let
         ) "${name}.tailscale.tag: must be a string")
         (ok
           (
+            !p "homeManager"
+            || (
+              builtins.isAttrs cfg.homeManager
+              && builtins.elem (cfg.homeManager.role or null) knownHomeManagerRoles
+              && (
+                !cfg.homeManager ? profiles
+                || (
+                  builtins.isList cfg.homeManager.profiles
+                  && builtins.all builtins.isString cfg.homeManager.profiles
+                  && builtins.all
+                    (profile: builtins.elem profile knownHomeManagerProfiles)
+                    cfg.homeManager.profiles
+                )
+              )
+            )
+          )
+          "${name}.homeManager: expected role in ${
+            builtins.toJSON knownHomeManagerRoles
+          } and profiles from ${builtins.toJSON knownHomeManagerProfiles}"
+        )
+        (ok
+          (
             !p "backup"
             || (
               builtins.isAttrs cfg.backup
@@ -82,12 +120,20 @@ let
   raw = {
     main = {
       role = "workstation";
+      homeManager = {
+        role = "desktop";
+        profiles = [
+          "desktop"
+          "workstation"
+        ];
+      };
       tailscale.tag = "workstation";
       backup.class = "standard";
     };
 
     homeserver = {
       role = "homeserver";
+      homeManager.role = "server";
       tailnetFQDN = "homeserver.filip-nowakowicz.ts.net";
       tailscale.tag = "server";
       deploy.sshUser = "user";
@@ -96,6 +142,13 @@ let
 
     vm = {
       role = "vm";
+      homeManager = {
+        role = "desktop";
+        profiles = [
+          "desktop"
+          "workstation"
+        ];
+      };
       sshPort = 2222;
       diskSize = "40G";
       deploy.sshUser = "user";
@@ -103,6 +156,7 @@ let
 
     homeserver-vm = {
       role = "homeserver-vm";
+      homeManager.role = "server";
       ip = "10.0.100.2";
       backup.class = "critical";
     };

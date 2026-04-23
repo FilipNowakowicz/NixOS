@@ -56,6 +56,7 @@ A host's Nix store closure should only contain what is explicitly requested.
 
 - Network IDs, Tailscale tags, and roles must be defined in the registry, not hardcoded in modules.
 - Modules should consume this data via `config.repo.host` (or similar library helpers) to adapt their behavior.
+- Generators may intentionally consume only a subset of the registry. For example, `lib/acl.nix` currently uses `tailscale.tag` only and does not infer host aliases or host-specific rules from richer metadata.
 
 ### Rule 4: Module vs. Profile
 

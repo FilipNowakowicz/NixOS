@@ -13,10 +13,13 @@ let
     main = {
       role = "workstation";
       tailscale.tag = "workstation";
+      backup.class = "standard";
     };
     homeserver = {
       role = "homeserver";
+      tailnetFQDN = "homeserver.example.ts.net";
       tailscale.tag = "server";
+      backup.class = "critical";
     };
     homeserver-vm = {
       role = "homeserver-vm";
@@ -46,6 +49,14 @@ let
     testNoHostsKey = {
       expr = result ? hosts;
       expected = false;
+    };
+
+    testAclOutputShapeRemainsMinimal = {
+      expr = builtins.sort builtins.lessThan (builtins.attrNames result);
+      expected = [
+        "acls"
+        "tagOwners"
+      ];
     };
 
     testAclCount = {
@@ -81,6 +92,11 @@ let
     testNonTailscaleHostExcludedFromTagOwners = {
       expr = result.tagOwners ? "tag:homeserver-vm";
       expected = false;
+    };
+
+    testBackupMetadataDoesNotChangeAclCount = {
+      expr = lib.length result.acls;
+      expected = 2;
     };
   };
 in
