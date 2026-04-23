@@ -52,6 +52,8 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
 - [x] **Document network hardening trade-off where `checkReversePath = "loose"` is required.**
   - **Context:** current comment exists; make sure docs clearly capture rationale and security implication.
 
+- [x] **Adopt signed commits and/or signed release tags.**
+
 ---
 
 ## P4 — Strategic / Optional (recommended when core backlog is stable)
@@ -59,22 +61,11 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
 - [ ] **Migrate flake structure to `flake-parts` (or equivalent per-system pattern).**
   - **Context:** current flake is functional but verbose and repetitive; migration improves scale to multi-arch and per-system ergonomics.
 
+- [ ] Add per-host system declarations for true multi-arch support.
+  - **Context**: the flake can be refactored to perSystem without changing behavior, but host builds still assume a single global system. This task moves architecture selection into host metadata so each machine can target its own platform independently, e.g. x86_64-linux for desktops/servers and aarch64-linux for ARM hosts.
+
 - [ ] **Add cross-system strategy (`--all-systems` checks / aarch64 readiness).**
   - **Context:** current evaluation is centered on `x86_64-linux`; future ARM/cloud targets benefit from earlier structure.
-
-- [ ] **Add `nixos-generators` image path for GCE (matching long-term homeserver/cloud goals).**
-
-- [ ] **Introduce service composition abstraction for repeated service wiring.**
-  - **Context:** can gradually unify hardening, backup, observability, and firewall concerns in one composable interface.
-
-- [ ] **Expand typed generator approach to additional domains (for example nginx vhosts/timers).**
-
-- [ ] **Stand up self-hosted CI runner on homeserver when available.**
-  - **Context:** enables heavier tests, better cache warmup, and deploy-oriented workflows.
-
-- [ ] **Adopt signed commits and/or signed release tags.**
-
-- [ ] **Create secret rotation ritual/checklist + age/rotation observability metric.**
 
 ## Extra
 

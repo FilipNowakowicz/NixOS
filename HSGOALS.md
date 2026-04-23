@@ -28,3 +28,5 @@ The homeserver modules are already hardware-agnostic. Two paths forward — GCP 
 - [ ] **LGTM tuning** — expand dashboards and alerts, tune retention/cardinality for long-running operation. Add alerting rules for disk usage >80%, service restarts, and backup failures.
 - [ ] **Host introspection → LGTM** (medium) — auditd + osquery or lynis timer → logs to Loki → dashboards. Pairs with the existing observability stack; proves the LGTM investment for something beyond infra metrics.
 - [ ] **Service composition DSL** (medium–substantial) — a module like `services.app.<name> = { package, port, backup, observe, harden }` that auto-wires sandboxing, systemd hardening, log shipping, and restic targets. Eliminates the "add a service → remember to also wire 5 cross-cutting things" tax.
+- [ ] **Expand typed generator approach to additional domains (for example nginx vhosts/timers).**
+- [ ] **Create secret rotation ritual/checklist + age/rotation observability metric.**
