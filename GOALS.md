@@ -105,7 +105,7 @@ isolated boot network, practical exposure is much lower."
 - [ ] **Tighten pre-commit plaintext secret allowlist trust model.**
   - **Context:** hook checks staged file content but reads allowlist from working tree, which can weaken trust in edge cases.
 
-- [ ] **Add `shellcheck` to pre-commit hooks.**
+- [x] **Add `shellcheck` to pre-commit hooks.**
   - **Context:** `shfmt` exists; linting shell semantics catches additional issues.
 
 - [ ] **Extend ACL generator tests beyond tag-owners to rule behavior.**
