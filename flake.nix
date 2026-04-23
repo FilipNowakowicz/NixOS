@@ -89,7 +89,7 @@
       vmRegistry = lib.filterAttrs (_: cfg: cfg ? sshPort && cfg ? diskSize) hostRegistry;
 
       mkNixos =
-        host:
+        host: hmArgs:
         nixpkgs.lib.nixosSystem {
           inherit system;
           specialArgs = { inherit inputs self; };
@@ -102,11 +102,12 @@
             {
               imports = [ ./modules/nixos ];
             }
+            { home-manager.extraSpecialArgs = hmArgs; }
           ];
         };
 
       # ── Host-derived infrastructure ──────────────────────────────────────
-      allNixosConfigs = lib.mapAttrs (name: _: mkNixos name) hostRegistry;
+      allNixosConfigs = lib.mapAttrs (name: _: mkNixos name { }) hostRegistry;
 
       deployableHosts = lib.filterAttrs (_: cfg: cfg ? deploy) hostRegistry;
 
@@ -376,7 +377,9 @@
       };
 
       # ── NixOS Configurations ────────────────────────────────────────────────
-      nixosConfigurations = allNixosConfigs;
+      nixosConfigurations = allNixosConfigs // {
+        main-ci = mkNixos "main" { skipHeavyPackages = true; };
+      };
 
       # ── Deploy-RS ───────────────────────────────────────────────────────────
       deploy.nodes = allDeployNodes;

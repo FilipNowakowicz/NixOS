@@ -1,8 +1,8 @@
-{ pkgs, ... }:
-let
-  # Skip heavy packages during CI builds to avoid disk exhaustion
-  skipHeavyPackages = builtins.getEnv "CI" != "";
-in
+{
+  pkgs,
+  skipHeavyPackages ? false,
+  ...
+}:
 {
   home.packages =
     with pkgs;

@@ -1,4 +1,8 @@
 # Centralized network identifiers used across hosts.
+# tailnetFQDN is derived from the host registry to avoid duplication.
+let
+  hosts = import ./hosts.nix;
+in
 {
-  tailnetFQDN = "homeserver.filip-nowakowicz.ts.net";
+  inherit (hosts.homeserver) tailnetFQDN;
 }

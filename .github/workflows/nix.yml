@@ -32,9 +32,7 @@ jobs:
         run: nix flake check --show-trace
 
       - name: Build main host
-        env:
-          CI: "true"
-        run: nix build .#nixosConfigurations.main.config.system.build.toplevel --no-link --show-trace --print-out-paths | tee -a /tmp/cachix-paths.txt
+        run: nix build .#nixosConfigurations.main-ci.config.system.build.toplevel --no-link --show-trace --print-out-paths | tee -a /tmp/cachix-paths.txt
 
       - name: Build vm host
         run: nix build .#nixosConfigurations.vm.config.system.build.toplevel --no-link --show-trace --print-out-paths | tee -a /tmp/cachix-paths.txt

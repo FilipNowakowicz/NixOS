@@ -113,15 +113,15 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
 - [x] **Extract shared Restic profile and actually use host `backup.class`.**
   - **Context:** backup blocks are duplicated across `main`, `homeserver`, and `homeserver-vm`; `backup.class` exists in registry but is not used.
 
-- [ ] **Unify network identity source of truth (`lib/hosts.nix` vs `lib/network.nix`).**
+- [x] **Unify network identity source of truth (`lib/hosts.nix` vs `lib/network.nix`).**
   - **Context:** `tailnetFQDN` appears in multiple places.
   - **Do this:** derive network info from host registry or remove duplicate field.
 
-- [ ] **Add typed schema validation for `lib/hosts.nix` entries.**
+- [x] **Add typed schema validation for `lib/hosts.nix` entries.**
   - **Context:** mixed-shape entries are filtered by presence checks, so malformed data can be silently skipped.
   - **Do this:** define typed submodule schema with explicit optional fields (`nullOr`) and fail at eval time on invalid registry entries.
 
-- [ ] **Replace impure `builtins.getEnv "CI"` toggle in `home/profiles/workstation.nix`.**
+- [x] **Replace impure `builtins.getEnv "CI"` toggle in `home/profiles/workstation.nix`.**
   - **Context:** flakes evaluate purely by default; current pattern can silently misbehave.
   - **Do this:** pass pure toggle via `specialArgs` or explicit option.
 
