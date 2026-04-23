@@ -73,6 +73,7 @@
     '';
   };
 
+  # Raw Lua via xdg.configFile intentionally: programs.neovim plugin packaging lags upstream and conflicts with treesitter grammars.
   xdg.configFile."nvim".source = ../../files/nvim;
   xdg.userDirs.setSessionVariables = false;
 }
