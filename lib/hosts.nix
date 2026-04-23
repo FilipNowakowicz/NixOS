@@ -82,16 +82,12 @@ let
                 || (
                   builtins.isList cfg.homeManager.profiles
                   && builtins.all builtins.isString cfg.homeManager.profiles
-                  && builtins.all
-                    (profile: builtins.elem profile knownHomeManagerProfiles)
-                    cfg.homeManager.profiles
+                  && builtins.all (profile: builtins.elem profile knownHomeManagerProfiles) cfg.homeManager.profiles
                 )
               )
             )
           )
-          "${name}.homeManager: expected role in ${
-            builtins.toJSON knownHomeManagerRoles
-          } and profiles from ${builtins.toJSON knownHomeManagerProfiles}"
+          "${name}.homeManager: expected role in ${builtins.toJSON knownHomeManagerRoles} and profiles from ${builtins.toJSON knownHomeManagerProfiles}"
         )
         (ok
           (
