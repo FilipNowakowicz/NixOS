@@ -136,11 +136,12 @@ jobs:
               body: summary || 'Closure diff computation skipped or failed.'
             });
 
-  # Detect whether paths relevant to the homeserver-vm smoke test changed.
+  # Detect whether paths relevant to smoke tests changed.
   changes:
     runs-on: ubuntu-latest
     outputs:
       homeserver: ${{ steps.filter.outputs.homeserver }}
+      vm: ${{ steps.filter.outputs.vm }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -149,10 +150,16 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
-          if git diff --name-only "$BASE_SHA" HEAD 2>/dev/null | grep -qE '^(hosts/homeserver|modules/|lib/)'; then
+          if git diff --name-only "$BASE_SHA" HEAD 2>/dev/null | grep -qE '^(hosts/homeserver(-vm)?/|modules/|lib/|tests/)'; then
             echo "homeserver=true" >> "$GITHUB_OUTPUT"
           else
             echo "homeserver=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if git diff --name-only "$BASE_SHA" HEAD 2>/dev/null | grep -qE '^(hosts/vm/|modules/|lib/|tests/)'; then
+            echo "vm=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "vm=false" >> "$GITHUB_OUTPUT"
           fi
 
   # Invariant checks for real hardware configs
