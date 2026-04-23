@@ -290,6 +290,13 @@ in
       content = "BASICAUTH_PASSWORD=${config.sops.placeholder.observability_ingest_password}";
       mode = "0400";
     };
+    templates."cachix-netrc" = {
+      content = ''
+        machine filipnowakowicz.cachix.org
+        password ${config.sops.placeholder.cachix_auth_token}
+      '';
+      mode = "0400";
+    };
     secrets = {
       user_password.neededForUsers = true;
       observability_ingest_password = {
@@ -298,8 +305,11 @@ in
       };
       restic_password = { };
       initrd_ssh_host_ed25519_key = { };
+      cachix_auth_token = { };
     };
   };
+
+  nix.settings.netrc-file = config.sops.templates."cachix-netrc".path;
 
   users.groups.telemetry-ingest = { };
 

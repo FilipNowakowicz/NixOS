@@ -11,6 +11,10 @@
         "flakes"
       ];
       auto-optimise-store = true;
+      extra-substituters = [ "https://filipnowakowicz.cachix.org" ];
+      extra-trusted-public-keys = [
+        "filipnowakowicz.cachix.org-1:QLgU0QAdYs9DoRBgVLuJjPT5etR10sqv75+s/B68jCA="
+      ];
     };
 
     gc = {
