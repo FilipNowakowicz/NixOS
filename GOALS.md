@@ -58,7 +58,7 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
 - [x] **Upgrade `cachix/install-nix-action` to a supported major release.**
   - **Context:** workflow references older major (`v27`) while newer major exists.
 
-- [ ] **Add explicit KVM availability fail-fast in smoke tests.**
+- [x] **Add explicit KVM availability fail-fast in smoke tests.**
   - **Context:** smoke relies on KVM; missing `/dev/kvm` can cause confusing failures/timeouts.
 
 - [x] **Derive `scripts/closure-diff.sh` repo reference from `$GITHUB_REPOSITORY`.**
