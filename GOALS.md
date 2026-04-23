@@ -171,31 +171,27 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
 
 ## P3 — Documentation Tasks
 
-- [ ] **Update README USBGuard wording to match actual allowlist reality.**
+- [x] **Update README USBGuard wording to match actual allowlist reality.**
   - **Context:** current wording implies complete deny-default coverage while actual whitelist may be narrower (for example only Logitech receiver).
 
 - [x] **Extend README secure-boot/encryption section with initrd SSH recovery path details.**
   - **Context:** TPM unlock is documented; initrd SSH fallback should be explicit.
   - **Done:** recovery procedure documented inline in P0 recovery-key task above.
 
-- [ ] **Add README/CLAUDE callout for sops bootstrap chicken-and-egg and host-key rotation implications.**
+- [x] **Add README/CLAUDE callout for sops bootstrap chicken-and-egg and host-key rotation implications.**
   - **Context:** host SSH key changes require corresponding `sops updatekeys` workflow.
 
-- [ ] **Clarify VM decision rule in top-level `CLAUDE.md`.**
+- [x] **Clarify VM decision rule in top-level `CLAUDE.md`.**
   - **Context:** microvm vs archived QEMU testing workflow distinction is easy to misread.
   - **Do this:** add direct rule (microvm default; QEMU only for specific impermanence/LUKS validation path).
 
-- [ ] **Update `hosts/homeserver/CLAUDE.md` account bootstrap note.**
+- [x] **Update `hosts/homeserver/CLAUDE.md` account bootstrap note.**
   - **Context:** one-time `SIGNUPS_ALLOWED` flow should be clearly marked as bootstrap-only; mention Tailscale-only exposure assumption.
 
-- [ ] **Update `hosts/homeserver-vm/CLAUDE.md` cert persistence note.**
+- [x] **Update `hosts/homeserver-vm/CLAUDE.md` cert persistence note.**
   - **Context:** self-signed cert is generated once and persists under `/persist`; replacement is manual.
 
-- [ ] **Clarify purpose/location of `PROMPT.md`.**
-  - **Context:** currently appears scratch-like.
-  - **Do this:** either document as reusable template or move to a dedicated prompt directory.
-
-- [ ] **Create architecture doc (`docs/architecture.md`) with host → profiles → modules → lib graph.**
+- [x] **Create architecture doc (`docs/architecture.md`) with host → profiles → modules → lib graph.**
   - **Context:** module topology confusion contributed directly to current import bug.
 
 - [ ] **Document Neovim config trade-off (raw Lua via `xdg.configFile` vs HM `programs.neovim`).**

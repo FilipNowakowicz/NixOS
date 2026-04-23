@@ -25,13 +25,14 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 - **TPM Unlocking**: The system's TPM 2.0 is used to automatically unlock the LUKS-encrypted disk on boot.
 - **Hardware Pass-through**: IOMMU is enabled (`intel_iommu=on iommu=force`) for potential VM GPU pass-through.
 - **Graphics Drivers**: The configuration uses stable by-path device paths for `AQ_DRM_DEVICES` to ensure stable multi-GPU / monitor performance.
+- **Initrd SSH Recovery**: In case of TPM failure, an initrd SSH server (port 2222) is available for remote LUKS unlocking using the recovery key stored in `lib/pubkeys.nix`. Note that this requires a wired Ethernet connection as WiFi drivers are unavailable in stage 1.
 
 ---
 
 ## Features
 
 - **Runtime Theming**: A runtime-swappable color system allows changing themes without a full NixOS rebuild.
-- **USB Device Control**: USBGuard enabled on `main` with an implicit deny policy to block unauthorized devices.
+- **USB Device Control**: USBGuard enabled on `main` with a strict deny-default policy; only the primary mouse (Logitech receiver) is whitelisted by ID.
 - **Tailscale ACLs as Nix**: Security rules and tag owners are generated declaratively from the host registry, providing a single source of truth for network access control.
 - **Systemd Hardening**: A custom DSL (`services.hardened`) applies a high-security sandbox baseline to critical services (Vaultwarden, Nginx, Syncthing).
 - **Intrusion Prevention**: Fail2ban integrated into the security profile with automated E2E testing.
@@ -48,7 +49,7 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 ├── flake.nix                          # Flake entry point
 ├── .sops.yaml                         # SOPS configuration for secret management
 ├── lib/
-│   ├── hosts.nix                      # Host registry (single source of truth for all hosts)
+│   ├── hosts.nix                      # Host registry (typed schema; single source of truth for all hosts)
 │   ├── generators.nix                 # Typed Alloy HCL generators
 │   ├── dashboards.nix                 # Typed Grafana dashboard builders
 │   ├── invariants.nix                 # Configuration invariant check builders
@@ -289,6 +290,9 @@ Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) and [age]
    sops hosts/homeserver/secrets/secrets.yaml
    ```
 
+> [!CAUTION]
+> **Host Key Rotation**: Rotating a host's SSH key or changing its identity requires a corresponding update to `.sops.yaml` (new age key) followed by `sops updatekeys <path/to/secrets.yaml>` to re-encrypt the file for the new key. Failing to do this before deployment will result in a boot-time decryption failure.
+
 ---
 
 ## Tooling
@@ -420,7 +424,8 @@ The repository uses GitHub Actions (`.github/workflows/nix.yml` and `flake-updat
 | Job                 | Description                                                                                                                           |
 | :------------------ | :------------------------------------------------------------------------------------------------------------------------------------ |
 | **Flake Check**     | Runs `nix flake check`, evaluates all host configurations, checks for dead code (`deadnix`), and verifies formatting (`treefmt-nix`). |
-| **Flake Update**    | Automated weekly `flake.lock` updates via GitHub Action, opening a PR for review.                                                     |
+| **Flake Update**    | Automated weekly `flake.lock` updates via GitHub Action; auto-merges if the `merge-gate` passes.                                      |
+| **Merge Gate**      | Consolidates all required checks (flake-check, invariants, smoke-tests) into a single status for branch protection.                   |
 | **Invariant Check** | Evaluates configuration assertions per host to close the intent/reality gap.                                                          |
 | **CVE Scanning**    | Runs `vulnix` against every host closure to report open vulnerabilities without blocking CI.                                          |
 | **Golden Tests**    | Verifies that generated configuration files (Alloy/Grafana) match committed snapshots.                                                |
@@ -432,7 +437,7 @@ The repository uses GitHub Actions (`.github/workflows/nix.yml` and `flake-updat
 
 To optimize CI runtime, the **Smoke Test** only executes when changes are detected in paths that affect the server configuration (`hosts/homeserver*/**`, `modules/**`, `lib/**`).
 
-The workflow uses **Cachix** (`filipnowakowicz`) to persist built artifacts. To enable pushing from CI, ensure `CACHIX_AUTH_TOKEN` is set in your repository secrets.
+The workflow uses **Cachix** (`filipnowakowicz`) to accelerate builds. CI seeds the cache with successful builds (`cachix push`), which can then be consumed by local machines for rebuild acceleration.
 
 <!-- > [!IMPORTANT] -->
 <!-- > **KVM Requirement**: NixOS integration tests require KVM virtualization. While GitHub-hosted `ubuntu-latest` runners provide `/dev/kvm` for public repositories, private or self-hosted runners must have KVM support enabled to prevent silent job timeouts. -->

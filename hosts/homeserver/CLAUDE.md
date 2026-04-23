@@ -29,7 +29,7 @@ Hardware not yet provisioned. Steps in order:
 1. **Replace hardware config** — run `nixos-generate-config` on target or use `nixos-anywhere --generate-hardware-config`
 2. **Set Tailscale auth key** — `sops hosts/homeserver/secrets/secrets.yaml`, set `tailscale_auth_key` (Tailscale admin → Settings → Keys → reusable + ephemeral)
 3. **Deploy** — `nix run '.#reinstall-homeserver' <target-ip>` (injects pre-baked host key via nixos-anywhere)
-4. **Create Vaultwarden account** — temporarily set `SIGNUPS_ALLOWED = true`, deploy, create account at `https://homeserver.filip-nowakowicz.ts.net`, set back to `false`, deploy again
+4. **Create Vaultwarden account** — This is a one-time bootstrap operation. Set `SIGNUPS_ALLOWED = true` in the configuration, deploy, and create your account at `https://homeserver.filip-nowakowicz.ts.net`. **Immediately** set it back to `false` and redeploy. Access is assumed to be Tailscale-only; no public internet exposure is intended.
 
 No post-deploy sops key rotation needed — the host key is stable from first boot.
 

@@ -11,11 +11,11 @@ approaches proactively. Explain why, not just what.
 - **Dev machine:** NixOS (main)
 - **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nh`, `nixd`, `statix`, `deadnix`, `pre-commit`, `sops`, `ssh-to-age`, `qemu`, `OVMF`
 - **Per-project shells:** `direnv` enabled — use `use flake` in `.envrc` for automatic environment loading.
-- **Deploy (VM):** `deploy '.#vm'` (homeserver-vm managed via main's microvm, see VM Management)
+- **Deploy (VM):** `deploy '.#vm'` (Note: `homeserver-vm` is managed via `main`'s microvm; QEMU `vm` is for testing only)
 - **Deploy (WSL):** `home-manager switch --flake .#user@wsl`
 - **Deploy (main):** `nh os switch --hostname main .` (alias: `rebuild`)
 - **Validate flake:** `nix flake check`
-- **Automated updates:** GitHub Action runs weekly (`flake-update.yml`), creating a PR with closure-diffs.
+- **Automated updates:** Weekly `flake.lock` updates (`flake-update.yml`); auto-merges if `merge-gate` status check passes.
 - **Validate invariants:** `nix build '.#checks.x86_64-linux.invariants-<host>'`
 - **Validate profile:** `nix build '.#checks.x86_64-linux.profile-<name>'`
 - **Golden tests:** `nix build '.#checks.x86_64-linux.lib-generators-golden'`
@@ -118,8 +118,10 @@ Managed with sops-nix + age. Edit secrets with `sops <file>`.
 
 - **Age key:** `~/.config/sops/age/keys.txt`
 - **Adding a host key:** `ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub` → add result to `.sops.yaml`
-- **`.sops.yaml`:** repo root, defines key groups per path regex
+- **.sops.yaml:** repo root, defines key groups per path regex
+- **Initrd Secrets:** `boot.initrd.secrets` MUST only point to sops-managed paths (e.g., `config.sops.secrets.X.path`). This is enforced by an invariant check.
 - **vm host:** has its own SSH host key in `hosts/vm/secrets/` — injected during `create`/`reinstall`
+
 - **homeserver-vm:** uses a dedicated age key stored in main's sops secrets (`hosts/main/secrets/secrets.yaml`), injected into the VM via virtiofs at `/run/age-keys/`
 
 ---

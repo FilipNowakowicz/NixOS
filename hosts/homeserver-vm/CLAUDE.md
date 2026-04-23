@@ -20,6 +20,9 @@ sudo journalctl -u microvm@homeserver-vm -f  # watch VM logs
 | Syncthing   | http://10.0.100.2:8384  |
 | Grafana     | http://10.0.100.2:3000  |
 
+> [!NOTE]
+> **Cert Persistence**: The self-signed TLS certificate is generated once during the first boot and persists under `/persist`. If replacement is needed (e.g., due to expiration), it must be done manually on the guest filesystem.
+
 ## Differences from Real Homeserver
 
 - No Tailscale
