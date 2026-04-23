@@ -1,5 +1,5 @@
-# Tailscale ACL generator — derives tag owners, host aliases, and base rules
-# from the host registry. Feed the output to builtins.toJSON for acl.hujson.
+# Tailscale ACL generator — derives tag owners and base rules from the host
+# registry. Feed the output to builtins.toJSON for acl.hujson.
 { lib }:
 let
   tailscaleHosts = hosts: lib.filterAttrs (_: cfg: cfg ? tailscale) hosts;
@@ -14,12 +14,6 @@ let
         name = "tag:${tag}";
         value = [ "autogroup:admin" ];
       }) tags
-    );
-
-  mkHostAliases =
-    hosts:
-    lib.mapAttrs' (name: cfg: lib.nameValuePair name cfg.tailscale.fqdn) (
-      lib.filterAttrs (_: cfg: cfg ? tailscale && cfg.tailscale ? fqdn) hosts
     );
 
 in
@@ -41,6 +35,5 @@ in
         dst = [ "*:*" ];
       }
     ];
-    hosts = mkHostAliases hostRegistry;
   };
 }

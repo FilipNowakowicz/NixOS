@@ -16,10 +16,7 @@ let
     };
     homeserver = {
       role = "homeserver";
-      tailscale = {
-        tag = "server";
-        fqdn = "homeserver.example.ts.net";
-      };
+      tailscale.tag = "server";
     };
     homeserver-vm = {
       role = "homeserver-vm";
@@ -46,18 +43,8 @@ let
       expected = 2;
     };
 
-    testHostAliasPresent = {
-      expr = result.hosts.homeserver;
-      expected = "homeserver.example.ts.net";
-    };
-
-    testHostNoFqdnExcluded = {
-      expr = result.hosts ? main;
-      expected = false;
-    };
-
-    testNonTailscaleHostExcluded = {
-      expr = result.hosts ? homeserver-vm;
+    testNoHostsKey = {
+      expr = result ? hosts;
       expected = false;
     };
 
