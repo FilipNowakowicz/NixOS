@@ -12,9 +12,8 @@ keys:
   - &main_host age1nn9990zfx0azcv9fm0m5gmcw2lhg5e2px0wawgnew0234w3nrdws0v2c0f
 
   # Homeserver SSH host key converted to age: ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub
-  # Pre-generate: ssh-keygen -t ed25519 -f /tmp/homeserver_host_key -N "" && ssh-to-age < /tmp/homeserver_host_key.pub
-  # Then paste the output here (uncomment before running sops commands):
-  # - &homeserver_host age1<fill-in-here>
+  # Pre-generated and injected via reinstall-homeserver; private key stored encrypted in hosts/homeserver/secrets/
+  - &homeserver_host age123dcg5al02n3lv0wyw2482wa6dfl8u550lp2mcplsve0gmq70udselsgjd
 
 creation_rules:
   - path_regex: hosts/vm/secrets/.*
@@ -36,5 +35,5 @@ creation_rules:
     key_groups:
       - age:
           - *user
-          # Uncomment after adding &homeserver_host to keys section above:
-          # - *homeserver_host
+          - *main_host
+          - *homeserver_host

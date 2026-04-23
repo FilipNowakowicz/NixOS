@@ -16,13 +16,13 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
   - **Do this:** replace shell preStart plumbing with `sops.templates` (or `LoadCredential`), set proper owner/mode, and source from `/run/secrets-rendered/...`.
   - **Design follow-up:** move this pattern into `modules/nixos/profiles/observability.nix` so all ingest-auth consumers inherit the safe behavior.
 
-- [ ] **Fix module topology bug: remove misleading global profile imports or gate profiles with options.**
+- [x] **Fix module topology bug: remove misleading global profile imports or gate profiles with options.**
   - **Context:** `modules/nixos/default.nix` imports unconditional profiles (`desktop`, `nvidia-prime`, `security`, `base`, `user`) for all hosts; host files also import profiles explicitly, creating redundancy and hidden closure bloat (headless hosts inherit desktop/NVIDIA stack unintentionally).
   - **Do this (recommended):** keep only option-declaring modules globally (`observability`, `services/hardened`, `systemd-failure-notify`) and let each host import intended profiles explicitly.
   - **Alternative:** add `profiles.<name>.enable` gates to all affected profiles.
   - **Included cleanup:** remove redundant `nvidia-prime` import in `hosts/main/default.nix:16` after topology fix.
 
-- [ ] **Complete homeserver sops bootstrap identity wiring (`.sops.yaml`) and make it fail-loud.**
+- [x] **Complete homeserver sops bootstrap identity wiring (`.sops.yaml`) and make it fail-loud.**
   - **Context:** `&homeserver_host` is commented; first boot decryption can silently fail until deploy time.
   - **Do this:** add homeserver age key mapping, run `sops updatekeys`, document bootstrapping sequence, and add invariant/pre-deploy check that errors when homeserver host identity is missing.
 
@@ -213,7 +213,5 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
 ---
 
 ## P5 — Decision Tasks (resolve before implementation branches diverge)
-
-- [ ] **Confirm whether `magicRollback = false` is intentional policy or legacy drift.**
 
 - [ ] **Confirm whether Cachix substituters are wired where expected for local rebuild acceleration.**

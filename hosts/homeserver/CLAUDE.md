@@ -10,20 +10,28 @@ Accessible via Tailscale at `homeserver.filip-nowakowicz.ts.net`.
 - **Nginx** — reverse proxy, TLS via Tailscale cert (not ACME)
 - **Tailscale** — auth key from sops secret `tailscale_auth_key`
 
+## Sops Bootstrap
+
+The host SSH key is **pre-generated** and committed (encrypted) to the repo. This means
+sops secrets are decryptable from first boot without any post-deploy manual step.
+
+- Private key: `hosts/homeserver/secrets/ssh_host_ed25519_key.enc` (sops-encrypted)
+- Public key: `hosts/homeserver/secrets/ssh_host_ed25519_key.pub.enc` (sops-encrypted)
+- Age identity: `&homeserver_host` in `.sops.yaml` (derived from the above public key)
+
+`nix build '.#checks.x86_64-linux.homeserver-sops-bootstrap'` enforces that both
+encrypted files are present; it will fail-loud with instructions if they're missing.
+
 ## First Deploy Checklist
 
 Hardware not yet provisioned. Steps in order:
 
 1. **Replace hardware config** — run `nixos-generate-config` on target or use `nixos-anywhere --generate-hardware-config`
 2. **Set Tailscale auth key** — `sops hosts/homeserver/secrets/secrets.yaml`, set `tailscale_auth_key` (Tailscale admin → Settings → Keys → reusable + ephemeral)
-3. **Deploy** — `deploy '.#homeserver'` (or `nix run '.#reinstall-homeserver' <target-ip>` for fresh install)
-4. **Add host age key to sops** — after first boot:
-   ```
-   ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub  # run on homeserver
-   ```
-   Add result under `&homeserver_host` in `.sops.yaml`, then:
-   `sops updatekeys hosts/homeserver/secrets/secrets.yaml`
-5. **Create Vaultwarden account** — temporarily set `SIGNUPS_ALLOWED = true`, deploy, create account at `https://homeserver.filip-nowakowicz.ts.net`, set back to `false`, deploy again
+3. **Deploy** — `nix run '.#reinstall-homeserver' <target-ip>` (injects pre-baked host key via nixos-anywhere)
+4. **Create Vaultwarden account** — temporarily set `SIGNUPS_ALLOWED = true`, deploy, create account at `https://homeserver.filip-nowakowicz.ts.net`, set back to `false`, deploy again
+
+No post-deploy sops key rotation needed — the host key is stable from first boot.
 
 ## Architecture
 
