@@ -6,12 +6,12 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
 
 ## P0 — Critical Security & Architecture (do first)
 
-- [ ] **Rotate leaked initrd SSH host key for `main` and migrate to sops-nix-managed initrd secret.**
+- [x] **Rotate leaked initrd SSH host key for `main` and migrate to sops-nix-managed initrd secret.**
   - **Context:** `hosts/main/initrd-ssh-host-key` is a committed plaintext private key (`openssh-key-v1` raw format), enabling MITM risk during remote LUKS unlock on initrd SSH (`port 2222`).
   - **Do this:** rotate key on host; store encrypted secret (for example `hosts/main/secrets/initrd_ssh_host_ed25519_key.enc`); inject through `boot.initrd.secrets` (or reinstall path `nixos-anywhere --extra-files`); remove plaintext file; scrub git history (`git filter-repo`) if already exposed.
   - **Hardening follow-up:** extend `no-plaintext-secrets` detection to catch raw/binary private keys and/or blocklist `*_key` outside approved encrypted secret paths.
 
-- [ ] **Fix OpenTelemetry ingest secret leak (`/tmp/otel-env`) and standardize secret env rendering with `sops.templates`.**
+- [x] **Fix OpenTelemetry ingest secret leak (`/tmp/otel-env`) and standardize secret env rendering with `sops.templates`.**
   - **Context:** `hosts/main/default.nix:262-264` writes decrypted secret to `/tmp/otel-env` (default umask can make it world-readable).
   - **Do this:** replace shell preStart plumbing with `sops.templates` (or `LoadCredential`), set proper owner/mode, and source from `/run/secrets-rendered/...`.
   - **Design follow-up:** move this pattern into `modules/nixos/profiles/observability.nix` so all ingest-auth consumers inherit the safe behavior.
@@ -37,7 +37,7 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
 - [ ] **Re-enable deploy-rs rollback safety (`magicRollback = true`) on deploy nodes.**
   - **Context:** current `magicRollback = false; autoRollback = false` raises outage risk if SSH/firewall deploys fail.
 
-- [ ] **Fix CI path-filter wiring so VM smoke actually runs, and smoke test edits retrigger smoke.**
+- [x] **Fix CI path-filter wiring so VM smoke actually runs, and smoke test edits retrigger smoke.**
   - **Context:** `.github/workflows/nix.yml` uses `needs.changes.outputs.vm` but `changes` does not set `vm`; `tests/` path changes do not trigger smoke.
   - **Do this:** add proper VM path filter output and include `tests/` in relevant regex.
 
