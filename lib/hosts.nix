@@ -6,8 +6,10 @@
 #   sshPort     — VM-only; used to filter hosts for the VM script
 #   diskSize    — VM-only; used by nixos-anywhere and qemu-img
 #   tailnetFQDN — per-host Tailscale FQDN; lib/network.nix re-exports this for host configs
+#                 and the ACL generator intentionally ignores it for now
 #   tailscale   — Tailscale metadata; presence means host is on the tailnet
-#     .tag      — Tailscale tag assigned to this host (without "tag:" prefix)
+#     .tag      — Tailscale tag assigned to this host (without "tag:" prefix);
+#                 this is the only host field currently consumed by lib/acl.nix
 #   homeManager — primary-user Home Manager mapping for this host
 #     .role     — entrypoint module under home/users/user
 #     .profiles — extra profile modules under home/profiles

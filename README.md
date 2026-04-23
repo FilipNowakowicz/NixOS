@@ -407,9 +407,10 @@ nix flake check
 
 Tailscale security rules are managed declaratively within the flake. The `lib/acl.nix` generator processes the `lib/hosts.nix` registry to produce a `acl.hujson` compatible structure.
 
-- **Source of Truth**: The `tailscale.tag` attribute in `lib/hosts.nix` defines the tags for each host.
-- **Generator**: `lib/acl.nix` maps tags to owners and defines access rules (e.g., workstations can reach all servers).
-- **Validation**: Unit tests in `tests/lib/acl.nix` verify that the generator correctly handles different host configurations.
+- **Current Policy Scope**: The ACL model is intentionally minimal. It consumes only `tailscale.tag` from the registry and emits shared fleet-wide rules.
+- **Registry Richness**: Other host metadata such as `tailnetFQDN`, `role`, `ip`, and `backup.class` remains available to the rest of the flake, but does not affect ACL generation yet.
+- **Generator**: `lib/acl.nix` maps tags to owners and defines the current base access rules (workstations can reach servers; `autogroup:admin` can reach everything).
+- **Validation**: Unit tests in `tests/lib/acl.nix` verify both the generated rules and the intentionally minimal output shape.
 - **Output**: The generated ACL JSON can be inspected via:
   ```bash
   nix build '.#packages.x86_64-linux.tailscale-acl' --print-out-paths | xargs cat
