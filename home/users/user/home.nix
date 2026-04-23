@@ -8,72 +8,62 @@ let
   privateUserJs = ../../files/firefox/private-user.js;
 in
 {
-  home = {
-    username = "user";
-    homeDirectory = "/home/user";
-    stateVersion = "24.11";
+  home.packages = with pkgs; [
+    (writeShellApplication {
+      name = "theme-switch";
+      runtimeInputs = with pkgs; [
+        home-manager
+        hyprland
+        waybar
+        swaybg
+        kitty
+        procps
+        systemd
+        libnotify
+        fzf
+      ];
+      text = ''
+        NIX_REPO="${nixRepo}"
+      ''
+      + builtins.readFile ../../files/scripts/theme-switch.sh;
+    })
 
-    sessionPath = [
-      "${config.home.homeDirectory}/.local/bin"
-      "${config.home.homeDirectory}/.npm-global/bin"
-    ];
+    (writeShellApplication {
+      name = "waybar-weather";
+      runtimeInputs = with pkgs; [ curl ];
+      text = builtins.readFile ../../files/scripts/waybar-weather.sh;
+    })
 
-    packages = with pkgs; [
-      (writeShellApplication {
-        name = "theme-switch";
-        runtimeInputs = with pkgs; [
-          home-manager
-          hyprland
-          waybar
-          swaybg
-          kitty
-          procps
-          systemd
-          libnotify
-          fzf
-        ];
-        text = ''
-          NIX_REPO="${nixRepo}"
-        ''
-        + builtins.readFile ../../files/scripts/theme-switch.sh;
-      })
+    (writeShellApplication {
+      name = "clipboard-pick";
+      runtimeInputs = with pkgs; [
+        cliphist
+        fzf
+        wl-clipboard
+      ];
+      text = builtins.readFile ../../files/scripts/clipboard-pick.sh;
+    })
 
-      (writeShellApplication {
-        name = "waybar-weather";
-        runtimeInputs = with pkgs; [ curl ];
-        text = builtins.readFile ../../files/scripts/waybar-weather.sh;
-      })
+    (writeShellApplication {
+      name = "firefox-private";
+      runtimeInputs = [ pkgs.firefox ];
+      text = ''
+        profile=$(mktemp -d)
+        trap 'rm -rf "$profile"' EXIT
+        cp ${privateUserJs} "$profile/user.js"
+        exec firefox --profile "$profile" --no-remote "$@"
+      '';
+    })
 
-      (writeShellApplication {
-        name = "clipboard-pick";
-        runtimeInputs = with pkgs; [
-          cliphist
-          fzf
-          wl-clipboard
-        ];
-        text = builtins.readFile ../../files/scripts/clipboard-pick.sh;
-      })
-
-      (writeShellApplication {
-        name = "firefox-private";
-        runtimeInputs = [ pkgs.firefox ];
-        text = ''
-          profile=$(mktemp -d)
-          trap 'rm -rf "$profile"' EXIT
-          cp ${privateUserJs} "$profile/user.js"
-          exec firefox --profile "$profile" --no-remote "$@"
-        '';
-      })
-
-      hypridle
-      opencode
-      opencode-claude-auth
-    ];
-  };
+    hypridle
+    opencode
+    opencode-claude-auth
+  ];
 
   imports = [
-    ../../profiles/base.nix
+    ./common.nix
     ../../profiles/desktop.nix
+    ../../profiles/workstation.nix
     ../../theme/module.nix
   ];
 
@@ -82,14 +72,6 @@ in
   gtk.gtk4.theme = null;
 
   programs = {
-    # ── Git ────────────────────────────────────────────────────────────────
-    git = {
-      enable = true;
-      settings.user.name = "Filip Nowakowicz";
-      settings.user.email = "filip.nowakowicz@gmail.com";
-      signing.format = null;
-    };
-
     # ── Direnv ─────────────────────────────────────────────────────────────
     direnv = {
       enable = true;
@@ -98,71 +80,22 @@ in
 
     # ── Zsh ────────────────────────────────────────────────────────────────
     # Base options, plugins, and vi-mode are set in home/profiles/base.nix
+    # Shared aliases and shell functions are in common.nix
     zsh = {
       shellAliases = {
-        # Files
-        ll = "ls -lh --color=auto";
-        la = "ls -A";
-        l = "ls -CF";
-        cp = "cp -i";
-        mv = "mv -i";
-        # Navigation
-        ".." = "cd ..";
-        "..." = "cd ../..";
-        "...." = "cd ../../..";
-        d = "dirs -v";
-        # Git
-        g = "git";
-        ga = "git add";
-        gd = "git diff";
-        gco = "git checkout";
-        gb = "git branch";
-        gc = "git commit -m";
-        gca = "git commit -am";
-        gp = "git push";
-        gl = "git pull";
-        glog = "git log --oneline --graph --decorate";
-        gs = "git status";
-        # Nix
-        ns = "nix-shell --run zsh";
-        nb = "nix build";
-        nd = "nix develop";
-        nf = "nix flake";
-        # Rebuilds
         rebuild = "nh os switch --hostname main .";
-        # Theme
         theme = "theme-switch";
-        # Clipboard
         cb = "clipboard-pick";
-        # AI
         copilot = "steam-run gh copilot";
       };
 
       initContent = ''
-        mkcd()   { mkdir -p -- "$1" && cd -- "$1"; }
-        detach() { setsid -f "$@" >/dev/null 2>&1 < /dev/null; }
-        extract() {
-          [[ -f "$1" ]] || { echo "extract: file not found: $1" >&2; return 1; }
-          case "$1" in
-            *.tar.bz2) tar xjf "$1" ;;
-            *.tar.gz)  tar xzf "$1" ;;
-            *.tar.xz)  tar xJf "$1" ;;
-            *.tar.zst) tar --zstd -xf "$1" ;;
-            *.zip)     unzip "$1" ;;
-            *.7z)      7z x "$1" ;;
-            *) echo "extract: unsupported format: $1" >&2; return 2 ;;
-          esac
-        }
-
         _theme_switch_completion() {
           local themes
           themes=($(ls ${nixRepo}/home/theme/themes | sed 's/\.nix//'))
           _describe 'themes' themes
         }
         compdef _theme_switch_completion theme-switch
-
-        bindkey "''${terminfo[kcuu1]}" history-beginning-search-backward
-        bindkey "''${terminfo[kcud1]}" history-beginning-search-forward
       '';
     };
   };
@@ -178,13 +111,8 @@ in
       };
     };
 
-    userDirs.setSessionVariables = false;
-
     # ── Themes & Config Files ──────────────────────────────────────────────
     configFile = {
-      # Neovim
-      "nvim".source = ../../files/nvim;
-
       # Kitty
       "kitty/kitty.conf".source = ../../files/kitty/kitty.conf;
 

@@ -445,6 +445,7 @@
       homeModules = {
         profiles-base = import ./home/profiles/base.nix;
         profiles-desktop = import ./home/profiles/desktop.nix;
+        profiles-workstation = import ./home/profiles/workstation.nix;
       };
     };
 }

@@ -125,7 +125,7 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
   - **Context:** flakes evaluate purely by default; current pattern can silently misbehave.
   - **Do this:** pass pure toggle via `specialArgs` or explicit option.
 
-- [ ] **Export `home/profiles/desktop.nix` consistently in `flake.nix` home modules output.**
+- [x] **Export `home/profiles/desktop.nix` consistently in `flake.nix` home modules output.**
   - **Context:** currently imported by user config but not exported with corresponding profile module set.
 
 - [ ] **Reduce duplication in `home/users/user/{home,server,wsl}.nix` via shared common profile.**
