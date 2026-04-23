@@ -13,6 +13,10 @@ in
   imports = [
     ./disko.nix
     ./hardware-configuration.nix
+    ../../modules/nixos/profiles/base.nix
+    ../../modules/nixos/profiles/desktop.nix
+    ../../modules/nixos/profiles/security.nix
+    ../../modules/nixos/profiles/user.nix
     ../../modules/nixos/hardware/nvidia-prime.nix
     inputs.microvm.nixosModules.host
     ../../modules/nixos/microvms/homeserver-vm.nix
