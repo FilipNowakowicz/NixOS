@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v27
+        uses: cachix/install-nix-action@v31
         with:
           nix_path: nixpkgs=channel:nixos-unstable
           extra_nix_config: |
@@ -26,6 +26,7 @@ jobs:
         with:
           name: filipnowakowicz
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          skipPush: true
 
       - name: Flake check
         run: nix flake check --show-trace
@@ -33,16 +34,25 @@ jobs:
       - name: Build main host
         env:
           CI: "true"
-        run: nix build .#nixosConfigurations.main.config.system.build.toplevel --no-link --show-trace
+        run: nix build .#nixosConfigurations.main.config.system.build.toplevel --no-link --show-trace --print-out-paths | tee -a /tmp/cachix-paths.txt
 
       - name: Build vm host
-        run: nix build .#nixosConfigurations.vm.config.system.build.toplevel --no-link --show-trace
+        run: nix build .#nixosConfigurations.vm.config.system.build.toplevel --no-link --show-trace --print-out-paths | tee -a /tmp/cachix-paths.txt
 
       - name: Build homeserver host
-        run: nix build .#nixosConfigurations.homeserver.config.system.build.toplevel --no-link --show-trace
+        run: nix build .#nixosConfigurations.homeserver.config.system.build.toplevel --no-link --show-trace --print-out-paths | tee -a /tmp/cachix-paths.txt
 
       - name: Build homeserver-vm host
-        run: nix build .#nixosConfigurations.homeserver-vm.config.system.build.toplevel --no-link --show-trace
+        run: nix build .#nixosConfigurations.homeserver-vm.config.system.build.toplevel --no-link --show-trace --print-out-paths | tee -a /tmp/cachix-paths.txt
+
+      - name: Push built paths to Cachix
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        run: |
+          test -n "$CACHIX_AUTH_TOKEN" || exit 0
+          test -f /tmp/cachix-paths.txt || exit 0
+          sort -u /tmp/cachix-paths.txt | xargs --no-run-if-empty cachix push filipnowakowicz
 
       - name: Lint (statix)
         run: nix run nixpkgs#statix -- check .
@@ -63,7 +73,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v27
+        uses: cachix/install-nix-action@v31
         with:
           nix_path: nixpkgs=channel:nixos-unstable
           extra_nix_config: |
@@ -74,6 +84,7 @@ jobs:
         with:
           name: filipnowakowicz
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          skipPush: true
 
       - name: Compute closure diffs
         id: diff
@@ -152,7 +163,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v27
+        uses: cachix/install-nix-action@v31
         with:
           nix_path: nixpkgs=channel:nixos-unstable
           extra_nix_config: |
@@ -163,12 +174,22 @@ jobs:
         with:
           name: filipnowakowicz
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          skipPush: true
 
       - name: Check main invariants
-        run: nix build .#checks.x86_64-linux.invariants-main --show-trace
+        run: nix build .#checks.x86_64-linux.invariants-main --show-trace --print-out-paths | tee -a /tmp/cachix-paths.txt
 
       - name: Check homeserver invariants
-        run: nix build .#checks.x86_64-linux.invariants-homeserver --show-trace
+        run: nix build .#checks.x86_64-linux.invariants-homeserver --show-trace --print-out-paths | tee -a /tmp/cachix-paths.txt
+
+      - name: Push built paths to Cachix
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        run: |
+          test -n "$CACHIX_AUTH_TOKEN" || exit 0
+          test -f /tmp/cachix-paths.txt || exit 0
+          sort -u /tmp/cachix-paths.txt | xargs --no-run-if-empty cachix push filipnowakowicz
 
   smoke-test:
     needs: [flake-check, changes]
@@ -182,7 +203,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v27
+        uses: cachix/install-nix-action@v31
         with:
           nix_path: nixpkgs=channel:nixos-unstable
           extra_nix_config: |
@@ -194,11 +215,21 @@ jobs:
         with:
           name: filipnowakowicz
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          skipPush: true
 
       - name: vm smoke test
         if: needs.changes.outputs.vm == 'true'
-        run: nix build .#checks.x86_64-linux.vm-smoke --show-trace
+        run: nix build .#checks.x86_64-linux.vm-smoke --show-trace --print-out-paths | tee -a /tmp/cachix-paths.txt
 
       - name: homeserver-vm smoke test
         if: needs.changes.outputs.homeserver == 'true'
-        run: nix build .#checks.x86_64-linux.homeserver-vm-smoke --show-trace
+        run: nix build .#checks.x86_64-linux.homeserver-vm-smoke --show-trace --print-out-paths | tee -a /tmp/cachix-paths.txt
+
+      - name: Push built paths to Cachix
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        run: |
+          test -n "$CACHIX_AUTH_TOKEN" || exit 0
+          test -f /tmp/cachix-paths.txt || exit 0
+          sort -u /tmp/cachix-paths.txt | xargs --no-run-if-empty cachix push filipnowakowicz

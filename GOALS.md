@@ -2,9 +2,6 @@
 
 _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI, secrets). Homeserver services are tracked in `GOALS.md`._
 
-This file is now a **single prioritized task list**.  
-Each task appears **once** (no duplicates), with merged context/action notes so details are not lost.
-
 ---
 
 ## P0 — Critical Security & Architecture (do first)
@@ -48,10 +45,10 @@ Each task appears **once** (no duplicates), with merged context/action notes so 
   - **Context:** `flake-update.yml` auto-merges update PRs; safety depends on branch protection.
   - **Do this:** require all status checks before merge (flake checks, invariants, smoke, closure-diff), and document required protection policy.
 
-- [ ] **Add `cachix push` in CI after successful builds.**
+- [x] **Add `cachix push` in CI after successful builds.**
   - **Context:** current CI appears to consume cache but does not seed it, causing avoidable rebuild cost on subsequent runs.
 
-- [ ] **Upgrade `cachix/install-nix-action` to a supported major release.**
+- [x] **Upgrade `cachix/install-nix-action` to a supported major release.**
   - **Context:** workflow references older major (`v27`) while newer major exists.
 
 - [ ] **Add explicit KVM availability fail-fast in smoke tests.**
