@@ -324,6 +324,11 @@ in
         default = null;
         description = "Password file for authenticated ingest";
       };
+      serviceEnvironmentFile = lib.mkOption {
+        type = with lib.types; nullOr path;
+        default = null;
+        description = "Path to an env file containing BASICAUTH_PASSWORD for the OTel collector.";
+      };
     };
   };
 
@@ -590,23 +595,31 @@ in
       })
     ];
 
-    systemd.tmpfiles.rules = lib.mkMerge [
-      (lib.mkIf cfg.grafana.enable [
-        "d /var/lib/grafana 0750 grafana grafana -"
-      ])
-      (lib.mkIf cfg.loki.enable [
-        "d /var/lib/loki 0750 loki loki -"
-        "d /var/lib/loki/chunks 0750 loki loki -"
-      ])
-      (lib.mkIf cfg.collectors.metrics.enable [
-        "d /var/lib/prometheus2 0750 prometheus prometheus -"
-      ])
-    ];
+    systemd = {
+      tmpfiles.rules = lib.mkMerge [
+        (lib.mkIf cfg.grafana.enable [
+          "d /var/lib/grafana 0750 grafana grafana -"
+        ])
+        (lib.mkIf cfg.loki.enable [
+          "d /var/lib/loki 0750 loki loki -"
+          "d /var/lib/loki/chunks 0750 loki loki -"
+        ])
+        (lib.mkIf cfg.collectors.metrics.enable [
+          "d /var/lib/prometheus2 0750 prometheus prometheus -"
+        ])
+      ];
 
-    systemd.services.alloy = lib.mkIf cfg.collectors.logs.enable {
-      after = lib.optionals cfg.loki.enable [ "loki.service" ];
-      requires = lib.optionals cfg.loki.enable [ "loki.service" ];
-      serviceConfig.SupplementaryGroups = [ "systemd-journal" ];
+      services = {
+        alloy = lib.mkIf cfg.collectors.logs.enable {
+          after = lib.optionals cfg.loki.enable [ "loki.service" ];
+          requires = lib.optionals cfg.loki.enable [ "loki.service" ];
+          serviceConfig.SupplementaryGroups = [ "systemd-journal" ];
+        };
+
+        "opentelemetry-collector" = lib.mkIf (
+          cfg.collectors.traces.enable && cfg.ingestAuth.serviceEnvironmentFile != null
+        ) { serviceConfig.EnvironmentFiles = [ cfg.ingestAuth.serviceEnvironmentFile ]; };
+      };
     };
   };
 }

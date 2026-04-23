@@ -99,6 +99,7 @@ in
     ingestAuth = {
       username = "admin";
       passwordFile = config.sops.secrets.observability_ingest_password.path;
+      serviceEnvironmentFile = config.sops.templates."otel-env".path;
     };
   };
 
@@ -259,9 +260,6 @@ in
       SupplementaryGroups = [ "telemetry-ingest" ];
     };
     "opentelemetry-collector".serviceConfig.SupplementaryGroups = lib.mkAfter [ "telemetry-ingest" ];
-    "opentelemetry-collector".preStart =
-      "${pkgs.bash}/bin/bash -c 'export BASICAUTH_PASSWORD=\"$(cat ${config.sops.secrets.observability_ingest_password.path})\" && echo BASICAUTH_PASSWORD=\"$BASICAUTH_PASSWORD\" > /tmp/otel-env'";
-    "opentelemetry-collector".serviceConfig.EnvironmentFiles = [ "/tmp/otel-env" ];
   };
 
   # ── USB Device Control ─────────────────────────────────────────────────────
@@ -284,6 +282,10 @@ in
     defaultSopsFile = ./secrets/secrets.yaml;
     defaultSopsFormat = "yaml";
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+    templates."otel-env" = {
+      content = "BASICAUTH_PASSWORD=${config.sops.placeholder.observability_ingest_password}";
+      mode = "0400";
+    };
     secrets = {
       user_password.neededForUsers = true;
       observability_ingest_password = {
