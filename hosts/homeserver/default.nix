@@ -55,14 +55,16 @@ in
         wants = [ "network-online.target" ];
         script = ''
           # Wait for tailscale to be running
-          until ${pkgs.tailscale}/bin/tailscale status > /dev/null 2>&1; do
-            sleep 1
+          for attempt in {1..60}; do
+            ${pkgs.tailscale}/bin/tailscale status > /dev/null 2>&1 && break
+            [ $attempt -lt 60 ] && sleep 1
           done
           ${pkgs.tailscale}/bin/tailscale cert --cert-file /var/lib/tailscale/certs/homeserver.crt --key-file /var/lib/tailscale/certs/homeserver.key ${tailnetFQDN}
         '';
         serviceConfig = {
           Type = "oneshot";
           RemainAfterExit = true;
+          TimeoutStartSec = 60;
         };
       };
 
