@@ -14,131 +14,55 @@ Before you change anything first use the 'Plan' mode to plan out the changes. Ma
 
 **The main changes are:**
 
-- Generate CVE checks for all hosts, but skip test VMs in CI (CI was running out of space)
-
-## P0 — Critical Security & Architecture (do first)
-
-- [x] **Rotate leaked initrd SSH host key for `main` and migrate to sops-nix-managed initrd secret.**
-  - **Context:** `hosts/main/initrd-ssh-host-key` is a committed plaintext private key (`openssh-key-v1` raw format), enabling MITM risk during remote LUKS unlock on initrd SSH (`port 2222`).
-  - **Do this:** rotate key on host; store encrypted secret (for example `hosts/main/secrets/initrd_ssh_host_ed25519_key.enc`); inject through `boot.initrd.secrets` (or reinstall path `nixos-anywhere --extra-files`); remove plaintext file; scrub git history (`git filter-repo`) if already exposed.
-  - **Hardening follow-up:** extend `no-plaintext-secrets` detection to catch raw/binary private keys and/or blocklist `*_key` outside approved encrypted secret paths.
-
-- [x] **Fix OpenTelemetry ingest secret leak (`/tmp/otel-env`) and standardize secret env rendering with `sops.templates`.**
-  - **Context:** `hosts/main/default.nix:262-264` writes decrypted secret to `/tmp/otel-env` (default umask can make it world-readable).
-  - **Do this:** replace shell preStart plumbing with `sops.templates` (or `LoadCredential`), set proper owner/mode, and source from `/run/secrets-rendered/...`.
-  - **Design follow-up:** move this pattern into `modules/nixos/profiles/observability.nix` so all ingest-auth consumers inherit the safe behavior.
-
-- [x] **Fix module topology bug: remove misleading global profile imports or gate profiles with options.**
-  - **Context:** `modules/nixos/default.nix` imports unconditional profiles (`desktop`, `nvidia-prime`, `security`, `base`, `user`) for all hosts; host files also import profiles explicitly, creating redundancy and hidden closure bloat (headless hosts inherit desktop/NVIDIA stack unintentionally).
-  - **Do this (recommended):** keep only option-declaring modules globally (`observability`, `services/hardened`, `systemd-failure-notify`) and let each host import intended profiles explicitly.
-  - **Alternative:** add `profiles.<name>.enable` gates to all affected profiles.
-  - **Included cleanup:** remove redundant `nvidia-prime` import in `hosts/main/default.nix:16` after topology fix.
-
-- [x] **Complete homeserver sops bootstrap identity wiring (`.sops.yaml`) and make it fail-loud.**
-  - **Context:** `&homeserver_host` is commented; first boot decryption can silently fail until deploy time.
-  - **Do this:** add homeserver age key mapping, run `sops updatekeys`, document bootstrapping sequence, and add invariant/pre-deploy check that errors when homeserver host identity is missing.
-
-- [x] **Add at least one recovery SSH key to `lib/pubkeys.nix` and document recovery procedure.**
-  - **Context:** single-key setup is a lockout risk for initrd unlock and host recovery.
-  - **Done:** added `recovery@main` ed25519 key (`~/.ssh/id_ed25519_recovery`). All auth surfaces consume `lib/pubkeys.nix`: initrd SSH (port 2222, LUKS unlock), main/homeserver/homeserver-vm/vm SSH, and installer root.
-  - **Recovery procedure:**
-    1. Retrieve `id_ed25519_recovery` from offline storage (Vaultwarden secure note or USB).
-    2. Boot fails TPM unlock → initrd SSH on port 2222 is available.
-    3. `ssh -i /path/to/id_ed25519_recovery -p 2222 root@<host-ip>` → enter LUKS passphrase.
-    4. Host boots normally; follow up with `nh os switch` to redeploy if config drift.
-  - **Key rotation:** generate new key, replace entry in `lib/pubkeys.nix`, rebuild and deploy all affected hosts, then retire old private key from offline storage.
-  - **Store `~/.ssh/id_ed25519_recovery` offline** (Vaultwarden secure note or encrypted USB). The copy on `main` is useless during a lockout — offline storage is the only copy that matters.
-
----
-
-## P1 — High Priority Reliability, CI, and Operational Safety
-
-- [x] **Re-enable deploy-rs rollback safety (`magicRollback = true`) on deploy nodes.**
-  - **Context:** current `magicRollback = false; autoRollback = false` raises outage risk if SSH/firewall deploys fail.
-
-- [x] **Fix CI path-filter wiring so VM smoke actually runs, and smoke test edits retrigger smoke.**
-  - **Context:** `.github/workflows/nix.yml` uses `needs.changes.outputs.vm` but `changes` does not set `vm`; `tests/` path changes do not trigger smoke.
-  - **Do this:** add proper VM path filter output and include `tests/` in relevant regex.
-
-- [x] **Ensure flake-update auto-merge cannot bypass required checks.**
-  - **Context:** `flake-update.yml` auto-merges update PRs; safety depends on branch protection.
-  - **Done:** added `merge-gate` job to `nix.yml` that consolidates all checks (flake-check, invariants, closure-diff, smoke-test) into a single required status. Configure branch protection: Settings → Branches → `main` → require status check `merge-gate`. smoke-test and closure-diff are allowed to be skipped (conditional jobs); flake-check and invariants must succeed.
-
-- [x] **Add `cachix push` in CI after successful builds.**
-  - **Context:** current CI appears to consume cache but does not seed it, causing avoidable rebuild cost on subsequent runs.
-
-- [x] **Confirm whether Cachix substituters are wired where expected for local rebuild acceleration.**
-  - **Done:** it wasn't wired. Added the integration and wired private keys through sops secrets.
-
-- [x] **Upgrade `cachix/install-nix-action` to a supported major release.**
-  - **Context:** workflow references older major (`v27`) while newer major exists.
-
-- [x] **Add explicit KVM availability fail-fast in smoke tests.**
-  - **Context:** smoke relies on KVM; missing `/dev/kvm` can cause confusing failures/timeouts.
-
-- [x] **Derive `scripts/closure-diff.sh` repo reference from `$GITHUB_REPOSITORY`.**
-  - **Context:** currently hardcoded owner/repo makes forks/renames fragile.
-
-- [x] **Keep cold-install guidance explicit: `reinstall-homeserver.sh --no-substitute-on-destination` is install-only.**
-  - **Context:** this is reasonable for first install but slower than normal deploy workflow.
-  - **Do this:** document transition to `deploy-rs` / `nh os switch` after bootstrap.
-
-- [x] **Strengthen fail2ban policy and enforce it with invariants on SSH hosts.**
-  - **Context:** current policy (`maxretry = 5`, short bantime) is permissive.
-  - **Do this:** lower retry threshold (for example 3), use incremental ban backoff, and add invariant check where SSH is enabled.
-
-- [x] **Add timeout to `tailscale-cert.service` startup behavior.**
-  - **Context:** current polling loop can run forever when Tailscale is unhealthy.
-  - **Do this:** set service timeout/fail-fast behavior (`TimeoutStartSec` or equivalent bounded retry).
-
-- [x] **Review initrd SSH exposure risk model and add constraints if needed.**
-  - **Findings:** initrd SSH (port 2222) is NOT exposed on WiFi — WiFi drivers/WPA
-    supplicant are unavailable in stage 1. Recovery requires a USB Ethernet dongle
-    (wired only). Public WiFi exposure risk is not a real concern.
-  - **Done:** added `flush-network-before-stage2` systemd unit in initrd
-    (`hosts/main/default.nix`) — tears down all non-loopback interfaces before stage 2
-    transition (defense-in-depth). Added comment block documenting dongle requirement
-    and WiFi limitation.
-  - **Follow-up (operational):** acquire a USB-C Ethernet dongle and test initrd SSH
-    recovery end-to-end before relying on it in an emergency.
-
-- [x] **Tighten pre-commit plaintext secret allowlist trust model.**
-  - **Context:** hook checks staged file content but reads allowlist from working tree, which can weaken trust in edge cases.
-
-- [x] **Add `shellcheck` to pre-commit hooks.**
-  - **Context:** `shfmt` exists; linting shell semantics catches additional issues. (Also added to CI)
-
-- [x] **Extend ACL generator tests beyond tag-owners to rule behavior.**
-  - **Context:** current tests focus on tag owners; rule list and non-Tailscale-host behavior should be covered.
-  - **Do this:** assert generated rules and assert hosts without `tailscale.tag` produce no tag ownership entries.
-
-- [x] **Add invariant enforcing that `boot.initrd.secrets` points only to sops-managed secret paths.**
-  - **Context:** prevents regressions to in-tree plaintext key material.
-
----
-
 ## P2 — Medium Priority Maintainability & Reproducibility
 
-- [x] **Extract shared host sops/user wiring (`profiles/sops-base.nix` or equivalent).**
-  - **Context:** repeated host boilerplate for `sops.defaultSopsFile`, format, `age.sshKeyPaths`, and user authorized-key wiring.
+- [x] **Lift hardcoded microvm external interface (`wlp0s20f3`) into host-level option or robust match rule.**
+  - **Context:** interface renaming can break networking unexpectedly.
 
-- [x] **Extract shared Restic profile and actually use host `backup.class`.**
-  - **Context:** backup blocks are duplicated across `main`, `homeserver`, and `homeserver-vm`; `backup.class` exists in registry but is not used.
+- [x] **Extract sops/Grafana file-substitution helper (`mkFileDirective`).**
+  - **Context:** repeated inline pattern in observability module reduces readability.
 
-- [x] **Unify network identity source of truth (`lib/hosts.nix` vs `lib/network.nix`).**
-  - **Context:** `tailnetFQDN` appears in multiple places.
-  - **Do this:** derive network info from host registry or remove duplicate field.
+- [x] **Consolidate overlapping Nix store optimization settings.**
+  - **Context:** `nix.gc.automatic`, `nix.optimise.automatic`, and `nix.settings.auto-optimise-store` overlap in purpose.
+  - **Do this:** keep one clear strategy.
 
-- [x] **Add typed schema validation for `lib/hosts.nix` entries.**
-  - **Context:** mixed-shape entries are filtered by presence checks, so malformed data can be silently skipped.
-  - **Do this:** define typed submodule schema with explicit optional fields (`nullOr`) and fail at eval time on invalid registry entries.
+- [x] **Improve `scripts/vm.sh` maintainability and SSH config integration model.**
+  - **Context 1:** repetitive inline `printf "%-20s"` formatting logic.
+  - **Context 2:** script mutates user `~/.ssh/config` directly (imperative behavior from Nix-built script).
+  - **Do this:** extract formatting helper and prefer HM-managed `Include` fragment strategy.
 
-- [x] **Replace impure `builtins.getEnv "CI"` toggle in `home/profiles/workstation.nix`.**
-  - **Context:** flakes evaluate purely by default; current pattern can silently misbehave.
-  - **Do this:** pass pure toggle via `specialArgs` or explicit option.
+- [x] **Normalize generator output style (Alloy trailing commas).**
+  - **Context:** current rendering style is tolerated by parser but diverges from common River style.
 
-- [x] **Export `home/profiles/desktop.nix` consistently in `flake.nix` home modules output.**
-  - **Context:** currently imported by user config but not exported with corresponding profile module set.
+- [x] **Unify package graph wiring to avoid split overlay/config maintenance.**
+  - **Context:** top-level `pkgs = import nixpkgs { ... }` plus independent NixOS imports can drift when overlays/config evolve.
 
-- [x] **Reduce duplication in `home/users/user/{home,server,wsl}.nix` via shared common profile.**
-  - **Context:** repeated git/zsh/session/state patterns across entry files.
+- [x] **Make host → Home Manager role/profile mapping explicit in registry.**
+  - **Context:** profile choices are currently repeated inline in host definitions.
+
+- [x] **Review and refine hardening overrides that disable syscall filter.**
+  - **Context:** several services (`thermald`, `power-profiles-daemon`, `fwupd`, `bluetooth`) set `SystemCallFilter = null`, reducing baseline hardening value.
+  - **Do this:** replace broad disablement with scoped allowlist profiles.
+
+- [x] **Align ACL policy model with host metadata richness (or explicitly document minimal policy intent).**
+  - **Context:** current ACL generation is intentionally simple; registry has richer metadata not yet consumed.
+
+- [x] **Address reproducibility gray areas.**
+  - ~~**Theme state:** `home/theme/active.nix` is imperatively changed by theme switch script.~~ **Resolved:** `git update-index --skip-worktree home/theme/active.nix` — file stays tracked (included in flake source, committed default survives fresh clone), but local writes from `theme-switch` are invisible to git. To commit a new default: `git update-index --no-skip-worktree home/theme/active.nix`, commit, re-apply skip.
+  - **Hardware config lifecycle:** hand-maintained `hardware-configuration.nix` should have regeneration policy/date note.
+  - **Timezone flexibility:** `Europe/Warsaw` is globally fixed; consider host-level override path.
+
+- [x] **Migrate flake structure to `flake-parts` (or equivalent per-system pattern).**
+  - **Context:** current flake is functional but verbose and repetitive; migration improves scale to multi-arch and per-system ergonomics. (full multi-arch support split into a second goal)
+
+---
+
+## P3 — Documentation Tasks
+
+- [x] **Document Neovim config trade-off (raw Lua via `xdg.configFile` vs HM `programs.neovim`).**
+  - **Context:** current approach favors iteration speed but skips HM-level validation.
+
+- [x] **Document network hardening trade-off where `checkReversePath = "loose"` is required.**
+  - **Context:** current comment exists; make sure docs clearly capture rationale and security implication.
+
+- [x] **Adopt signed commits and/or signed release tags.**
