@@ -4,6 +4,8 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
+    flake-parts.follows = "nixos-anywhere/flake-parts";
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -57,6 +59,7 @@
     inputs@{
       self,
       nixpkgs,
+      flake-parts,
       home-manager,
       deploy-rs,
       nixos-anywhere,
@@ -68,10 +71,10 @@
       ...
     }:
     let
-      system = "x86_64-linux";
+      hostSystem = "x86_64-linux";
 
       pkgs = import nixpkgs {
-        inherit system;
+        system = hostSystem;
         config.allowUnfree = true;
       };
 
@@ -112,7 +115,7 @@
           hostMeta = hostRegistry.${host};
         in
         nixpkgs.lib.nixosSystem {
-          inherit system;
+          system = hostSystem;
           specialArgs = {
             inherit inputs self hostMeta;
           };
@@ -149,41 +152,9 @@
         autoRollback = true;
         profiles.system = {
           user = "root";
-          path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.${name};
+          path = deploy-rs.lib.${hostSystem}.activate.nixos self.nixosConfigurations.${name};
         };
       }) deployableHosts;
-
-      # VM management script — unified entry point
-      vmApp = {
-        type = "app";
-        program = toString (
-          pkgs.writeShellScript "vm" ''
-            export VM_REGISTRY='${builtins.toJSON vmRegistry}'
-            export OVMF_CODE="${pkgs.OVMF.fd}/FV/OVMF_CODE.fd"
-            export OVMF_SOURCE="${pkgs.OVMF.fd}/FV/OVMF_VARS.fd"
-            export QEMU_BIN="${pkgs.qemu}/bin/qemu-system-x86_64"
-            export QEMU_IMG_BIN="${pkgs.qemu}/bin/qemu-img"
-            export JQ_BIN="${pkgs.jq}/bin/jq"
-            export SSH_KEYGEN_BIN="${pkgs.openssh}/bin/ssh-keygen"
-            export NIXOS_ANYWHERE_BIN="${nixos-anywhere.packages.${system}.nixos-anywhere}/bin/nixos-anywhere"
-            export SOPS_BIN="${pkgs.sops}/bin/sops"
-            export SSH_TO_AGE_BIN="${pkgs.ssh-to-age}/bin/ssh-to-age"
-            exec ${pkgs.bash}/bin/bash ${./scripts/vm.sh} "$@"
-          ''
-        );
-        meta.description = "Manage QEMU/KVM virtual machines";
-      };
-
-      treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
-
-      preCommitCheck = import ./pre-commit-hooks.nix {
-        inherit
-          pkgs
-          pre-commit-hooks
-          system
-          treefmtEval
-          ;
-      };
 
       # ── Configuration Invariant Checks ──────────────────────────────────
       invariantChecks =
@@ -312,171 +283,217 @@
           hostName: config: cveChecks.mkCveCheck hostName config.config.system.build.toplevel
         ) hostsToCheck;
     in
-    {
-      # ── Apps ────────────────────────────────────────────────────────────────
-      apps.${system} = {
-        vm = vmApp;
-        reinstall-homeserver = {
-          type = "app";
-          program = toString (
-            pkgs.writeShellScript "reinstall-homeserver" ''
-              export SOPS_BIN="${pkgs.sops}/bin/sops"
-              export NIXOS_ANYWHERE_BIN="${nixos-anywhere.packages.${system}.nixos-anywhere}/bin/nixos-anywhere"
-              exec ${pkgs.bash}/bin/bash ${./scripts/reinstall-homeserver.sh} "$@"
-            ''
-          );
-          meta.description = "Reinstall NixOS on the homeserver via nixos-anywhere";
-        };
-      };
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      systems = [ hostSystem ];
 
-      # ── Packages ────────────────────────────────────────────────────────────
-      packages.${system} = {
-        tailscale-acl =
-          pkgs.runCommand "tailscale-acl"
-            {
-              aclJson = builtins.toJSON (aclGen.mkAcl hostRegistry);
-              passAsFile = [ "aclJson" ];
-            }
-            ''
-              cp "$aclJsonPath" "$out"
-            '';
-
-        installer-iso =
-          (nixpkgs.lib.nixosSystem {
+      perSystem =
+        { system, ... }:
+        let
+          pkgs = import nixpkgs {
             inherit system;
-            specialArgs = { inherit inputs; };
-            modules = [ ./hosts/installer/default.nix ];
-          }).config.system.build.isoImage;
-      };
+            config.allowUnfree = true;
+          };
 
-      # ── Formatter ───────────────────────────────────────────────────────────
-      formatter.${system} = treefmtEval.config.build.wrapper;
+          # VM management script — unified entry point
+          vmApp = {
+            type = "app";
+            program = toString (
+              pkgs.writeShellScript "vm" ''
+                export VM_REGISTRY='${builtins.toJSON vmRegistry}'
+                export OVMF_CODE="${pkgs.OVMF.fd}/FV/OVMF_CODE.fd"
+                export OVMF_SOURCE="${pkgs.OVMF.fd}/FV/OVMF_VARS.fd"
+                export QEMU_BIN="${pkgs.qemu}/bin/qemu-system-x86_64"
+                export QEMU_IMG_BIN="${pkgs.qemu}/bin/qemu-img"
+                export JQ_BIN="${pkgs.jq}/bin/jq"
+                export SSH_KEYGEN_BIN="${pkgs.openssh}/bin/ssh-keygen"
+                export NIXOS_ANYWHERE_BIN="${nixos-anywhere.packages.${system}.nixos-anywhere}/bin/nixos-anywhere"
+                export SOPS_BIN="${pkgs.sops}/bin/sops"
+                export SSH_TO_AGE_BIN="${pkgs.ssh-to-age}/bin/ssh-to-age"
+                exec ${pkgs.bash}/bin/bash ${./scripts/vm.sh} "$@"
+              ''
+            );
+            meta.description = "Manage QEMU/KVM virtual machines";
+          };
 
-      # ── Shells ──────────────────────────────────────────────────────────────
-      devShells.${system} = {
-        default = pkgs.mkShell {
-          packages =
-            (with pkgs; [
-              nixd
-              statix
-              deadnix
-              sops
-              ssh-to-age
-              qemu
-              OVMF
-              vulnix
-              direnv
-            ])
-            ++ [
-              deploy-rs.packages.${system}.deploy-rs
-              nixos-anywhere.packages.${system}.nixos-anywhere
-            ]
-            ++ preCommitCheck.enabledPackages;
-          shellHook = ''
-            ${preCommitCheck.shellHook}
-            # Make 'vm' command available directly in the dev shell
-            alias vm="nix run '.#vm' --"
-            exec ${pkgs.zsh}/bin/zsh
-          '';
+          treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
+
+          preCommitCheck = import ./pre-commit-hooks.nix {
+            inherit
+              pkgs
+              pre-commit-hooks
+              system
+              treefmtEval
+              ;
+          };
+        in
+        {
+          # ── Apps ────────────────────────────────────────────────────────────
+          apps = {
+            vm = vmApp;
+            reinstall-homeserver = {
+              type = "app";
+              program = toString (
+                pkgs.writeShellScript "reinstall-homeserver" ''
+                  export SOPS_BIN="${pkgs.sops}/bin/sops"
+                  export NIXOS_ANYWHERE_BIN="${nixos-anywhere.packages.${system}.nixos-anywhere}/bin/nixos-anywhere"
+                  exec ${pkgs.bash}/bin/bash ${./scripts/reinstall-homeserver.sh} "$@"
+                ''
+              );
+              meta.description = "Reinstall NixOS on the homeserver via nixos-anywhere";
+            };
+          };
+
+          # ── Packages ────────────────────────────────────────────────────────
+          packages = {
+            tailscale-acl =
+              pkgs.runCommand "tailscale-acl"
+                {
+                  aclJson = builtins.toJSON (aclGen.mkAcl hostRegistry);
+                  passAsFile = [ "aclJson" ];
+                }
+                ''
+                  cp "$aclJsonPath" "$out"
+                '';
+
+            installer-iso =
+              (nixpkgs.lib.nixosSystem {
+                inherit system;
+                specialArgs = { inherit inputs; };
+                modules = [ ./hosts/installer/default.nix ];
+              }).config.system.build.isoImage;
+          };
+
+          # ── Formatter ───────────────────────────────────────────────────────
+          formatter = treefmtEval.config.build.wrapper;
+
+          # ── Shells ──────────────────────────────────────────────────────────
+          devShells = {
+            default = pkgs.mkShell {
+              packages =
+                (with pkgs; [
+                  nixd
+                  statix
+                  deadnix
+                  sops
+                  ssh-to-age
+                  qemu
+                  OVMF
+                  vulnix
+                  direnv
+                ])
+                ++ [
+                  deploy-rs.packages.${system}.deploy-rs
+                  nixos-anywhere.packages.${system}.nixos-anywhere
+                ]
+                ++ preCommitCheck.enabledPackages;
+              shellHook = ''
+                ${preCommitCheck.shellHook}
+                # Make 'vm' command available directly in the dev shell
+                alias vm="nix run '.#vm' --"
+                exec ${pkgs.zsh}/bin/zsh
+              '';
+            };
+
+            security = pkgs.mkShell {
+              packages = with pkgs; [
+                nmap
+                whois
+                dnsutils
+                sqlmap
+                gobuster
+                ffuf
+                hydra
+                john
+                hashcat
+                netcat-gnu
+                wireshark-cli
+              ];
+              shellHook = ''
+                	echo "Security tools ready"
+                	echo ""
+                	echo "Available tools:"
+                	echo "  Network:   nmap, whois, dig, netcat"
+                	echo "  Web:       sqlmap, gobuster, ffuf"
+                	echo "  Password:  hydra, john, hashcat"
+                	echo "  Analysis:  wireshark-cli (tshark)"
+                	exec ${pkgs.zsh}/bin/zsh
+              '';
+            };
+          };
+
+          checks =
+            deploy-rs.lib.${system}.deployChecks self.deploy
+            // invariantChecks
+            // cveCheckMap
+            // {
+              vm-smoke = import ./tests/nixos/vm-smoke.nix {
+                inherit nixpkgs system inputs;
+              };
+              homeserver-vm-smoke = import ./tests/nixos/homeserver-vm-smoke.nix {
+                inherit nixpkgs system inputs;
+              };
+              profile-security = import ./tests/nixos/profile-security.nix {
+                inherit nixpkgs system;
+              };
+              profile-observability = import ./tests/nixos/profile-observability.nix {
+                inherit nixpkgs system;
+              };
+              profile-hardening = import ./tests/nixos/profile-hardening.nix {
+                inherit nixpkgs system;
+              };
+              lib-generators = import ./tests/lib/generators.nix {
+                inherit nixpkgs system;
+              };
+              lib-generators-golden = import ./tests/lib/generators.golden.nix {
+                inherit nixpkgs system;
+              };
+              lib-acl = import ./tests/lib/acl.nix {
+                inherit nixpkgs system;
+              };
+            };
         };
 
-        security = pkgs.mkShell {
-          packages = with pkgs; [
-            nmap
-            whois
-            dnsutils
-            sqlmap
-            gobuster
-            ffuf
-            hydra
-            john
-            hashcat
-            netcat-gnu
-            wireshark-cli
-          ];
-          shellHook = ''
-            	    echo "Security tools ready"
-            	    echo ""
-            	    echo "Available tools:"
-            	    echo "  Network:   nmap, whois, dig, netcat"
-            	    echo "  Web:       sqlmap, gobuster, ffuf"
-            	    echo "  Password:  hydra, john, hashcat"
-            	    echo "  Analysis:  wireshark-cli (tshark)"
-            	    exec ${pkgs.zsh}/bin/zsh
-          '';
+      flake = {
+        # ── NixOS Configurations ────────────────────────────────────────────
+        nixosConfigurations = allNixosConfigs // {
+          main-ci = mkNixos "main" { skipHeavyPackages = true; };
         };
-      };
 
-      # ── NixOS Configurations ────────────────────────────────────────────────
-      nixosConfigurations = allNixosConfigs // {
-        main-ci = mkNixos "main" { skipHeavyPackages = true; };
-      };
+        # ── Deploy-RS ───────────────────────────────────────────────────────
+        deploy.nodes = allDeployNodes;
 
-      # ── Deploy-RS ───────────────────────────────────────────────────────────
-      deploy.nodes = allDeployNodes;
-
-      checks.${system} =
-        deploy-rs.lib.${system}.deployChecks self.deploy
-        // invariantChecks
-        // cveCheckMap
-        // {
-          vm-smoke = import ./tests/nixos/vm-smoke.nix {
-            inherit nixpkgs system inputs;
+        # ── Home Manager Configurations ─────────────────────────────────────
+        homeConfigurations = {
+          user = home-manager.lib.homeManagerConfiguration {
+            inherit pkgs;
+            extraSpecialArgs = { inherit inputs; };
+            modules = [
+              ./home/users/user/home.nix
+            ];
           };
-          homeserver-vm-smoke = import ./tests/nixos/homeserver-vm-smoke.nix {
-            inherit nixpkgs system inputs;
-          };
-          profile-security = import ./tests/nixos/profile-security.nix {
-            inherit nixpkgs system;
-          };
-          profile-observability = import ./tests/nixos/profile-observability.nix {
-            inherit nixpkgs system;
-          };
-          profile-hardening = import ./tests/nixos/profile-hardening.nix {
-            inherit nixpkgs system;
-          };
-          lib-generators = import ./tests/lib/generators.nix {
-            inherit nixpkgs system;
-          };
-          lib-generators-golden = import ./tests/lib/generators.golden.nix {
-            inherit nixpkgs system;
-          };
-          lib-acl = import ./tests/lib/acl.nix {
-            inherit nixpkgs system;
+          "user@wsl" = home-manager.lib.homeManagerConfiguration {
+            inherit pkgs;
+            extraSpecialArgs = { inherit inputs; };
+            modules = [
+              ./home/users/user/wsl.nix
+            ];
           };
         };
 
-      # ── Home Manager Configurations ─────────────────────────────────────────
-      homeConfigurations = {
-        user = home-manager.lib.homeManagerConfiguration {
-          inherit pkgs;
-          extraSpecialArgs = { inherit inputs; };
-          modules = [
-            ./home/users/user/home.nix
-          ];
+        # ── Modules ─────────────────────────────────────────────────────────
+        nixosModules = {
+          profiles-base = import ./modules/nixos/profiles/base.nix;
+          profiles-desktop = import ./modules/nixos/profiles/desktop.nix;
+          profiles-observability = import ./modules/nixos/profiles/observability.nix;
+          profiles-security = import ./modules/nixos/profiles/security.nix;
+          profiles-vm = import ./modules/nixos/profiles/vm.nix;
         };
-        "user@wsl" = home-manager.lib.homeManagerConfiguration {
-          inherit pkgs;
-          extraSpecialArgs = { inherit inputs; };
-          modules = [
-            ./home/users/user/wsl.nix
-          ];
+
+        homeModules = {
+          profiles-base = import ./home/profiles/base.nix;
+          profiles-desktop = import ./home/profiles/desktop.nix;
+          profiles-workstation = import ./home/profiles/workstation.nix;
         };
-      };
-
-      # ── Modules ─────────────────────────────────────────────────────────────
-      nixosModules = {
-        profiles-base = import ./modules/nixos/profiles/base.nix;
-        profiles-desktop = import ./modules/nixos/profiles/desktop.nix;
-        profiles-observability = import ./modules/nixos/profiles/observability.nix;
-        profiles-security = import ./modules/nixos/profiles/security.nix;
-        profiles-vm = import ./modules/nixos/profiles/vm.nix;
-      };
-
-      homeModules = {
-        profiles-base = import ./home/profiles/base.nix;
-        profiles-desktop = import ./home/profiles/desktop.nix;
-        profiles-workstation = import ./home/profiles/workstation.nix;
       };
     };
 }
