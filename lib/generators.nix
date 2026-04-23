@@ -18,7 +18,8 @@ let
     else if lib.isBool v then
       (if v then "true" else "false")
     else if lib.isList v then
-      "[${lib.concatStringsSep ", " (map (renderValue depth) v)}]"
+      let items = map (renderValue depth) v;
+      in if items == [ ] then "[]" else "[${lib.concatStringsSep ", " items},]"
     else if lib.isAttrs v && !isBlock v then
       let
         pairs = lib.mapAttrsToList (
