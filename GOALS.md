@@ -38,7 +38,7 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
   - **Context:** current ACL generation is intentionally simple; registry has richer metadata not yet consumed.
 
 - [ ] **Address reproducibility gray areas.**
-  - **Theme state:** `home/theme/active.nix` is imperatively changed by theme switch script.
+  - ~~**Theme state:** `home/theme/active.nix` is imperatively changed by theme switch script.~~ **Resolved:** `git update-index --skip-worktree home/theme/active.nix` — file stays tracked (included in flake source, committed default survives fresh clone), but local writes from `theme-switch` are invisible to git. To commit a new default: `git update-index --no-skip-worktree home/theme/active.nix`, commit, re-apply skip.
   - **Hardware config lifecycle:** hand-maintained `hardware-configuration.nix` should have regeneration policy/date note.
   - **Timezone flexibility:** `Europe/Warsaw` is globally fixed; consider host-level override path.
 

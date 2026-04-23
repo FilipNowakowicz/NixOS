@@ -101,6 +101,9 @@ nix run '.#vm' -- ssh <name>      # SSH into VM
 - `modules/nixos/hardware/` — hardware drivers and graphics (NVIDIA PRIME)
 - `home/profiles/` — home-manager profiles (base, desktop, workstation)
 - `home/theme/` — runtime-swappable themes and Home Manager module
+  - `active.nix` is intentionally local state (tracks current theme). On a fresh clone, run:
+    `git update-index --skip-worktree home/theme/active.nix`
+    To commit a new default: `git update-index --no-skip-worktree home/theme/active.nix`, commit, re-apply.
 - `home/files/` — dotfiles and standalone scripts (NIX_REPO injected)
 - `home/users/user/` — user home-manager entry points (`home.nix`, `server.nix`, `wsl.nix`)
 
