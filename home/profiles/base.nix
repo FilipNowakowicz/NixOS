@@ -41,6 +41,7 @@
 
     # AI
     claude-code
+    codex
     gemini-cli
 
     # GitHub / Steam
