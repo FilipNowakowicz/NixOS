@@ -45,10 +45,12 @@ die() {
 
 vm_attr() {
   local name="$1" attr="$2"
+  # shellcheck disable=SC2016
   "$JQ_BIN" -r --arg n "$name" --arg a "$attr" '.[$n][$a] // empty' <<<"$VM_REGISTRY"
 }
 
 vm_exists_in_registry() {
+  # shellcheck disable=SC2016
   "$JQ_BIN" -e --arg n "$1" 'has($n)' <<<"$VM_REGISTRY" >/dev/null 2>&1
 }
 
@@ -216,6 +218,7 @@ action_create() {
   echo "Installing NixOS via nixos-anywhere..."
   local tmpdir
   tmpdir=$(mktemp -d)
+  # shellcheck disable=SC2064
   trap "rm -rf $tmpdir" EXIT
 
   mkdir -p "$tmpdir/persist/etc/ssh"
@@ -352,6 +355,7 @@ action_reinstall() {
   echo "Reinstalling NixOS via nixos-anywhere..."
   local tmpdir
   tmpdir=$(mktemp -d)
+  # shellcheck disable=SC2064
   trap "rm -rf $tmpdir" EXIT
 
   mkdir -p "$tmpdir/persist/etc/ssh"
@@ -468,6 +472,7 @@ action_init() {
   # Generate SSH host key pair
   local tmpdir
   tmpdir=$(mktemp -d)
+  # shellcheck disable=SC2064
   trap "rm -rf $tmpdir" EXIT
 
   "$SSH_KEYGEN_BIN" -t ed25519 -f "$tmpdir/ssh_host_ed25519_key" -N "" -q

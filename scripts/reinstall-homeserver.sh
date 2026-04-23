@@ -5,6 +5,7 @@ target_ip="${1:?Usage: reinstall-homeserver <target-ip>}"
 
 # Temp dir for injected host keys; cleaned up on exit
 tmpdir=$(mktemp -d)
+# shellcheck disable=SC2064
 trap "rm -rf $tmpdir" EXIT
 
 mkdir -p "$tmpdir/etc/ssh"

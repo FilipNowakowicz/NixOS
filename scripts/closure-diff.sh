@@ -65,9 +65,12 @@ format_diff_table() {
 
   echo "$nvd_output" | grep -E '^\s+\S+:' | while read -r line; do
     # Extract package name and sizes
-    local package=$(echo "$line" | sed -E 's/^\s+([^:]+):.*/\1/')
-    local old_size=$(echo "$line" | sed -E 's/.*: ([0-9.]+[KMG]?B?) -> .*/\1/')
-    local new_size=$(echo "$line" | sed -E 's/.*-> ([0-9.]+[KMG]?B?) .*/\1/')
+    local package
+    package=$(echo "$line" | sed -E 's/^\s+([^:]+):.*/\1/')
+    local old_size
+    old_size=$(echo "$line" | sed -E 's/.*: ([0-9.]+[KMG]?B?) -> .*/\1/')
+    local new_size
+    new_size=$(echo "$line" | sed -E 's/.*-> ([0-9.]+[KMG]?B?) .*/\1/')
 
     # Skip if we couldn't parse
     if [[ -z $old_size ]] || [[ -z $new_size ]]; then
@@ -75,8 +78,10 @@ format_diff_table() {
     fi
 
     # Convert to bytes for calculation
-    local old_bytes=$(echo "$old_size" | numfmt --from=auto 2>/dev/null || echo 0)
-    local new_bytes=$(echo "$new_size" | numfmt --from=auto 2>/dev/null || echo 0)
+    local old_bytes
+    old_bytes=$(echo "$old_size" | numfmt --from=auto 2>/dev/null || echo 0)
+    local new_bytes
+    new_bytes=$(echo "$new_size" | numfmt --from=auto 2>/dev/null || echo 0)
     local delta_bytes=$((new_bytes - old_bytes))
     local delta_pct=0
 
