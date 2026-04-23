@@ -16,6 +16,9 @@ approaches proactively. Explain why, not just what.
 - **Deploy (main):** `nh os switch --hostname main .` (alias: `rebuild`)
 - **Validate flake:** `nix flake check`
 - **Automated updates:** Weekly `flake.lock` updates (`flake-update.yml`); auto-merges if `merge-gate` status check passes.
+- **Merge Gate:** Consolidates all required checks (flake-check, invariants, smoke-tests) into a single required status check for branch protection.
+- **Module Topology:** Global profile imports in `modules/nixos/default.nix` have been removed. Hosts must explicitly import required profiles (e.g., `desktop`, `security`).
+- **Host Registry:** `lib/hosts.nix` is the single source of truth and uses typed schema validation.
 - **Validate invariants:** `nix build '.#checks.x86_64-linux.invariants-<host>'`
 - **Validate profile:** `nix build '.#checks.x86_64-linux.profile-<name>'`
 - **Golden tests:** `nix build '.#checks.x86_64-linux.lib-generators-golden'`
@@ -96,7 +99,7 @@ nix run '.#vm' -- ssh <name>      # SSH into VM
 - `scripts/closure-diff.sh` — compute closure diffs in CI
 - `scripts/reinstall-homeserver.sh` — real homeserver reinstall (separate workflow)
 - `modules/nixos/microvms/` — microvm.nix VM definitions (homeserver-vm)
-- `modules/nixos/profiles/` — system profiles (base, desktop, security, observability, vm)
+- `modules/nixos/profiles/` — system profiles (base, desktop, security, observability, vm, sops-base)
 - `modules/nixos/services/` — standalone systemd services (hardened.nix, failure-notify)
 - `modules/nixos/hardware/` — hardware drivers and graphics (NVIDIA PRIME)
 - `home/profiles/` — home-manager profiles (base, desktop, workstation)
@@ -127,6 +130,12 @@ Managed with sops-nix + age. Edit secrets with `sops <file>`.
 - **vm host:** has its own SSH host key in `hosts/vm/secrets/` — injected during `create`/`reinstall`
 
 - **homeserver-vm:** uses a dedicated age key stored in main's sops secrets (`hosts/main/secrets/secrets.yaml`), injected into the VM via virtiofs at `/run/age-keys/`
+
+- **Homeserver Bootstrap:** Real hardware reinstall requires pre-baked host keys in `hosts/homeserver/secrets/` to ensure the host has a stable age identity from first boot. If missing, the `homeserver-sops-bootstrap` invariant check will fail.
+  1. Generate key: `ssh-keygen -t ed25519 -f /tmp/hs_key -N ""`
+  2. Encrypt: `sops encrypt --input-type binary --output-type binary --output hosts/homeserver/secrets/ssh_host_ed25519_key.enc /tmp/hs_key`
+  3. Encrypt pubkey: `sops encrypt --input-type binary --output-type binary --output hosts/homeserver/secrets/ssh_host_ed25519_key.pub.enc /tmp/hs_key.pub`
+  4. Update `.sops.yaml` with the new age key and run `sops updatekeys hosts/homeserver/secrets/secrets.yaml`.
 
 ---
 
