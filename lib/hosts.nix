@@ -8,11 +8,13 @@
 #   tailnetFQDN — per-host Tailscale FQDN; unused metadata for now (host configs read lib/network.nix directly)
 #   tailscale   — Tailscale metadata; presence means host is on the tailnet
 #     .tag      — Tailscale tag assigned to this host (without "tag:" prefix)
-#   backup      — metadata; ready to drive a backup module later
+#   backup      — drives modules/nixos/profiles/backup.nix retention policy
+#     .class    — "critical" (14d/8w/6m/2y) | "standard" (7d/4w/3m); absent = no backup module
 {
   main = {
     role = "workstation";
     tailscale.tag = "workstation";
+    backup.class = "standard";
   };
 
   homeserver = {
@@ -33,5 +35,6 @@
   homeserver-vm = {
     role = "homeserver-vm";
     ip = "10.0.100.2";
+    backup.class = "critical";
   };
 }

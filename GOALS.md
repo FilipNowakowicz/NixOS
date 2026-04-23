@@ -110,7 +110,7 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
 - [x] **Extract shared host sops/user wiring (`profiles/sops-base.nix` or equivalent).**
   - **Context:** repeated host boilerplate for `sops.defaultSopsFile`, format, `age.sshKeyPaths`, and user authorized-key wiring.
 
-- [ ] **Extract shared Restic profile and actually use host `backup.class`.**
+- [x] **Extract shared Restic profile and actually use host `backup.class`.**
   - **Context:** backup blocks are duplicated across `main`, `homeserver`, and `homeserver-vm`; `backup.class` exists in registry but is not used.
 
 - [ ] **Unify network identity source of truth (`lib/hosts.nix` vs `lib/network.nix`).**
