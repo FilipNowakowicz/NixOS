@@ -48,9 +48,9 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
   - **Context:** `.github/workflows/nix.yml` uses `needs.changes.outputs.vm` but `changes` does not set `vm`; `tests/` path changes do not trigger smoke.
   - **Do this:** add proper VM path filter output and include `tests/` in relevant regex.
 
-- [ ] **Ensure flake-update auto-merge cannot bypass required checks.**
+- [x] **Ensure flake-update auto-merge cannot bypass required checks.**
   - **Context:** `flake-update.yml` auto-merges update PRs; safety depends on branch protection.
-  - **Do this:** require all status checks before merge (flake checks, invariants, smoke, closure-diff), and document required protection policy.
+  - **Done:** added `merge-gate` job to `nix.yml` that consolidates all checks (flake-check, invariants, closure-diff, smoke-test) into a single required status. Configure branch protection: Settings → Branches → `main` → require status check `merge-gate`. smoke-test and closure-diff are allowed to be skipped (conditional jobs); flake-check and invariants must succeed.
 
 - [x] **Add `cachix push` in CI after successful builds.**
   - **Context:** current CI appears to consume cache but does not seed it, causing avoidable rebuild cost on subsequent runs.

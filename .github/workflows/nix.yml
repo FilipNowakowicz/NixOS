@@ -240,3 +240,41 @@ jobs:
           test -n "$CACHIX_AUTH_TOKEN" || exit 0
           test -f /tmp/cachix-paths.txt || exit 0
           sort -u /tmp/cachix-paths.txt | xargs --no-run-if-empty cachix push filipnowakowicz
+
+  # Single required-check gate for branch protection.
+  # Configure GitHub branch protection to require ONLY this job:
+  #   Settings → Branches → Branch name pattern: main
+  #   ✓ Require status checks to pass before merging
+  #   ✓ Require branches to be up to date before merging
+  #   Required check name: "merge-gate"
+  # This prevents flake-update auto-merge from bypassing CI: `gh pr merge --auto`
+  # only merges when all required checks pass, so this job is the enforcement point.
+  # smoke-test and closure-diff are allowed to be skipped (they are conditional).
+  merge-gate:
+    needs: [flake-check, invariants, closure-diff, smoke-test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all required checks passed
+        env:
+          RESULT_FLAKE: ${{ needs.flake-check.result }}
+          RESULT_INVARIANTS: ${{ needs.invariants.result }}
+          RESULT_CLOSURE: ${{ needs.closure-diff.result }}
+          RESULT_SMOKE: ${{ needs.smoke-test.result }}
+        run: |
+          echo "flake-check:  $RESULT_FLAKE"
+          echo "invariants:   $RESULT_INVARIANTS"
+          echo "closure-diff: $RESULT_CLOSURE"
+          echo "smoke-test:   $RESULT_SMOKE"
+
+          fail=0
+          [[ "$RESULT_FLAKE" == "success" ]]      || { echo "FAIL: flake-check ($RESULT_FLAKE)"; fail=1; }
+          [[ "$RESULT_INVARIANTS" == "success" ]] || { echo "FAIL: invariants ($RESULT_INVARIANTS)"; fail=1; }
+          # closure-diff is PR-only — skipped on push events, acceptable
+          [[ "$RESULT_CLOSURE" == "success" || "$RESULT_CLOSURE" == "skipped" ]] \
+            || { echo "FAIL: closure-diff ($RESULT_CLOSURE)"; fail=1; }
+          # smoke-test is path-conditional — skipped when no relevant paths changed, acceptable
+          [[ "$RESULT_SMOKE" == "success" || "$RESULT_SMOKE" == "skipped" ]] \
+            || { echo "FAIL: smoke-test ($RESULT_SMOKE)"; fail=1; }
+
+          exit $fail
