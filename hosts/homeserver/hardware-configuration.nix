@@ -1,4 +1,8 @@
-# STUB — replace with real hardware config generated on the target machine.
+# Hand-maintained hardware configuration stub.
+# Regeneration policy: replace this file with generated hardware config from the
+# target machine during install or after hardware topology changes, then review
+# and keep only the host-specific settings that should remain hand-maintained.
+# Last reviewed: 2026-04-24.
 # Run on the installed system: nixos-generate-config --show-hardware-config
 # or generate during install: nixos-anywhere --generate-hardware-config nixos-generate-config ...
 { modulesPath, ... }:

@@ -87,3 +87,8 @@ The entry points. A host file should be a "thin" composition of:
 2.  Disk layout (`disko.nix`).
 3.  A list of Profile imports.
 4.  Host-specific secrets and identity.
+
+Hand-maintained `hardware-configuration.nix` files must carry a short header
+with their regeneration policy and a `Last reviewed: YYYY-MM-DD` note so it is
+obvious when a checked-in hardware snapshot should be regenerated or manually
+revalidated.
