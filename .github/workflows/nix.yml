@@ -63,6 +63,9 @@ jobs:
       - name: Format check (treefmt)
         run: nix fmt -- --fail-on-change
 
+      - name: Lint shell (shellcheck)
+        run: nix run nixpkgs#shellcheck -- $(find . -type f -name '*.sh' -not -path './.*')
+
   closure-diff:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'

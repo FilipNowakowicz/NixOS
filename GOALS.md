@@ -106,7 +106,7 @@ isolated boot network, practical exposure is much lower."
   - **Context:** hook checks staged file content but reads allowlist from working tree, which can weaken trust in edge cases.
 
 - [x] **Add `shellcheck` to pre-commit hooks.**
-  - **Context:** `shfmt` exists; linting shell semantics catches additional issues.
+  - **Context:** `shfmt` exists; linting shell semantics catches additional issues. (Also added to CI)
 
 - [ ] **Extend ACL generator tests beyond tag-owners to rule behavior.**
   - **Context:** current tests focus on tag owners; rule list and non-Tailscale-host behavior should be covered.
