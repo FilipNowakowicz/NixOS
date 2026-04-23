@@ -9,6 +9,7 @@
   microvm.vms.homeserver-vm = {
     flake = self;
     autostart = true;
+    vsock.cid = 3;
   };
 
   # ── Bridge networking (host-only, managed by systemd-networkd) ────────────

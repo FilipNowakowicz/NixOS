@@ -256,10 +256,19 @@
               '';
         };
 
-      # Generate CVE checks for all NixOS configs
-      cveCheckMap = lib.mapAttrs (
-        hostName: config: cveChecks.mkCveCheck hostName config.config.system.build.toplevel
-      ) allNixosConfigs;
+      # Generate CVE checks for all hosts, but skip test VMs in CI
+      cveCheckMap =
+        let
+          isCi = builtins.getEnv "CI" != "";
+          hostsToCheck =
+            if isCi then
+              lib.filterAttrs (name: _: name != "vm" && name != "homeserver-vm") allNixosConfigs
+            else
+              allNixosConfigs;
+        in
+        lib.mapAttrs (
+          hostName: config: cveChecks.mkCveCheck hostName config.config.system.build.toplevel
+        ) hostsToCheck;
     in
     {
       # ── Apps ────────────────────────────────────────────────────────────────

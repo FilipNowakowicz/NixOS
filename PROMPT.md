@@ -11,3 +11,5 @@ I have recently updated the NixOS configuration with the changes listed below. N
 4.  **Verification:** Cross-reference `flake.nix` with the documentation to ensure all new outputs or inputs are accounted for.
 
 **The main changes are:**
+
+- Generate CVE checks for all hosts, but skip test VMs in CI (CI was running out of space)
