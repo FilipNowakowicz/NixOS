@@ -113,8 +113,8 @@
       allDeployNodes = lib.mapAttrs (name: cfg: {
         hostname = name;
         inherit (cfg.deploy) sshUser;
-        magicRollback = false;
-        autoRollback = false;
+        magicRollback = true;
+        autoRollback = true;
         profiles.system = {
           user = "root";
           path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.${name};

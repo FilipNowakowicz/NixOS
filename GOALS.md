@@ -26,15 +26,22 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
   - **Context:** `&homeserver_host` is commented; first boot decryption can silently fail until deploy time.
   - **Do this:** add homeserver age key mapping, run `sops updatekeys`, document bootstrapping sequence, and add invariant/pre-deploy check that errors when homeserver host identity is missing.
 
-- [ ] **Add at least one recovery SSH key to `lib/pubkeys.nix` and document recovery procedure.**
+- [x] **Add at least one recovery SSH key to `lib/pubkeys.nix` and document recovery procedure.**
   - **Context:** single-key setup is a lockout risk for initrd unlock and host recovery.
-  - **Do this:** add backup ed25519 key (offline/U2F-backed recommended), confirm all relevant auth surfaces consume it (including initrd authorized keys), document rotation/recovery flow.
+  - **Done:** added `recovery@main` ed25519 key (`~/.ssh/id_ed25519_recovery`). All auth surfaces consume `lib/pubkeys.nix`: initrd SSH (port 2222, LUKS unlock), main/homeserver/homeserver-vm/vm SSH, and installer root.
+  - **Recovery procedure:**
+    1. Retrieve `id_ed25519_recovery` from offline storage (Vaultwarden secure note or USB).
+    2. Boot fails TPM unlock → initrd SSH on port 2222 is available.
+    3. `ssh -i /path/to/id_ed25519_recovery -p 2222 root@<host-ip>` → enter LUKS passphrase.
+    4. Host boots normally; follow up with `nh os switch` to redeploy if config drift.
+  - **Key rotation:** generate new key, replace entry in `lib/pubkeys.nix`, rebuild and deploy all affected hosts, then retire old private key from offline storage.
+  - **Store `~/.ssh/id_ed25519_recovery` offline** (Vaultwarden secure note or encrypted USB). The copy on `main` is useless during a lockout — offline storage is the only copy that matters.
 
 ---
 
 ## P1 — High Priority Reliability, CI, and Operational Safety
 
-- [ ] **Re-enable deploy-rs rollback safety (`magicRollback = true`) on deploy nodes.**
+- [x] **Re-enable deploy-rs rollback safety (`magicRollback = true`) on deploy nodes.**
   - **Context:** current `magicRollback = false; autoRollback = false` raises outage risk if SSH/firewall deploys fail.
 
 - [x] **Fix CI path-filter wiring so VM smoke actually runs, and smoke test edits retrigger smoke.**
@@ -157,8 +164,9 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
 - [ ] **Update README USBGuard wording to match actual allowlist reality.**
   - **Context:** current wording implies complete deny-default coverage while actual whitelist may be narrower (for example only Logitech receiver).
 
-- [ ] **Extend README secure-boot/encryption section with initrd SSH recovery path details.**
+- [x] **Extend README secure-boot/encryption section with initrd SSH recovery path details.**
   - **Context:** TPM unlock is documented; initrd SSH fallback should be explicit.
+  - **Done:** recovery procedure documented inline in P0 recovery-key task above.
 
 - [ ] **Add README/CLAUDE callout for sops bootstrap chicken-and-egg and host-key rotation implications.**
   - **Context:** host SSH key changes require corresponding `sops updatekeys` workflow.
