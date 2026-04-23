@@ -128,7 +128,7 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
 - [x] **Export `home/profiles/desktop.nix` consistently in `flake.nix` home modules output.**
   - **Context:** currently imported by user config but not exported with corresponding profile module set.
 
-- [ ] **Reduce duplication in `home/users/user/{home,server,wsl}.nix` via shared common profile.**
+- [x] **Reduce duplication in `home/users/user/{home,server,wsl}.nix` via shared common profile.**
   - **Context:** repeated git/zsh/session/state patterns across entry files.
 
 - [ ] **Lift hardcoded microvm external interface (`wlp0s20f3`) into host-level option or robust match rule.**

@@ -102,7 +102,12 @@
             {
               imports = [ ./modules/nixos ];
             }
-            { home-manager.extraSpecialArgs = hmArgs; }
+            {
+              home-manager.extraSpecialArgs = {
+                skipHeavyPackages = false;
+              }
+              // hmArgs;
+            }
           ];
         };
 

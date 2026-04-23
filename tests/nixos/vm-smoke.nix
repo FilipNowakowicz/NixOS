@@ -27,6 +27,10 @@ in
           inputs.sops-nix.nixosModules.sops
         ];
 
+        home-manager.extraSpecialArgs = {
+          skipHeavyPackages = true;
+        };
+
         sops = lib.mkForce {
           defaultSopsFile =
             let
