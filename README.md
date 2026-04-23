@@ -146,7 +146,7 @@ nix run '.#vm' -- <action> <name>
 
 ### Adding a new host
 
-1. Add an entry to `lib/hosts.nix` (role, and if it's a QEMU VM: SSH port, disk size)
+1. Add an entry to `lib/hosts.nix` (role, Home Manager role/profile mapping, and if it's a QEMU VM: SSH port, disk size)
 2. Create `hosts/<name>/default.nix` (import `modules/nixos/profiles/vm.nix` for QEMU VMs or appropriate profiles for real hosts)
 3. Generate sops secrets: `nix run '.#vm' -- init <name>` (for QEMU VMs) or manual setup for real hosts.
 

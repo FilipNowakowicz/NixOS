@@ -79,6 +79,24 @@
 
       hostRegistry = import ./lib/hosts.nix;
 
+      homeManagerRoleModules = {
+        desktop = ./home/users/user/home.nix;
+        server = ./home/users/user/server.nix;
+      };
+
+      homeManagerProfileModules = {
+        desktop = ./home/profiles/desktop.nix;
+        workstation = ./home/profiles/workstation.nix;
+      };
+
+      mkHomeManagerImports =
+        hostMeta:
+        let
+          hm = hostMeta.homeManager;
+        in
+        [ homeManagerRoleModules.${hm.role} ]
+        ++ map (profile: homeManagerProfileModules.${profile}) (hm.profiles or [ ]);
+
       invariants = import ./lib/invariants.nix { inherit lib pkgs; };
 
       aclGen = import ./lib/acl.nix { inherit lib; };
@@ -90,9 +108,14 @@
 
       mkNixos =
         host: hmArgs:
+        let
+          hostMeta = hostRegistry.${host};
+        in
         nixpkgs.lib.nixosSystem {
           inherit system;
-          specialArgs = { inherit inputs self; };
+          specialArgs = {
+            inherit inputs self hostMeta;
+          };
           modules = [
             ./hosts/${host}/default.nix
             home-manager.nixosModules.home-manager
@@ -102,6 +125,9 @@
             {
               imports = [ ./modules/nixos ];
             }
+            (lib.mkIf (hostMeta ? homeManager) {
+              home-manager.users.user.imports = mkHomeManagerImports hostMeta;
+            })
             {
               home-manager.extraSpecialArgs = {
                 skipHeavyPackages = false;

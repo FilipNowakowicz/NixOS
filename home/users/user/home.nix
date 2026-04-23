@@ -62,8 +62,6 @@ in
 
   imports = [
     ./common.nix
-    ../../profiles/desktop.nix
-    ../../profiles/workstation.nix
     ../../theme/module.nix
   ];
 
