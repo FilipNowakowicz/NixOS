@@ -148,7 +148,8 @@ nix run '.#vm' -- <action> <name>
 
 1. Add an entry to `lib/hosts.nix` (role, Home Manager role/profile mapping, and if it's a QEMU VM: SSH port, disk size)
 2. Create `hosts/<name>/default.nix` (import `modules/nixos/profiles/vm.nix` for QEMU VMs or appropriate profiles for real hosts)
-3. Generate sops secrets: `nix run '.#vm' -- init <name>` (for QEMU VMs) or manual setup for real hosts.
+3. If the host has a checked-in `hardware-configuration.nix`, add a short header documenting its regeneration policy and `Last reviewed: YYYY-MM-DD`.
+4. Generate sops secrets: `nix run '.#vm' -- init <name>` (for QEMU VMs) or manual setup for real hosts.
 
 Multiple VMs can run simultaneously — each has its own disk image, OVMF vars, and SSH port (for QEMU).
 

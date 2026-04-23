@@ -1,3 +1,10 @@
+#
+# Hand-maintained hardware configuration.
+# Regeneration policy: do not blindly overwrite this file; regenerate from the
+# target machine only after hardware topology, firmware-facing device exposure,
+# or required kernel module detection changes, then review the diff before
+# merging.
+# Last reviewed: 2026-04-24.
 { modulesPath, ... }:
 {
   imports = [
