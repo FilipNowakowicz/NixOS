@@ -64,7 +64,7 @@ in
         };
       };
       secrets = {
-        "/etc/secrets/initrd/ssh_host_ed25519_key" = lib.mkForce ./initrd-ssh-host-key;
+        "/etc/secrets/initrd/ssh_host_ed25519_key" = lib.mkForce "/run/secrets/initrd_ssh_host_ed25519_key";
       };
     };
   };
@@ -293,6 +293,7 @@ in
         mode = "0440";
       };
       restic_password = { };
+      initrd_ssh_host_ed25519_key = { };
     };
   };
 
