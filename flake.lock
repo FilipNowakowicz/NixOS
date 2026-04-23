@@ -445,6 +445,10 @@
       "inputs": {
         "deploy-rs": "deploy-rs",
         "disko": "disko",
+        "flake-parts": [
+          "nixos-anywhere",
+          "flake-parts"
+        ],
         "home-manager": "home-manager",
         "impermanence": "impermanence",
         "lanzaboote": "lanzaboote",
