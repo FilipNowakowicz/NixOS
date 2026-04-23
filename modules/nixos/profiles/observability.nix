@@ -8,6 +8,7 @@ let
   cfg = config.profiles.observability;
   gen = import ../../../lib/generators.nix { inherit lib; };
   dash = import ../../../lib/dashboards.nix;
+  mkFileDirective = path: "$__file{${toString path}}";
 
   shouldUseIngestAuth = cfg.ingestAuth.username != null && cfg.ingestAuth.passwordFile != null;
   metricsRemoteWriteAuth = lib.optionalAttrs shouldUseIngestAuth {
@@ -483,10 +484,10 @@ in
             admin_user = cfg.grafana.adminUser;
           }
           // lib.optionalAttrs (cfg.grafana.secretKeyFile != null) {
-            secret_key = "$__file{${toString cfg.grafana.secretKeyFile}}";
+            secret_key = mkFileDirective cfg.grafana.secretKeyFile;
           }
           // lib.optionalAttrs (cfg.grafana.adminPasswordFile != null) {
-            admin_password = "$__file{${toString cfg.grafana.adminPasswordFile}}";
+            admin_password = mkFileDirective cfg.grafana.adminPasswordFile;
           };
         };
         provision = {
