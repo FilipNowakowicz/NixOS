@@ -103,16 +103,6 @@ in
     };
   };
 
-  # ── Nix Store ───────────────────────────────────────────────────────────────
-  nix = {
-    gc = {
-      automatic = true;
-    };
-    optimise = {
-      automatic = true;
-    };
-  };
-
   # ── Profiles ────────────────────────────────────────────────────────────────
   profiles.observability = {
     enable = true;
