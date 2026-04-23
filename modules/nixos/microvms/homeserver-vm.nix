@@ -1,10 +1,18 @@
 {
   self,
   config,
+  lib,
   pkgs,
   ...
 }:
 {
+  options.microvms.homeserver-vm.externalInterface = lib.mkOption {
+    type = lib.types.str;
+    description = "Host network interface used for NAT masquerading (VM internet access).";
+    example = "wlp0s20f3";
+  };
+
+  config = {
   # ── microvm VM declaration ─────────────────────────────────────────────────
   microvm.vms.homeserver-vm = {
     flake = self;
@@ -47,7 +55,7 @@
   networking.nat = {
     enable = true;
     internalInterfaces = [ "microvm-br0" ];
-    externalInterface = "wlp0s20f3";
+    externalInterface = config.microvms.homeserver-vm.externalInterface;
   };
 
   # ── Age key virtiofs share setup ───────────────────────────────────────────
@@ -72,4 +80,5 @@
 
   # ── Sops secret (main holds the VM's age private key) ─────────────────────
   sops.secrets.homeserver_vm_age_key = { };
+  }; # config
 }

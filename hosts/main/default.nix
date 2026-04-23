@@ -23,6 +23,9 @@ in
     ../../modules/nixos/microvms/homeserver-vm.nix
   ];
 
+  # ── microvm ─────────────────────────────────────────────────────────────────
+  microvms.homeserver-vm.externalInterface = "wlp0s20f3";
+
   # ── Hardware ────────────────────────────────────────────────────────────────
   networking = {
     hostName = "main";
