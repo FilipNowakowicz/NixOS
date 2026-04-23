@@ -16,6 +16,7 @@ in
     ../../modules/nixos/profiles/base.nix
     ../../modules/nixos/profiles/desktop.nix
     ../../modules/nixos/profiles/security.nix
+    ../../modules/nixos/profiles/sops-base.nix
     ../../modules/nixos/profiles/user.nix
     ../../modules/nixos/hardware/nvidia-prime.nix
     inputs.microvm.nixosModules.host
@@ -310,8 +311,6 @@ in
 
   sops = {
     defaultSopsFile = ./secrets/secrets.yaml;
-    defaultSopsFormat = "yaml";
-    age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     templates."otel-env" = {
       content = "BASICAUTH_PASSWORD=${config.sops.placeholder.observability_ingest_password}";
       mode = "0400";
@@ -342,7 +341,6 @@ in
   users.users.user = {
     extraGroups = [ "video" ];
     hashedPasswordFile = config.sops.secrets.user_password.path;
-    openssh.authorizedKeys.keys = import ../../lib/pubkeys.nix;
   };
 
   home-manager = {

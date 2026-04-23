@@ -22,6 +22,7 @@ in
     ../../modules/nixos/profiles/base.nix
     ../../modules/nixos/profiles/observability.nix
     ../../modules/nixos/profiles/security.nix
+    ../../modules/nixos/profiles/sops-base.nix
     ../../modules/nixos/profiles/user.nix
   ];
 
@@ -247,8 +248,6 @@ in
   # ensuring the homeserver can decrypt its own secrets (user_password, tailscale_auth_key) from first boot.
   sops = {
     defaultSopsFile = ./secrets/secrets.yaml;
-    defaultSopsFormat = "yaml";
-    age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     secrets = {
       user_password.neededForUsers = true;
       tailscale_auth_key = { };
@@ -291,7 +290,6 @@ in
   users.users.user = {
     home = "/home/user";
     hashedPasswordFile = config.sops.secrets.user_password.path;
-    openssh.authorizedKeys.keys = import ../../lib/pubkeys.nix;
   };
 
   # ── Home Manager ────────────────────────────────────────────────────────────

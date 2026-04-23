@@ -10,6 +10,7 @@ in
     ../../modules/nixos/profiles/desktop.nix
     ../../modules/nixos/profiles/observability.nix
     ../../modules/nixos/profiles/security.nix
+    ../../modules/nixos/profiles/sops-base.nix
     ../../modules/nixos/profiles/user.nix
   ];
 
@@ -54,7 +55,6 @@ in
     home = "/home/user";
     extraGroups = [ "video" ];
     hashedPasswordFile = config.sops.secrets.user_password.path;
-    openssh.authorizedKeys.keys = import ../../lib/pubkeys.nix;
   };
 
   # ── Sops ────────────────────────────────────────────────────────────────────

@@ -96,18 +96,18 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
 - [x] **Add `shellcheck` to pre-commit hooks.**
   - **Context:** `shfmt` exists; linting shell semantics catches additional issues. (Also added to CI)
 
-- [ ] **Extend ACL generator tests beyond tag-owners to rule behavior.**
+- [x] **Extend ACL generator tests beyond tag-owners to rule behavior.**
   - **Context:** current tests focus on tag owners; rule list and non-Tailscale-host behavior should be covered.
   - **Do this:** assert generated rules and assert hosts without `tailscale.tag` produce no tag ownership entries.
 
-- [ ] **Add invariant enforcing that `boot.initrd.secrets` points only to sops-managed secret paths.**
+- [x] **Add invariant enforcing that `boot.initrd.secrets` points only to sops-managed secret paths.**
   - **Context:** prevents regressions to in-tree plaintext key material.
 
 ---
 
 ## P2 — Medium Priority Maintainability & Reproducibility
 
-- [ ] **Extract shared host sops/user wiring (`profiles/sops-base.nix` or equivalent).**
+- [x] **Extract shared host sops/user wiring (`profiles/sops-base.nix` or equivalent).**
   - **Context:** repeated host boilerplate for `sops.defaultSopsFile`, format, `age.sshKeyPaths`, and user authorized-key wiring.
 
 - [ ] **Extract shared Restic profile and actually use host `backup.class`.**

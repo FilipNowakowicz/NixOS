@@ -102,12 +102,6 @@
     openFirewall = true;
   };
 
-  # ── Sops (base — hosts set defaultSopsFile and declare secrets) ────────────
-  sops = {
-    defaultSopsFormat = "yaml";
-    age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
-  };
-
   # ── Nix ────────────────────────────────────────────────────────────────────
   nix.settings.trusted-users = [
     "root"

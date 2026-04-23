@@ -11,6 +11,7 @@ in
     ../../modules/nixos/profiles/base.nix
     ../../modules/nixos/profiles/observability.nix
     ../../modules/nixos/profiles/security.nix
+    ../../modules/nixos/profiles/sops-base.nix
     ../../modules/nixos/profiles/user.nix
     ../../modules/nixos/profiles/microvm-guest.nix
   ];
@@ -192,7 +193,6 @@ in
 
   sops = {
     defaultSopsFile = ./secrets/secrets.yaml;
-    defaultSopsFormat = "yaml";
     age.keyFile = "/run/age-keys/homeserver-vm.txt";
     secrets = {
       user_password.neededForUsers = true;
@@ -231,7 +231,6 @@ in
   users.users.user = {
     home = "/home/user";
     hashedPasswordFile = config.sops.secrets.user_password.path;
-    openssh.authorizedKeys.keys = import ../../lib/pubkeys.nix;
   };
 
   # ── Home Manager ────────────────────────────────────────────────────────────

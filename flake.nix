@@ -180,6 +180,16 @@
               name = "no passwordless sudo";
               check = cfg: cfg.security.sudo.wheelNeedsPassword;
             }
+            {
+              name = "initrd secrets point to sops-managed paths";
+              check =
+                cfg:
+                let
+                  values = lib.attrValues cfg.boot.initrd.secrets;
+                  nonNull = lib.filter (v: v != null) values;
+                in
+                lib.all (lib.hasPrefix "/run/secrets/") nonNull;
+            }
             sshFail2banHardened
           ] allNixosConfigs.main.config;
 

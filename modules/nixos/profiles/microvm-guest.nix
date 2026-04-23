@@ -45,7 +45,6 @@
   # Hosts set defaultSopsFile and declare secrets; this disables SSH-key
   # derivation in favour of the virtiofs-shared age key.
   sops = {
-    defaultSopsFormat = "yaml";
     age.sshKeyPaths = lib.mkForce [ ];
     # age.keyFile is set per-host pointing to the virtiofs-injected key
   };

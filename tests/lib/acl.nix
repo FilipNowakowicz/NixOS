@@ -72,6 +72,16 @@ let
       expr = lib.all (rule: rule.action == "accept") result.acls;
       expected = true;
     };
+
+    testSecondAclDst = {
+      expr = (lib.elemAt result.acls 1).dst;
+      expected = [ "*:*" ];
+    };
+
+    testNonTailscaleHostExcludedFromTagOwners = {
+      expr = result.tagOwners ? "tag:homeserver-vm";
+      expected = false;
+    };
   };
 in
 if failures == [ ] then
