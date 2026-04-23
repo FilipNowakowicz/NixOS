@@ -239,3 +239,7 @@ isolated boot network, practical exposure is much lower."
 - [ ] **Adopt signed commits and/or signed release tags.**
 
 - [ ] **Create secret rotation ritual/checklist + age/rotation observability metric.**
+
+## Extra
+
+- Hooks not tracked, other things?

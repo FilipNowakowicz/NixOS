@@ -29,6 +29,7 @@ in
 
   microvm = {
     hypervisor = "cloud-hypervisor";
+    vsock.cid = 3;
 
     # Share host's Nix store via virtiofs — avoids building a slow erofs image.
     storeOnDisk = false;
