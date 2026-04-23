@@ -33,6 +33,14 @@ Hardware not yet provisioned. Steps in order:
 
 No post-deploy sops key rotation needed — the host key is stable from first boot.
 
+## Deployment Workflow
+
+**Cold-install (bootstrap only):** `nix run '.#reinstall-homeserver' <target-ip>` uses `--no-substitute-on-destination`, preventing package substitution on an empty target. This is slower (builds closures on-destination) but required for fresh deployments with no existing closure store.
+
+**Ongoing updates:** Use standard deployment tools—`deploy-rs` or `nh os switch`—which substitute pre-built closures and are orders of magnitude faster.
+
+After initial hardware bootstrap, always use normal deployment tools for config updates.
+
 ## Architecture
 
 - **Config**: `hosts/homeserver/default.nix` — imports `modules/nixos/profiles/observability.nix` (full stack)

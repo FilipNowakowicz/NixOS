@@ -1,6 +1,6 @@
 # Opus Audit Report — Unified Task Backlog
 
-_Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI, secrets). Homeserver services are tracked in `GOALS.md`._
+_Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI, secrets). Homeserver services are tracked in `HSGOALS.md`._
 
 ---
 
@@ -55,6 +55,9 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
 - [x] **Add `cachix push` in CI after successful builds.**
   - **Context:** current CI appears to consume cache but does not seed it, causing avoidable rebuild cost on subsequent runs.
 
+- [x] **Confirm whether Cachix substituters are wired where expected for local rebuild acceleration.**
+  - **Done:** it wasn't wired. Added the integration and wired private keys through sops secrets.
+
 - [x] **Upgrade `cachix/install-nix-action` to a supported major release.**
   - **Context:** workflow references older major (`v27`) while newer major exists.
 
@@ -64,21 +67,40 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
 - [x] **Derive `scripts/closure-diff.sh` repo reference from `$GITHUB_REPOSITORY`.**
   - **Context:** currently hardcoded owner/repo makes forks/renames fragile.
 
-- [ ] **Keep cold-install guidance explicit: `reinstall-homeserver.sh --no-substitute-on-destination` is install-only.**
+- [x] **Keep cold-install guidance explicit: `reinstall-homeserver.sh --no-substitute-on-destination` is install-only.**
   - **Context:** this is reasonable for first install but slower than normal deploy workflow.
   - **Do this:** document transition to `deploy-rs` / `nh os switch` after bootstrap.
 
-- [ ] **Strengthen fail2ban policy and enforce it with invariants on SSH hosts.**
+- [x] **Strengthen fail2ban policy and enforce it with invariants on SSH hosts.**
   - **Context:** current policy (`maxretry = 5`, short bantime) is permissive.
   - **Do this:** lower retry threshold (for example 3), use incremental ban backoff, and add invariant check where SSH is enabled.
 
-- [ ] **Add timeout to `tailscale-cert.service` startup behavior.**
+- [x] **Add timeout to `tailscale-cert.service` startup behavior.**
   - **Context:** current polling loop can run forever when Tailscale is unhealthy.
   - **Do this:** set service timeout/fail-fast behavior (`TimeoutStartSec` or equivalent bounded retry).
 
 - [ ] **Review initrd SSH exposure risk model and add constraints if needed.**
   - **Context:** initrd firewall controls differ; port 2222 exposure depends on network posture.
   - **Do this (if threat model requires):** add tighter initrd network restrictions (for example flush-before-stage2/limited exposure) and document expected boot-network assumptions.
+    "Result: the initrd SSH exposure is conditional in your current config, not always-on.
+
+- main explicitly enables initrd SSH on port 2222 with keys from lib/pubkeys.nix, and
+  uses a sops-injected initrd host key (hosts/main/default.nix:56-72,
+  hosts/main/default.nix:307, lib/pubkeys.nix:1-4).
+- This happens in stage 1, so normal host controls (networking.firewall,
+  services.openssh.openFirewall = false, Tailscale posture) are not the protection boundary
+  for initrd SSH (modules/nixos/profiles/security.nix:4-5, hosts/main/default.nix:121-129;
+  upstream initrd-ssh.nix:31-37, initrd-ssh.nix:336-343).
+- There is no repo-defined initrd firewall policy; upstream initrd networking/SSH
+  modules don’t add one by default (initrd-network.nix:56-120, initrd-ssh.nix:26-128).
+- In the evaluated config, initrd networking is likely not auto-addressed right now
+  (networking.useDHCP = false, boot.initrd.systemd.network.networks = {}), so reachability
+  of :2222 depends on boot-time network setup (e.g., kernel ip= or explicit initrd network
+  config).
+
+So your GOALS note is accurate: exposure depends on network posture. On an untrusted
+L2/publicly reachable boot network, risk is materially higher; on a non-addressed or
+isolated boot network, practical exposure is much lower."
 
 - [ ] **Tighten pre-commit plaintext secret allowlist trust model.**
   - **Context:** hook checks staged file content but reads allowlist from working tree, which can weaken trust in edge cases.
@@ -217,9 +239,3 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
 - [ ] **Adopt signed commits and/or signed release tags.**
 
 - [ ] **Create secret rotation ritual/checklist + age/rotation observability metric.**
-
----
-
-## P5 — Decision Tasks (resolve before implementation branches diverge)
-
-- [ ] **Confirm whether Cachix substituters are wired where expected for local rebuild acceleration.**

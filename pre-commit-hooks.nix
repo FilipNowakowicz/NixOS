@@ -78,6 +78,7 @@ pre-commit-hooks.lib.${system}.run {
       files = "";
     };
     deadnix.enable = true;
+    shellcheck.enable = true;
 
     statix-staged = {
       enable = true;

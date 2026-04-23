@@ -356,6 +356,7 @@ pre-commit run --all-files
 Included quick checks:
 
 - `treefmt` (Unified formatting for Nix, shell, Markdown)
+- `shellcheck` (shell script linting)
 - `statix` (Nix lint)
 - `deadnix` (dead code)
 - `no-plaintext-secrets` (high-signal plaintext secret detector)

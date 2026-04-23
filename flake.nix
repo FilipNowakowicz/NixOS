@@ -154,87 +154,107 @@
       };
 
       # ── Configuration Invariant Checks ──────────────────────────────────
-      invariantChecks = {
-        invariants-main = invariants.mkInvariantCheck "main" [
-          {
-            name = "has stateVersion";
-            check = cfg: cfg.system.stateVersion != null;
-          }
-          {
-            name = "no passwordless sudo";
-            check = cfg: cfg.security.sudo.wheelNeedsPassword;
-          }
-        ] allNixosConfigs.main.config;
+      invariantChecks =
+        let
+          sshFail2banHardened = {
+            name = "SSH hosts enforce hardened fail2ban";
+            check =
+              cfg:
+              (!cfg.services.openssh.enable)
+              || (
+                cfg.services.fail2ban.enable
+                && cfg.services.fail2ban.maxretry <= 3
+                && cfg.services.fail2ban.bantime == "30m"
+                && cfg.services.fail2ban."bantime-increment".enable
+                && cfg.services.fail2ban."bantime-increment".maxtime != null
+              );
+          };
+        in
+        {
+          invariants-main = invariants.mkInvariantCheck "main" [
+            {
+              name = "has stateVersion";
+              check = cfg: cfg.system.stateVersion != null;
+            }
+            {
+              name = "no passwordless sudo";
+              check = cfg: cfg.security.sudo.wheelNeedsPassword;
+            }
+            sshFail2banHardened
+          ] allNixosConfigs.main.config;
 
-        invariants-vm = invariants.mkInvariantCheck "vm" [
-          {
-            name = "has stateVersion";
-            check = cfg: cfg.system.stateVersion != null;
-          }
-          {
-            name = "passwordless sudo enabled";
-            check = cfg: !cfg.security.sudo.wheelNeedsPassword;
-          }
-        ] allNixosConfigs.vm.config;
+          invariants-vm = invariants.mkInvariantCheck "vm" [
+            {
+              name = "has stateVersion";
+              check = cfg: cfg.system.stateVersion != null;
+            }
+            {
+              name = "passwordless sudo enabled";
+              check = cfg: !cfg.security.sudo.wheelNeedsPassword;
+            }
+            sshFail2banHardened
+          ] allNixosConfigs.vm.config;
 
-        invariants-homeserver-vm = invariants.mkInvariantCheck "homeserver-vm" [
-          {
-            name = "has stateVersion";
-            check = cfg: cfg.system.stateVersion != null;
-          }
-          {
-            name = "passwordless sudo enabled";
-            check = cfg: !cfg.security.sudo.wheelNeedsPassword;
-          }
-          {
-            name = "firewall enabled";
-            check = cfg: cfg.networking.firewall.enable;
-          }
-        ] allNixosConfigs.homeserver-vm.config;
+          invariants-homeserver-vm = invariants.mkInvariantCheck "homeserver-vm" [
+            {
+              name = "has stateVersion";
+              check = cfg: cfg.system.stateVersion != null;
+            }
+            {
+              name = "passwordless sudo enabled";
+              check = cfg: !cfg.security.sudo.wheelNeedsPassword;
+            }
+            {
+              name = "firewall enabled";
+              check = cfg: cfg.networking.firewall.enable;
+            }
+            sshFail2banHardened
+          ] allNixosConfigs.homeserver-vm.config;
 
-        invariants-homeserver = invariants.mkInvariantCheck "homeserver" [
-          {
-            name = "has stateVersion";
-            check = cfg: cfg.system.stateVersion != null;
-          }
-          {
-            name = "firewall enabled";
-            check = cfg: cfg.networking.firewall.enable;
-          }
-          {
-            name = "sops uses SSH host key for decryption";
-            check = cfg: cfg.sops.age.sshKeyPaths != [ ];
-          }
-        ] allNixosConfigs.homeserver.config;
+          invariants-homeserver = invariants.mkInvariantCheck "homeserver" [
+            {
+              name = "has stateVersion";
+              check = cfg: cfg.system.stateVersion != null;
+            }
+            {
+              name = "firewall enabled";
+              check = cfg: cfg.networking.firewall.enable;
+            }
+            {
+              name = "sops uses SSH host key for decryption";
+              check = cfg: cfg.sops.age.sshKeyPaths != [ ];
+            }
+            sshFail2banHardened
+          ] allNixosConfigs.homeserver.config;
 
-        # Fail-loud: pre-baked host key files must be present so reinstall-homeserver can inject
-        # a stable age identity from first boot. Without them, sops secrets won't decrypt on boot.
-        homeserver-sops-bootstrap =
-          let
-            secretsDir = ./hosts/homeserver/secrets;
-            hasKey = builtins.pathExists (secretsDir + "/ssh_host_ed25519_key.enc");
-            hasPub = builtins.pathExists (secretsDir + "/ssh_host_ed25519_key.pub.enc");
-          in
-          if hasKey && hasPub then
-            pkgs.runCommand "homeserver-sops-bootstrap-check" { } "touch $out"
-          else
-            pkgs.runCommand "homeserver-sops-bootstrap-check" { } ''
-              echo "homeserver sops bootstrap incomplete — missing pre-baked host key files:"
-              ${lib.optionalString (!hasKey) ''echo "  hosts/homeserver/secrets/ssh_host_ed25519_key.enc"''}
-              ${lib.optionalString (!hasPub) ''echo "  hosts/homeserver/secrets/ssh_host_ed25519_key.pub.enc"''}
-              echo ""
-              echo "Generate and commit them:"
-              echo "  ssh-keygen -t ed25519 -f /tmp/homeserver_host_key -N \"\""
-              echo "  sops encrypt --filename-override hosts/homeserver/secrets/ssh_host_ed25519_key.enc \\"
-              echo "    --input-type binary --output-type binary \\"
-              echo "    --output hosts/homeserver/secrets/ssh_host_ed25519_key.enc /tmp/homeserver_host_key"
-              echo "  sops encrypt --filename-override hosts/homeserver/secrets/ssh_host_ed25519_key.pub.enc \\"
-              echo "    --input-type binary --output-type binary \\"
-              echo "    --output hosts/homeserver/secrets/ssh_host_ed25519_key.pub.enc /tmp/homeserver_host_key.pub"
-              echo "  sops updatekeys hosts/homeserver/secrets/secrets.yaml"
-              exit 1
-            '';
-      };
+          # Fail-loud: pre-baked host key files must be present so reinstall-homeserver can inject
+          # a stable age identity from first boot. Without them, sops secrets won't decrypt on boot.
+          homeserver-sops-bootstrap =
+            let
+              secretsDir = ./hosts/homeserver/secrets;
+              hasKey = builtins.pathExists (secretsDir + "/ssh_host_ed25519_key.enc");
+              hasPub = builtins.pathExists (secretsDir + "/ssh_host_ed25519_key.pub.enc");
+            in
+            if hasKey && hasPub then
+              pkgs.runCommand "homeserver-sops-bootstrap-check" { } "touch $out"
+            else
+              pkgs.runCommand "homeserver-sops-bootstrap-check" { } ''
+                echo "homeserver sops bootstrap incomplete — missing pre-baked host key files:"
+                ${lib.optionalString (!hasKey) ''echo "  hosts/homeserver/secrets/ssh_host_ed25519_key.enc"''}
+                ${lib.optionalString (!hasPub) ''echo "  hosts/homeserver/secrets/ssh_host_ed25519_key.pub.enc"''}
+                echo ""
+                echo "Generate and commit them:"
+                echo "  ssh-keygen -t ed25519 -f /tmp/homeserver_host_key -N \"\""
+                echo "  sops encrypt --filename-override hosts/homeserver/secrets/ssh_host_ed25519_key.enc \\"
+                echo "    --input-type binary --output-type binary \\"
+                echo "    --output hosts/homeserver/secrets/ssh_host_ed25519_key.enc /tmp/homeserver_host_key"
+                echo "  sops encrypt --filename-override hosts/homeserver/secrets/ssh_host_ed25519_key.pub.enc \\"
+                echo "    --input-type binary --output-type binary \\"
+                echo "    --output hosts/homeserver/secrets/ssh_host_ed25519_key.pub.enc /tmp/homeserver_host_key.pub"
+                echo "  sops updatekeys hosts/homeserver/secrets/secrets.yaml"
+                exit 1
+              '';
+        };
 
       # Generate CVE checks for all NixOS configs
       cveCheckMap = lib.mapAttrs (

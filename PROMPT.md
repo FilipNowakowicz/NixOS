@@ -1,6 +1,6 @@
 # Post-Implementation Audit and Documentation Sync
 
-I have recently updated the NixOS configuration with the changes listed below. Please perform a multi-layered audit of the current state of the repository:
+I have recently updated the NixOS configuration with the changes listed below. Not all changes might have the need for documentation. Please perform a multi-layered audit of the current state of the repository:
 
 1.  **Code Analysis:** Review the new and modified `.nix` files for structural consistency, comment accuracy, and idiomatic Nix patterns. Identify any stale comments or logic that contradicts the current implementation.
 2.  **Architecture Review:** Evaluate the new file/folder structure. Verify if the placement of new modules or host configurations follows the project's existing organizational logic (e.g., `modules/nixos/` vs `home/profiles/`).

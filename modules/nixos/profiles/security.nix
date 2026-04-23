@@ -17,8 +17,13 @@
   # ── Intrusion Prevention ───────────────────────────────────────────────
   services.fail2ban = {
     enable = true;
-    maxretry = 5;
-    bantime = "10m";
+    maxretry = 3;
+    bantime = "30m";
+    "bantime-increment" = {
+      enable = true;
+      maxtime = "24h";
+      overalljails = true;
+    };
   };
 
   # ── Kernel Hardening ───────────────────────────────────────────────────
