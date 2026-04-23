@@ -32,6 +32,7 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 
 - **Runtime Theming**: A runtime-swappable color system allows changing themes without a full NixOS rebuild.
 - **USB Device Control**: USBGuard enabled on `main` with an implicit deny policy to block unauthorized devices.
+- **Tailscale ACLs as Nix**: Security rules and tag owners are generated declaratively from the host registry, providing a single source of truth for network access control.
 - **Systemd Hardening**: A custom DSL (`services.hardened`) applies a high-security sandbox baseline to critical services (Vaultwarden, Nginx, Syncthing).
 - **Intrusion Prevention**: Fail2ban integrated into the security profile with automated E2E testing.
 - **Idle Policy (desktop)**: Hypridle locks at 10 minutes of inactivity and suspends at 15 minutes.
@@ -54,6 +55,7 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 │   ├── cve-checks.nix                 # CVE scanning check builders
 │   ├── pubkeys.nix                    # Centralized SSH public keys
 │   ├── syncthing.nix                  # Shared Syncthing device/folder registry
+│   ├── acl.nix                        # Declarative Tailscale ACL generator
 │   └── network.nix                    # Centralized network identifiers (tailnet FQDN)
 ├── hosts/
 │   ├── main/                          # Primary workstation
@@ -393,6 +395,20 @@ nix build '.#checks.x86_64-linux.main' --print-out-paths | xargs cat
 # Check for flake inputs, formatting, and unused variables
 nix flake check
 ```
+
+---
+
+## Tailscale ACLs
+
+Tailscale security rules are managed declaratively within the flake. The `lib/acl.nix` generator processes the `lib/hosts.nix` registry to produce a `acl.hujson` compatible structure.
+
+- **Source of Truth**: The `tailscale.tag` attribute in `lib/hosts.nix` defines the tags for each host.
+- **Generator**: `lib/acl.nix` maps tags to owners and defines access rules (e.g., workstations can reach all servers).
+- **Validation**: Unit tests in `tests/lib/acl.nix` verify that the generator correctly handles different host configurations.
+- **Output**: The generated ACL JSON can be inspected via:
+  ```bash
+  nix build '.#packages.x86_64-linux.tailscale-acl' --print-out-paths | xargs cat
+  ```
 
 ---
 

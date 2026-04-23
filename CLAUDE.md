@@ -10,6 +10,7 @@ approaches proactively. Explain why, not just what.
 
 - **Dev machine:** NixOS (main)
 - **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nh`, `nixd`, `statix`, `deadnix`, `pre-commit`, `sops`, `ssh-to-age`, `qemu`, `OVMF`
+- **Per-project shells:** `direnv` enabled — use `use flake` in `.envrc` for automatic environment loading.
 - **Deploy (VM):** `deploy '.#vm'` (homeserver-vm managed via main's microvm, see VM Management)
 - **Deploy (WSL):** `home-manager switch --flake .#user@wsl`
 - **Deploy (main):** `nh os switch --hostname main .` (alias: `rebuild`)
@@ -44,6 +45,19 @@ Services are reachable from main at:
 - Vaultwarden: `https://10.0.100.2:8443`
 - Syncthing: `http://10.0.100.2:8384`
 
+---
+
+## Networking & VPN
+
+- **Tailscale** — used for secure remote access and service mesh.
+- **Tailscale ACLs** — generated declaratively from `lib/hosts.nix`.
+  - Tags are assigned per-host in the registry (`tailscale.tag`).
+  - Rules are defined in `lib/acl.nix`.
+  - Build/inspect ACLs: `nix build '.#packages.x86_64-linux.tailscale-acl'`.
+- **Tailscale Certs** — `homeserver` uses `tailscale-cert.service` to fetch TLS certificates automatically.
+
+---
+
 ### nix run '.#vm' (QEMU — archived)
 
 `scripts/vm.sh` and `nix run '.#vm'` are archived for testing impermanence,
@@ -68,6 +82,7 @@ nix run '.#vm' -- ssh <name>      # SSH into VM
 - `lib/dashboards.nix` — typed Grafana dashboard builders
 - `lib/invariants.nix` — configuration invariant check builders
 - `lib/cve-checks.nix` — CVE scanning check builders
+- `lib/acl.nix` — Tailscale ACL generator (derives rules from host registry)
 - `lib/pubkeys.nix` — centralized SSH public keys
 - `lib/syncthing.nix` — shared Syncthing device/folder registry
 - `lib/network.nix` — centralized network identifiers (tailnet FQDN)
