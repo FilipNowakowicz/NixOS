@@ -55,9 +55,35 @@ in
 
     initrd = {
       # Systemd in initrd (required for initrd SSH)
-      systemd.enable = true;
+      systemd = {
+        enable = true;
+        # Tear down all non-loopback interfaces before transitioning to stage 2.
+        # Ensures port 2222 stops being reachable the moment stage 1 is done,
+        # before stage 2's firewall loads. Guards against future misconfiguration
+        # (e.g. if WiFi support were added to initrd later).
+        services.flush-network-before-stage2 = {
+          description = "Tear down initrd network before transitioning to stage 2";
+          before = [ "initrd-cleanup.service" ];
+          wantedBy = [ "initrd.target" ];
+          unitConfig.DefaultDependencies = false;
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = pkgs.writeShellScript "flush-initrd-network" ''
+              for iface in /sys/class/net/*; do
+                iface=$(basename "$iface")
+                [ "$iface" = "lo" ] && continue
+                ip link set dev "$iface" down 2>/dev/null || true
+                ip addr flush dev "$iface" 2>/dev/null || true
+              done
+            '';
+          };
+        };
+      };
 
-      # Initrd SSH (fallback LUKS unlock when TPM2 fails)
+      # Initrd SSH — fallback LUKS unlock when TPM2 fails.
+      # Recovery requires a USB Ethernet dongle; WiFi is not available in stage 1.
+      # Port 2222 is therefore NOT exposed on WiFi (including public WiFi).
+      # flush-network-before-stage2 tears down the interface before stage 2 starts.
       network = {
         enable = true;
         ssh = {
