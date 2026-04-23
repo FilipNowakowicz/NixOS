@@ -70,8 +70,12 @@
     let
       system = "x86_64-linux";
 
+      # Single source of truth for overlays — changes here propagate to both
+      # the top-level pkgs (devShells, HM) and all NixOS configs via mkNixos.
+      overlays = [ ];
+
       pkgs = import nixpkgs {
-        inherit system;
+        inherit system overlays;
         config.allowUnfree = true;
       };
 
@@ -94,6 +98,7 @@
           inherit system;
           specialArgs = { inherit inputs self; };
           modules = [
+            { nixpkgs.overlays = overlays; }
             ./hosts/${host}/default.nix
             home-manager.nixosModules.home-manager
             sops-nix.nixosModules.sops
