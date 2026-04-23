@@ -52,6 +52,12 @@ in
       };
 
     testScript = ''
+      import os
+      assert os.path.exists('/dev/kvm'), \
+        "KVM not available: /dev/kvm missing. Smoke tests require KVM acceleration.\n" \
+        "On Linux: enable nested KVM or run on hardware with KVM support.\n" \
+        "On WSL: upgrade to WSL2 with --system-distro support or use nested hypervisor."
+
       start_all()
 
       vm.wait_for_unit("multi-user.target")
