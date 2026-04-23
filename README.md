@@ -25,7 +25,13 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 - **TPM Unlocking**: The system's TPM 2.0 is used to automatically unlock the LUKS-encrypted disk on boot.
 - **Hardware Pass-through**: IOMMU is enabled (`intel_iommu=on iommu=force`) for potential VM GPU pass-through.
 - **Graphics Drivers**: The configuration uses stable by-path device paths for `AQ_DRM_DEVICES` to ensure stable multi-GPU / monitor performance.
-- **Initrd SSH Recovery**: In case of TPM failure, an initrd SSH server (port 2222) is available for remote LUKS unlocking using the recovery key stored in `lib/pubkeys.nix`. Note that this requires a wired Ethernet connection as WiFi drivers are unavailable in stage 1.
+- **Initrd SSH Recovery**: In case of TPM failure, an initrd SSH server (port 2222) is available for remote LUKS unlocking using the recovery key stored in `lib/pubkeys.nix`.
+  - **Recovery Procedure**:
+    1. Retrieve the `id_ed25519_recovery` private key from offline storage.
+    2. Connect the host via wired Ethernet (WiFi is unavailable in stage 1).
+    3. `ssh -i /path/to/id_ed25519_recovery -p 2222 root@<host-ip>`
+    4. Enter the LUKS passphrase when prompted to unlock the disk.
+    5. The system will continue booting into stage 2.
 
 ---
 
@@ -169,10 +175,13 @@ Multiple VMs can run simultaneously — each has its own disk image, OVMF vars, 
 | Host            | Command                                  | Notes                                           |
 | --------------- | ---------------------------------------- | ----------------------------------------------- |
 | `main`          | `nh os switch --hostname main .`         | Modern Nix helper (`nh`) for fast rebuilds.     |
-| `homeserver`    | `deploy '.#homeserver'`                  | Run from the `nix develop` shell.               |
+| `homeserver`    | `deploy '.#homeserver'`                  | Standard remote deployment via `deploy-rs`.     |
 | `vm`            | `deploy '.#vm'`                          | After `nix run '.#vm' -- create vm`.            |
 | `homeserver-vm` | `deploy '.#homeserver-vm'`               | After `nix run '.#vm' -- create homeserver-vm`. |
 | `user@wsl`      | `home-manager switch --flake .#user@wsl` | Portable Home Manager for WSL.                  |
+
+> [!NOTE]
+> **Cold Installs**: Use `reinstall-homeserver.sh` (which wraps `nixos-anywhere`) only for the initial installation on real hardware. Once bootstrapped, transition to the `deploy-rs` workflow for all configuration updates.
 
 ---
 
