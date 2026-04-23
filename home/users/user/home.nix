@@ -72,6 +72,16 @@ in
   gtk.gtk4.theme = null;
 
   programs = {
+    # Home Manager owns ~/.ssh/config; VM aliases are injected via runtime
+    # fragments under ~/.local/state/nixos-vms/ssh/.
+    ssh = {
+      enable = true;
+      enableDefaultConfig = false;
+      includes = [
+        "${config.home.homeDirectory}/.local/state/nixos-vms/ssh/*.conf"
+      ];
+    };
+
     # ── Direnv ─────────────────────────────────────────────────────────────
     direnv = {
       enable = true;

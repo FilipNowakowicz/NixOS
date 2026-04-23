@@ -19,9 +19,11 @@ set -euo pipefail
 
 # ── Constants ────────────────────────────────────────────────────────────────
 VM_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/nixos-vms"
-SSH_CONFIG="$HOME/.ssh/config"
+SSH_CONFIG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/nixos-vms/ssh"
 SSH_WAIT_TIMEOUT=120
 SSH_WAIT_INTERVAL=3
+VM_LIST_NAME_WIDTH=20
+VM_LIST_STATUS_WIDTH=12
 
 # ── Required env (set by Nix wrapper) ────────────────────────────────────────
 : "${VM_REGISTRY:?VM_REGISTRY not set — run via nix run .#vm}"
@@ -61,6 +63,11 @@ all_vm_names() {
 vm_disk() { echo "$VM_DIR/$1.qcow2"; }
 vm_vars() { echo "$VM_DIR/$1-vars.fd"; }
 vm_pidfile() { echo "$VM_DIR/$1.pid"; }
+vm_ssh_config_fragment() { echo "$SSH_CONFIG_DIR/$1.conf"; }
+
+print_vm_list_row() {
+  printf "%-${VM_LIST_NAME_WIDTH}s %-${VM_LIST_STATUS_WIDTH}s %s\n" "$1" "$2" "$3"
+}
 
 vm_is_running() {
   local pidfile
@@ -90,16 +97,12 @@ require_tools() {
 # ── SSH config management ────────────────────────────────────────────────────
 ssh_config_add() {
   local name="$1" port="$2"
-  mkdir -p "$(dirname "$SSH_CONFIG")"
-  touch "$SSH_CONFIG"
+  local fragment
+  fragment="$(vm_ssh_config_fragment "$name")"
 
-  if grep -q "^Host ${name}$" "$SSH_CONFIG" 2>/dev/null; then
-    echo "SSH config for $name already exists"
-    return
-  fi
+  mkdir -p "$SSH_CONFIG_DIR"
 
-  cat >>"$SSH_CONFIG" <<EOF
-
+  cat >"$fragment" <<EOF
 Host ${name}
     HostName localhost
     Port ${port}
@@ -108,21 +111,24 @@ Host ${name}
     UserKnownHostsFile /dev/null
     LogLevel ERROR
 EOF
-  echo "Added SSH config: $name → localhost:$port"
+  echo "Wrote SSH config fragment: $fragment"
 }
 
 ssh_config_remove() {
   local name="$1"
-  if [ ! -f "$SSH_CONFIG" ]; then return; fi
-  # Remove the Host block (Host line + indented lines following it)
-  sed -i "/^Host ${name}$/,/^$/d" "$SSH_CONFIG"
-  # Clean up any trailing blank lines
-  sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$SSH_CONFIG"
-  echo "Removed SSH config for $name"
+  local fragment
+  fragment="$(vm_ssh_config_fragment "$name")"
+
+  if [ -f "$fragment" ]; then
+    rm -f "$fragment"
+    echo "Removed SSH config fragment: $fragment"
+  fi
+
+  rmdir "$SSH_CONFIG_DIR" 2>/dev/null || true
 }
 
 ssh_clear_known_hosts() {
-  local name="$1" port="$2"
+  local port="$1"
   "$SSH_KEYGEN_BIN" -R "[localhost]:${port}" 2>/dev/null || true
 }
 
@@ -197,7 +203,7 @@ action_create() {
 
   # 3. Add SSH config
   ssh_config_add "$name" "$port"
-  ssh_clear_known_hosts "$name" "$port"
+  ssh_clear_known_hosts "$port"
 
   # 4. Build installer ISO
   echo "Building installer ISO..."
@@ -242,7 +248,7 @@ action_create() {
   sleep 2
 
   # 9. Boot installed VM
-  ssh_clear_known_hosts "$name" "$port"
+  ssh_clear_known_hosts "$port"
   echo "Starting installed VM..."
   qemu_launch "$name" "$port"
   wait_for_ssh "$name" "$port" user
@@ -265,7 +271,7 @@ action_start() {
     return 0
   fi
 
-  # Ensure SSH config exists
+  # Ensure the runtime SSH include fragment exists
   ssh_config_add "$name" "$port"
 
   echo "Starting VM '$name' on port $port..."
@@ -335,7 +341,7 @@ action_reinstall() {
     return
   fi
 
-  ssh_clear_known_hosts "$name" "$port"
+  ssh_clear_known_hosts "$port"
 
   # Build installer ISO
   echo "Building installer ISO..."
@@ -378,7 +384,7 @@ action_reinstall() {
   sleep 2
 
   # Boot installed VM
-  ssh_clear_known_hosts "$name" "$port"
+  ssh_clear_known_hosts "$port"
   echo "Starting reinstalled VM..."
   qemu_launch "$name" "$port"
   wait_for_ssh "$name" "$port" user
@@ -412,7 +418,7 @@ action_destroy() {
 
   local port
   port="$(vm_attr "$name" sshPort)"
-  ssh_clear_known_hosts "$name" "$port"
+  ssh_clear_known_hosts "$port"
 
   if [ "$destroyed" = true ]; then
     echo "✓ VM '$name' destroyed"
@@ -432,8 +438,8 @@ action_ssh() {
 }
 
 action_list() {
-  printf "%-20s %-10s %s\n" "NAME" "STATUS" "PORT"
-  printf "%-20s %-10s %s\n" "----" "------" "----"
+  print_vm_list_row "NAME" "STATUS" "PORT"
+  print_vm_list_row "----" "------" "----"
 
   for name in $(all_vm_names); do
     local port status
@@ -447,7 +453,7 @@ action_list() {
       status="not created"
     fi
 
-    printf "%-20s %-10s %s\n" "$name" "$status" "$port"
+    print_vm_list_row "$name" "$status" "$port"
   done
 }
 
