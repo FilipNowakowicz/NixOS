@@ -79,28 +79,16 @@ _Audit date: 2026-04-23. Scope: non-homeserver focused (main, VMs, WSL, lib, CI,
   - **Context:** current polling loop can run forever when Tailscale is unhealthy.
   - **Do this:** set service timeout/fail-fast behavior (`TimeoutStartSec` or equivalent bounded retry).
 
-- [ ] **Review initrd SSH exposure risk model and add constraints if needed.**
-  - **Context:** initrd firewall controls differ; port 2222 exposure depends on network posture.
-  - **Do this (if threat model requires):** add tighter initrd network restrictions (for example flush-before-stage2/limited exposure) and document expected boot-network assumptions.
-    "Result: the initrd SSH exposure is conditional in your current config, not always-on.
-
-- main explicitly enables initrd SSH on port 2222 with keys from lib/pubkeys.nix, and
-  uses a sops-injected initrd host key (hosts/main/default.nix:56-72,
-  hosts/main/default.nix:307, lib/pubkeys.nix:1-4).
-- This happens in stage 1, so normal host controls (networking.firewall,
-  services.openssh.openFirewall = false, Tailscale posture) are not the protection boundary
-  for initrd SSH (modules/nixos/profiles/security.nix:4-5, hosts/main/default.nix:121-129;
-  upstream initrd-ssh.nix:31-37, initrd-ssh.nix:336-343).
-- There is no repo-defined initrd firewall policy; upstream initrd networking/SSH
-  modules don’t add one by default (initrd-network.nix:56-120, initrd-ssh.nix:26-128).
-- In the evaluated config, initrd networking is likely not auto-addressed right now
-  (networking.useDHCP = false, boot.initrd.systemd.network.networks = {}), so reachability
-  of :2222 depends on boot-time network setup (e.g., kernel ip= or explicit initrd network
-  config).
-
-So your GOALS note is accurate: exposure depends on network posture. On an untrusted
-L2/publicly reachable boot network, risk is materially higher; on a non-addressed or
-isolated boot network, practical exposure is much lower."
+- [x] **Review initrd SSH exposure risk model and add constraints if needed.**
+  - **Findings:** initrd SSH (port 2222) is NOT exposed on WiFi — WiFi drivers/WPA
+    supplicant are unavailable in stage 1. Recovery requires a USB Ethernet dongle
+    (wired only). Public WiFi exposure risk is not a real concern.
+  - **Done:** added `flush-network-before-stage2` systemd unit in initrd
+    (`hosts/main/default.nix`) — tears down all non-loopback interfaces before stage 2
+    transition (defense-in-depth). Added comment block documenting dongle requirement
+    and WiFi limitation.
+  - **Follow-up (operational):** acquire a USB-C Ethernet dongle and test initrd SSH
+    recovery end-to-end before relying on it in an emergency.
 
 - [ ] **Tighten pre-commit plaintext secret allowlist trust model.**
   - **Context:** hook checks staged file content but reads allowlist from working tree, which can weaken trust in edge cases.
