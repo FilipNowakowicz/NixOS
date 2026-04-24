@@ -60,7 +60,7 @@ build_closure() {
     return 0
   fi
 
-  printf '%s\n' "$store_path" > "$cache_file"
+  printf '%s\n' "$store_path" >"$cache_file"
   echo "$store_path"
 }
 

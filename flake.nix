@@ -104,8 +104,6 @@
 
       aclGen = import ./lib/acl.nix { inherit lib; };
 
-      cveChecks = import ./lib/cve-checks.nix { inherit pkgs; };
-
       # VMs only — for the VM management script
       vmRegistry = lib.filterAttrs (_: cfg: cfg ? sshPort && cfg ? diskSize) hostRegistry;
 
@@ -115,7 +113,7 @@
           hostMeta = hostRegistry.${host};
         in
         nixpkgs.lib.nixosSystem {
-          system = hostMeta.system;
+          inherit (hostMeta) system;
           specialArgs = {
             inherit inputs self hostMeta;
           };
@@ -280,29 +278,26 @@
         in
         {
           main = targetCveChecks.mkCveCheck "main" allNixosConfigs.main.config.system.build.toplevel;
-          homeserver =
-            targetCveChecks.mkCveCheck "homeserver" allNixosConfigs.homeserver.config.system.build.toplevel;
+          homeserver = targetCveChecks.mkCveCheck "homeserver" allNixosConfigs.homeserver.config.system.build.toplevel;
         };
 
-      ciTestsFor =
-        system:
-        {
-          vm-smoke = import ./tests/nixos/vm-smoke.nix {
-            inherit nixpkgs system inputs;
-          };
-          homeserver-vm-smoke = import ./tests/nixos/homeserver-vm-smoke.nix {
-            inherit nixpkgs system inputs;
-          };
-          profile-security = import ./tests/nixos/profile-security.nix {
-            inherit nixpkgs system;
-          };
-          profile-observability = import ./tests/nixos/profile-observability.nix {
-            inherit nixpkgs system;
-          };
-          profile-hardening = import ./tests/nixos/profile-hardening.nix {
-            inherit nixpkgs system;
-          };
+      ciTestsFor = system: {
+        vm-smoke = import ./tests/nixos/vm-smoke.nix {
+          inherit nixpkgs system inputs;
         };
+        homeserver-vm-smoke = import ./tests/nixos/homeserver-vm-smoke.nix {
+          inherit nixpkgs system inputs;
+        };
+        profile-security = import ./tests/nixos/profile-security.nix {
+          inherit nixpkgs system;
+        };
+        profile-observability = import ./tests/nixos/profile-observability.nix {
+          inherit nixpkgs system;
+        };
+        profile-hardening = import ./tests/nixos/profile-hardening.nix {
+          inherit nixpkgs system;
+        };
+      };
     in
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ defaultSystem ];
@@ -365,25 +360,24 @@
           };
 
           # ── Packages ────────────────────────────────────────────────────────
-          packages =
-            {
-              tailscale-acl =
-                pkgs.runCommand "tailscale-acl"
-                  {
-                    aclJson = builtins.toJSON (aclGen.mkAcl hostRegistry);
-                    passAsFile = [ "aclJson" ];
-                  }
-                  ''
-                    cp "$aclJsonPath" "$out"
-                  '';
+          packages = {
+            tailscale-acl =
+              pkgs.runCommand "tailscale-acl"
+                {
+                  aclJson = builtins.toJSON (aclGen.mkAcl hostRegistry);
+                  passAsFile = [ "aclJson" ];
+                }
+                ''
+                  cp "$aclJsonPath" "$out"
+                '';
 
-              installer-iso =
-                (nixpkgs.lib.nixosSystem {
-                  inherit system;
-                  specialArgs = { inherit inputs; };
-                  modules = [ ./hosts/installer/default.nix ];
-                }).config.system.build.isoImage;
-            };
+            installer-iso =
+              (nixpkgs.lib.nixosSystem {
+                inherit system;
+                specialArgs = { inherit inputs; };
+                modules = [ ./hosts/installer/default.nix ];
+              }).config.system.build.isoImage;
+          };
 
           # ── Formatter ───────────────────────────────────────────────────────
           formatter = treefmtEval.config.build.wrapper;
