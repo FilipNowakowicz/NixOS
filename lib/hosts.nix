@@ -55,9 +55,9 @@ let
           unknownFields == [ ]
         ) "${name}: unknown field(s): ${builtins.concatStringsSep ", " unknownFields}")
         (ok (p "system") "${name}: missing required field 'system'")
-        (ok (builtins.isString cfg.system)
-          "${name}.system: must be a string, got ${builtins.typeOf (cfg.system or null)}"
-        )
+        (ok (builtins.isString cfg.system) "${name}.system: must be a string, got ${
+          builtins.typeOf (cfg.system or null)
+        }")
         (ok (p "role") "${name}: missing required field 'role'")
         (ok (builtins.isString cfg.role) "${name}.role: must be a string, got ${builtins.typeOf cfg.role}")
         (ok (

@@ -49,15 +49,15 @@
 
 ### Field semantics
 
-| Field            | Type   | Meaning                                                         |
-| ---------------- | ------ | --------------------------------------------------------------- |
+| Field            | Type   | Meaning                                                                     |
+| ---------------- | ------ | --------------------------------------------------------------------------- |
 | `system`         | string | Nix system string for this host; drives `nixosSystem` and deploy activation |
-| `role`           | string | Human label; metadata only now, ready to drive modules later    |
-| `deploy.sshUser` | string | Presence triggers a deploy-rs node; absence = local-only (main) |
-| `sshPort`        | int    | VM-only; used to filter hosts for the VM script                 |
-| `diskSize`       | string | VM-only; used by nixos-anywhere and qemu-img                    |
-| `tailnetFQDN`    | string | Per-host Tailscale FQDN; mirrors `lib/network.nix` today        |
-| `backup.class`   | string | Metadata only now; ready to drive a backup module later         |
+| `role`           | string | Human label; metadata only now, ready to drive modules later                |
+| `deploy.sshUser` | string | Presence triggers a deploy-rs node; absence = local-only (main)             |
+| `sshPort`        | int    | VM-only; used to filter hosts for the VM script                             |
+| `diskSize`       | string | VM-only; used by nixos-anywhere and qemu-img                                |
+| `tailnetFQDN`    | string | Per-host Tailscale FQDN; mirrors `lib/network.nix` today                    |
+| `backup.class`   | string | Metadata only now; ready to drive a backup module later                     |
 
 ---
 
