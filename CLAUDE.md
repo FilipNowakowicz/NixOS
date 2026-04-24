@@ -17,7 +17,7 @@ approaches proactively. Explain why, not just what.
 - **Validate flake:** `nix flake check`
 - **Automated updates:** Weekly `flake.lock` updates (`flake-update.yml`); auto-merges if `merge-gate` status check passes.
 - **Merge Gate:** Consolidates all required checks (flake-check, invariants, smoke-tests) into a single required status check for branch protection.
-- **Module Topology:** Global profile imports in `modules/nixos/default.nix` have been removed. Hosts must explicitly import required profiles (e.g., `desktop`, `security`).
+- **Module Topology:** `modules/nixos/default.nix` globally imports `observability.nix`, `backup.nix`, `systemd-failure-notify.nix`, and `hardened.nix` for all hosts. Hosts must explicitly import host-specific profiles (e.g., `desktop`, `security`, `base`) but must NOT re-import the globally-provided ones.
 - **Host Registry:** `lib/hosts.nix` is the single source of truth and uses typed schema validation. It includes target architecture (`system`) for multi-arch support.
 - **Validate invariants:** `nix build '.#checks.x86_64-linux.invariants-<host>'`
 - **Validate profile:** `nix build '.#legacyPackages.x86_64-linux.ciTests.profile-<name>'`
