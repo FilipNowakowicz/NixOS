@@ -381,15 +381,15 @@ If the secret detector flags an intentional value, add a narrow path or glob to 
 
 ```bash
 # Run the homeserver VM integration smoke test
-nix build '.#checks.x86_64-linux.homeserver-vm-smoke'
+nix build '.#legacyPackages.x86_64-linux.ciTests.homeserver-vm-smoke'
 
 # Run the standard VM desktop smoke test
-nix build '.#checks.x86_64-linux.vm-smoke'
+nix build '.#legacyPackages.x86_64-linux.ciTests.vm-smoke'
 
 # Run profile-specific E2E tests
-nix build '.#checks.x86_64-linux.profile-security'       # fail2ban blocks attacker
-nix build '.#checks.x86_64-linux.profile-observability'  # Alloy ships journal logs to Loki
-nix build '.#checks.x86_64-linux.profile-hardening'      # systemd sandbox score < 2.0
+nix build '.#legacyPackages.x86_64-linux.ciTests.profile-security'       # fail2ban blocks attacker
+nix build '.#legacyPackages.x86_64-linux.ciTests.profile-observability'  # Alloy ships journal logs to Loki
+nix build '.#legacyPackages.x86_64-linux.ciTests.profile-hardening'      # systemd sandbox score < 2.0
 
 # Run library unit tests (generators, etc.)
 nix build '.#checks.x86_64-linux.lib-generators'
@@ -402,8 +402,8 @@ nix build '.#checks.x86_64-linux.lib-generators-golden'
 nix build '.#checks.x86_64-linux.invariants-main'
 
 # View CVE scanning reports for each host (outputs a text file)
-nix build '.#checks.x86_64-linux.homeserver' --print-out-paths | xargs cat
-nix build '.#checks.x86_64-linux.main' --print-out-paths | xargs cat
+nix build '.#legacyPackages.x86_64-linux.ciReports.homeserver' --print-out-paths | xargs cat
+nix build '.#legacyPackages.x86_64-linux.ciReports.main' --print-out-paths | xargs cat
 
 # Check for flake inputs, formatting, and unused variables
 nix flake check

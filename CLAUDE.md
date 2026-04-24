@@ -20,9 +20,9 @@ approaches proactively. Explain why, not just what.
 - **Module Topology:** Global profile imports in `modules/nixos/default.nix` have been removed. Hosts must explicitly import required profiles (e.g., `desktop`, `security`).
 - **Host Registry:** `lib/hosts.nix` is the single source of truth and uses typed schema validation. It includes target architecture (`system`) for multi-arch support.
 - **Validate invariants:** `nix build '.#checks.x86_64-linux.invariants-<host>'`
-- **Validate profile:** `nix build '.#checks.x86_64-linux.profile-<name>'`
+- **Validate profile:** `nix build '.#legacyPackages.x86_64-linux.ciTests.profile-<name>'`
 - **Golden tests:** `nix build '.#checks.x86_64-linux.lib-generators-golden'`
-- **CVE scan:** `nix build '.#checks.x86_64-linux.cve-check-<host>'`
+- **CVE scan:** `nix build '.#legacyPackages.x86_64-linux.ciReports.<host>'`
 - **Lint:** `statix check .` and `deadnix .`
 - **Pre-commit (manual run):** `pre-commit run --all-files`
 - **Git hooks:** `nix develop` installs a `commit-msg` hook that removes `Co-authored-by:` trailers to keep history single-author.
