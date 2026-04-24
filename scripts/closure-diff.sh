@@ -32,39 +32,56 @@ fi
 build_closure() {
   local sha=$1
   local host=$2
-  local output_dir="/tmp/closure-${sha:0:8}-${host}"
+  local cache_file="/tmp/closure-${sha:0:8}-${host}.path"
 
-  if [[ -d $output_dir ]]; then
-    echo "$output_dir/result"
+  if [[ -f $cache_file ]]; then
+    local cached_path
+    cached_path="$(<"$cache_file")"
+    if [[ -n $cached_path && -e $cached_path ]]; then
+      echo "$cached_path"
+      return 0
+    fi
+    rm -f "$cache_file"
+  fi
+
+  echo "Building closure for $sha:$host..." >&2
+  local store_path
+  if ! store_path="$(
+    nix build "github:$REPO/$sha#nixosConfigurations.$host.config.system.build.toplevel" \
+      --print-out-paths --no-link --show-trace
+  )"; then
+    echo "" # Return empty string on failure
     return 0
   fi
 
-  mkdir -p "$output_dir"
-
-  echo "Building closure for $sha:$host..." >&2
-  if ! nix build "github:$REPO/$sha#nixosConfigurations.$host.config.system.build.toplevel" \
-    --out-link "$output_dir/result" --no-link 2>/dev/null; then
-    echo "" # Return empty string on failure
-    return 1
+  store_path="$(echo "$store_path" | tail -n 1)"
+  if [[ -z $store_path ]]; then
+    echo ""
+    return 0
   fi
 
-  echo "$output_dir/result"
+  printf '%s\n' "$store_path" > "$cache_file"
+  echo "$store_path"
 }
 
 format_diff_table() {
   local base_closure=$1
   local target_closure=$2
 
-  # Run nvd and capture output
   local nvd_output
-  nvd_output=$(nvd diff "$base_closure" "$target_closure" 2>&1 || true)
+  if ! nvd_output="$(
+    nix run nixpkgs#nvd -- diff "$base_closure" "$target_closure" 2>&1
+  )"; then
+    echo "Failed to diff closures:" >&2
+    echo "$nvd_output" >&2
+    return 1
+  fi
 
-  # Extract package diffs: parse lines like "  package_name: 123 -> 456"
-  # Format as markdown table
   local table="| Package | Old | New | Δ | Δ% |"$'\n'"| --- | --- | --- | --- | --- |"
+  local row_count=0
+  local line
 
-  echo "$nvd_output" | grep -E '^\s+\S+:' | while read -r line; do
-    # Extract package name and sizes
+  while IFS= read -r line; do
     local package
     package=$(echo "$line" | sed -E 's/^\s+([^:]+):.*/\1/')
     local old_size
@@ -72,12 +89,10 @@ format_diff_table() {
     local new_size
     new_size=$(echo "$line" | sed -E 's/.*-> ([0-9.]+[KMG]?B?) .*/\1/')
 
-    # Skip if we couldn't parse
     if [[ -z $old_size ]] || [[ -z $new_size ]]; then
       continue
     fi
 
-    # Convert to bytes for calculation
     local old_bytes
     old_bytes=$(echo "$old_size" | numfmt --from=auto 2>/dev/null || echo 0)
     local new_bytes
@@ -97,7 +112,12 @@ format_diff_table() {
     fi
 
     table+=$'\n'"| $package | $old_size | $new_size | $delta_str | ${delta_pct}% |"
-  done
+    row_count=$((row_count + 1))
+  done < <(grep -E '^\s+\S+:' <<<"$nvd_output")
+
+  if [[ $row_count -eq 0 ]]; then
+    table+=$'\n'"| No package-level closure delta | - | - | - | - |"
+  fi
 
   echo "$table"
 }

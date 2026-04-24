@@ -269,19 +269,31 @@
               '';
         };
 
-      # Generate CVE checks for all hosts, but skip test VMs in CI
-      cveCheckMap =
-        let
-          isCi = builtins.getEnv "CI" != "";
-          hostsToCheck =
-            if isCi then
-              lib.filterAttrs (name: _: name != "vm" && name != "homeserver-vm") allNixosConfigs
-            else
-              allNixosConfigs;
-        in
-        lib.mapAttrs (
-          hostName: config: cveChecks.mkCveCheck hostName config.config.system.build.toplevel
-        ) hostsToCheck;
+      cveReportPackages = {
+        cve-main = cveChecks.mkCveCheck "main" allNixosConfigs.main.config.system.build.toplevel;
+        cve-homeserver =
+          cveChecks.mkCveCheck "homeserver" allNixosConfigs.homeserver.config.system.build.toplevel;
+      };
+
+      ciPackagesFor =
+        system:
+        {
+          ci-vm-smoke = import ./tests/nixos/vm-smoke.nix {
+            inherit nixpkgs system inputs;
+          };
+          ci-homeserver-vm-smoke = import ./tests/nixos/homeserver-vm-smoke.nix {
+            inherit nixpkgs system inputs;
+          };
+          ci-profile-security = import ./tests/nixos/profile-security.nix {
+            inherit nixpkgs system;
+          };
+          ci-profile-observability = import ./tests/nixos/profile-observability.nix {
+            inherit nixpkgs system;
+          };
+          ci-profile-hardening = import ./tests/nixos/profile-hardening.nix {
+            inherit nixpkgs system;
+          };
+        };
     in
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ defaultSystem ];
@@ -344,24 +356,27 @@
           };
 
           # ── Packages ────────────────────────────────────────────────────────
-          packages = {
-            tailscale-acl =
-              pkgs.runCommand "tailscale-acl"
-                {
-                  aclJson = builtins.toJSON (aclGen.mkAcl hostRegistry);
-                  passAsFile = [ "aclJson" ];
-                }
-                ''
-                  cp "$aclJsonPath" "$out"
-                '';
+          packages =
+            {
+              tailscale-acl =
+                pkgs.runCommand "tailscale-acl"
+                  {
+                    aclJson = builtins.toJSON (aclGen.mkAcl hostRegistry);
+                    passAsFile = [ "aclJson" ];
+                  }
+                  ''
+                    cp "$aclJsonPath" "$out"
+                  '';
 
-            installer-iso =
-              (nixpkgs.lib.nixosSystem {
-                inherit system;
-                specialArgs = { inherit inputs; };
-                modules = [ ./hosts/installer/default.nix ];
-              }).config.system.build.isoImage;
-          };
+              installer-iso =
+                (nixpkgs.lib.nixosSystem {
+                  inherit system;
+                  specialArgs = { inherit inputs; };
+                  modules = [ ./hosts/installer/default.nix ];
+                }).config.system.build.isoImage;
+            }
+            // ciPackagesFor system
+            // cveReportPackages;
 
           # ── Formatter ───────────────────────────────────────────────────────
           formatter = treefmtEval.config.build.wrapper;
@@ -424,23 +439,7 @@
           checks =
             deploy-rs.lib.${system}.deployChecks self.deploy
             // invariantChecks
-            // cveCheckMap
             // {
-              vm-smoke = import ./tests/nixos/vm-smoke.nix {
-                inherit nixpkgs system inputs;
-              };
-              homeserver-vm-smoke = import ./tests/nixos/homeserver-vm-smoke.nix {
-                inherit nixpkgs system inputs;
-              };
-              profile-security = import ./tests/nixos/profile-security.nix {
-                inherit nixpkgs system;
-              };
-              profile-observability = import ./tests/nixos/profile-observability.nix {
-                inherit nixpkgs system;
-              };
-              profile-hardening = import ./tests/nixos/profile-hardening.nix {
-                inherit nixpkgs system;
-              };
               lib-generators = import ./tests/lib/generators.nix {
                 inherit nixpkgs system;
               };
@@ -451,6 +450,7 @@
                 inherit nixpkgs system;
               };
             };
+
         };
 
       flake = {
