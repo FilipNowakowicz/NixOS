@@ -39,7 +39,7 @@ jobs:
           pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: Flake evaluation
-        run: nix flake check --no-build --show-trace
+        run: bash scripts/validate.sh flake-eval
 
   checks-light:
     needs: eval
@@ -64,19 +64,7 @@ jobs:
           pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: Build lightweight blocking checks
-        run: |
-          nix build \
-            .#checks.x86_64-linux.deploy-activate \
-            .#checks.x86_64-linux.deploy-schema \
-            .#checks.x86_64-linux.invariants-main \
-            .#checks.x86_64-linux.invariants-vm \
-            .#checks.x86_64-linux.invariants-homeserver \
-            .#checks.x86_64-linux.invariants-homeserver-vm \
-            .#checks.x86_64-linux.homeserver-sops-bootstrap \
-            .#checks.x86_64-linux.lib-generators \
-            .#checks.x86_64-linux.lib-generators-golden \
-            .#checks.x86_64-linux.lib-acl \
-            --no-link --show-trace
+        run: bash scripts/validate.sh light
 
   lint:
     needs: eval
@@ -125,13 +113,9 @@ jobs:
       matrix:
         include:
           - name: main-ci
-            attr: .#nixosConfigurations.main-ci.config.system.build.toplevel
           - name: vm
-            attr: .#nixosConfigurations.vm.config.system.build.toplevel
           - name: homeserver
-            attr: .#nixosConfigurations.homeserver.config.system.build.toplevel
           - name: homeserver-vm
-            attr: .#nixosConfigurations.homeserver-vm.config.system.build.toplevel
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -152,7 +136,7 @@ jobs:
           pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: Build ${{ matrix.name }}
-        run: nix build ${{ matrix.attr }} --no-link --show-trace
+        run: bash scripts/validate.sh host "${{ matrix.name }}"
 
   changes:
     runs-on: ubuntu-latest
@@ -219,7 +203,7 @@ jobs:
           pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: vm smoke test
-        run: nix build .#legacyPackages.x86_64-linux.ciTests.vm-smoke --no-link --show-trace
+        run: bash scripts/validate.sh smoke-vm
 
   smoke-homeserver:
     needs: [changes, hosts]
@@ -246,7 +230,7 @@ jobs:
           pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: homeserver-vm smoke test
-        run: nix build .#legacyPackages.x86_64-linux.ciTests.homeserver-vm-smoke --no-link --show-trace
+        run: bash scripts/validate.sh smoke-homeserver
 
   profile-tests:
     needs: [changes, hosts]
@@ -257,11 +241,8 @@ jobs:
       matrix:
         include:
           - name: profile-security
-            attr: .#legacyPackages.x86_64-linux.ciTests.profile-security
           - name: profile-observability
-            attr: .#legacyPackages.x86_64-linux.ciTests.profile-observability
           - name: profile-hardening
-            attr: .#legacyPackages.x86_64-linux.ciTests.profile-hardening
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -283,7 +264,7 @@ jobs:
           pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: Build ${{ matrix.name }}
-        run: nix build ${{ matrix.attr }} --no-link --show-trace
+        run: bash scripts/validate.sh profile-test "${{ matrix.name }}"
 
   closure-diff:
     if: github.event_name == 'pull_request'

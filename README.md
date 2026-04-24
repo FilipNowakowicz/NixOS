@@ -380,34 +380,30 @@ If the secret detector flags an intentional value, add a narrow path or glob to 
 ## Validation
 
 ```bash
-# Run the homeserver VM integration smoke test
-nix build '.#legacyPackages.x86_64-linux.ciTests.homeserver-vm-smoke'
+# Fast evaluation only: flake outputs and lightweight checks evaluate
+bash scripts/validate.sh flake-eval
 
-# Run the standard VM desktop smoke test
-nix build '.#legacyPackages.x86_64-linux.ciTests.vm-smoke'
+# Lightweight blocking checks used by CI
+bash scripts/validate.sh light
 
-# Run profile-specific E2E tests
-nix build '.#legacyPackages.x86_64-linux.ciTests.profile-security'       # fail2ban blocks attacker
-nix build '.#legacyPackages.x86_64-linux.ciTests.profile-observability'  # Alloy ships journal logs to Loki
-nix build '.#legacyPackages.x86_64-linux.ciTests.profile-hardening'      # systemd sandbox score < 2.0
+# Build all host system closures used by CI
+bash scripts/validate.sh hosts
 
-# Run library unit tests (generators, etc.)
-nix build '.#checks.x86_64-linux.lib-generators'
+# Build smoke tests individually
+bash scripts/validate.sh smoke-vm
+bash scripts/validate.sh smoke-homeserver
 
-# Run generator golden tests (snapshot testing for Alloy/Grafana)
-nix build '.#checks.x86_64-linux.lib-generators-golden'
+# Build all profile-specific NixOS tests
+bash scripts/validate.sh profile-tests
 
-# Run configuration invariant checks (assertions for every host)
-# e.g., "main has no passwordless sudo", "homeserver has firewall enabled"
-nix build '.#checks.x86_64-linux.invariants-main'
+# Build the full heavy KVM-backed suite
+bash scripts/validate.sh heavy
 
-# View CVE scanning reports for each host (outputs a text file)
-nix build '.#legacyPackages.x86_64-linux.ciReports.homeserver' --print-out-paths | xargs cat
-nix build '.#legacyPackages.x86_64-linux.ciReports.main' --print-out-paths | xargs cat
-
-# Check for flake inputs, formatting, and unused variables
-nix flake check
+# View CVE scanning reports for each host
+bash scripts/validate.sh cve-reports
 ```
+
+`nix flake check` in this repo is intentionally evaluation-oriented. The booted NixOS tests and CVE reports live under `legacyPackages` so they can stay path-gated in CI and opt-in locally.
 
 ---
 
@@ -430,26 +426,22 @@ Tailscale security rules are managed declaratively within the flake. The `lib/ac
 
 The repository uses GitHub Actions (`.github/workflows/nix.yml` and `flake-update.yml`) for automated validation and maintenance. The CI pipeline is designed for both correctness and performance, using path-filtering to skip expensive tests when possible.
 
-| Job                  | Description                                                                                                        |
-| :------------------- | :----------------------------------------------------------------------------------------------------------------- |
-| **Flake Evaluation** | Verifies that the flake and all host configurations evaluate correctly (`nix flake check --no-build`).             |
-| **Light Checks**     | Builds lightweight blocking checks like invariants, generators, and library unit tests.                            |
-| **Linting**          | Runs `statix` (Nix), `deadnix` (dead code), `treefmt` (formatting), and `shellcheck` (shell scripts).              |
-| **Host Builds**      | Matrix-based build of the `toplevel` closure for every host defined in the registry.                               |
-| **Smoke Tests**      | Executes integration tests (`vm-smoke`, `homeserver-vm-smoke`) in full NixOS environments, gated by path changes.  |
-| **Profile Tests**    | Matrix-based NixOS tests for Security, Observability, and Hardening profiles.                                      |
-| **Closure Diff**     | Automatically computes and comments the package closure diff on PRs to visualize the impact of changes.            |
-| **Merge Gate**       | Consolidates all required checks into a single status; required for branch protection and automated flake updates. |
-| **Flake Update**     | Automated weekly `flake.lock` updates via GitHub Action; auto-merges if the `merge-gate` passes.                   |
+| Job                  | Description                                                                                                                                     |
+| :------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Flake Evaluation** | Runs `bash scripts/validate.sh flake-eval`, which keeps `nix flake check --no-build` as a fast evaluation gate for flake outputs and configs. |
+| **Light Checks**     | Runs `bash scripts/validate.sh light` for deploy checks, invariants, SOPS bootstrap validation, and lightweight library tests.                 |
+| **Linting**          | Runs `statix` (Nix), `deadnix` (dead code), `treefmt` (formatting), and `shellcheck` (shell scripts).                                         |
+| **Host Builds**      | Matrix-builds each host closure via `bash scripts/validate.sh host <name>`.                                                                    |
+| **Smoke Tests**      | Runs `bash scripts/validate.sh smoke-vm` and `smoke-homeserver` in full NixOS environments when relevant paths change.                         |
+| **Profile Tests**    | Matrix-builds each profile test via `bash scripts/validate.sh profile-test <name>`.                                                            |
+| **Closure Diff**     | Automatically computes and comments the `nvd` diff of package closures on PRs.                                                                 |
+| **Merge Gate**       | Consolidates all required checks into a single status; required for branch protection and automated flake updates.                              |
+| **Flake Update**     | Automated weekly `flake.lock` updates via GitHub Action; auto-merges if the `merge-gate` passes.                                               |
 
 ### Path Filtering & Performance
 
 To optimize CI runtime, expensive **Smoke Tests** and **Profile Tests** only execute when changes are detected in relevant paths (e.g., `modules/`, `lib/`, or specific host directories).
 
 The workflow uses **Cachix** (`filipnowakowicz`) to accelerate builds. CI seeds the cache with successful builds (`cachix push`), which can then be consumed by local machines for rebuild acceleration.
-TANT] -->
 
 <!-- > **KVM Requirement**: NixOS integration tests require KVM virtualization. While GitHub-hosted `ubuntu-latest` runners provide `/dev/kvm` for public repositories, private or self-hosted runners must have KVM support enabled to prevent silent job timeouts. -->
-
-->
-->
