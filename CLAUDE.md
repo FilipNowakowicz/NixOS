@@ -18,13 +18,14 @@ approaches proactively. Explain why, not just what.
 - **Automated updates:** Weekly `flake.lock` updates (`flake-update.yml`); auto-merges if `merge-gate` status check passes.
 - **Merge Gate:** Consolidates all required checks (flake-check, invariants, smoke-tests) into a single required status check for branch protection.
 - **Module Topology:** Global profile imports in `modules/nixos/default.nix` have been removed. Hosts must explicitly import required profiles (e.g., `desktop`, `security`).
-- **Host Registry:** `lib/hosts.nix` is the single source of truth and uses typed schema validation.
+- **Host Registry:** `lib/hosts.nix` is the single source of truth and uses typed schema validation. It includes target architecture (`system`) for multi-arch support.
 - **Validate invariants:** `nix build '.#checks.x86_64-linux.invariants-<host>'`
 - **Validate profile:** `nix build '.#checks.x86_64-linux.profile-<name>'`
 - **Golden tests:** `nix build '.#checks.x86_64-linux.lib-generators-golden'`
 - **CVE scan:** `nix build '.#checks.x86_64-linux.cve-check-<host>'`
 - **Lint:** `statix check .` and `deadnix .`
 - **Pre-commit (manual run):** `pre-commit run --all-files`
+- **Git hooks:** `nix develop` installs a `commit-msg` hook that removes `Co-authored-by:` trailers to keep history single-author.
 - **Git** is for version control only, not deployment
 
 ---

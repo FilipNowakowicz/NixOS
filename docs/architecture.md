@@ -54,6 +54,7 @@ A host's Nix store closure should only contain what is explicitly requested.
 
 `lib/hosts.nix` is the **Single Source of Truth (SSoT)** for host metadata.
 
+- **Multi-Arch Support:** Every host must define its target `system` (e.g., `x86_64-linux`), ensuring the flake evaluates correctly for heterogeneous fleets.
 - Network IDs, Tailscale tags, and roles must be defined in the registry, not hardcoded in modules.
 - Modules should consume this data via `config.repo.host` (or similar library helpers) to adapt their behavior.
 - Generators may intentionally consume only a subset of the registry. For example, `lib/acl.nix` currently uses `tailscale.tag` only and does not infer host aliases or host-specific rules from richer metadata.

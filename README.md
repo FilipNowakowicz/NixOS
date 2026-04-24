@@ -8,7 +8,7 @@ The repository separates hardware, host identity, system profiles, and user conf
 ## Overview
 
 - **Reproducible & Declarative**: NixOS defines the entire system state, services, and hardware. Home Manager manages the user environment and dotfiles.
-- **Multi-Host**: Built from reusable profiles to support a primary workstation (`main`), a headless `homeserver`, and multiple VMs.
+- **Multi-Host & Multi-Arch**: Built from reusable profiles to support a primary workstation (`main`), a headless `homeserver`, and multiple VMs. The host registry defines the target architecture (`system`) per-host for true multi-arch support.
 - **Secrets Management**: Handled by [sops-nix](https://github.com/Mic92/sops-nix) with age encryption, with secrets decrypted at boot by the host itself.
 - **Impermanent Root**: VMs and the `homeserver` use an ephemeral root filesystem created with [impermanence](https://github.com/nix-community/impermanence). System state is reset on boot, with persistent data explicitly stored on a `/persist` volume.
 - **Declarative Disks**: Disk layouts for all hosts are managed declaratively with [disko](https://github.com/nix-community/disko).
@@ -181,8 +181,7 @@ Multiple VMs can run simultaneously — each has its own disk image, OVMF vars, 
 | `homeserver-vm` | `deploy '.#homeserver-vm'`               | After `nix run '.#vm' -- create homeserver-vm`. |
 | `user@wsl`      | `home-manager switch --flake .#user@wsl` | Portable Home Manager for WSL.                  |
 
-> [!NOTE]
-> **Cold Installs**: Use `reinstall-homeserver.sh` (which wraps `nixos-anywhere`) only for the initial installation on real hardware. Once bootstrapped, transition to the `deploy-rs` workflow for all configuration updates.
+**Cold Installs**: Use `reinstall-homeserver.sh` (which wraps `nixos-anywhere`) only for the initial installation on real hardware. Once bootstrapped, transition to the `deploy-rs` workflow for all configuration updates.
 
 ---
 
@@ -300,8 +299,7 @@ Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) and [age]
    sops hosts/homeserver/secrets/secrets.yaml
    ```
 
-> [!CAUTION]
-> **Host Key Rotation**: Rotating a host's SSH key or changing its identity requires a corresponding update to `.sops.yaml` (new age key) followed by `sops updatekeys <path/to/secrets.yaml>` to re-encrypt the file for the new key. Failing to do this before deployment will result in a boot-time decryption failure.
+**Host Key Rotation**: Rotating a host's SSH key or changing its identity requires a corresponding update to `.sops.yaml` (new age key) followed by `sops updatekeys <path/to/secrets.yaml>` to re-encrypt the file for the new key. Failing to do this before deployment will result in a boot-time decryption failure.
 
 ---
 
@@ -430,25 +428,28 @@ Tailscale security rules are managed declaratively within the flake. The `lib/ac
 
 ## Continuous Integration
 
-The repository uses GitHub Actions (`.github/workflows/nix.yml` and `flake-update.yml`) for automated validation and maintenance.
+The repository uses GitHub Actions (`.github/workflows/nix.yml` and `flake-update.yml`) for automated validation and maintenance. The CI pipeline is designed for both correctness and performance, using path-filtering to skip expensive tests when possible.
 
-| Job                 | Description                                                                                                                           |
-| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------ |
-| **Flake Check**     | Runs `nix flake check`, evaluates all host configurations, checks for dead code (`deadnix`), and verifies formatting (`treefmt-nix`). |
-| **Flake Update**    | Automated weekly `flake.lock` updates via GitHub Action; auto-merges if the `merge-gate` passes.                                      |
-| **Merge Gate**      | Consolidates all required checks (flake-check, invariants, smoke-tests) into a single status for branch protection.                   |
-| **Invariant Check** | Evaluates configuration assertions per host to close the intent/reality gap.                                                          |
-| **CVE Scanning**    | Runs `vulnix` against every host closure to report open vulnerabilities without blocking CI.                                          |
-| **Golden Tests**    | Verifies that generated configuration files (Alloy/Grafana) match committed snapshots.                                                |
-| **Smoke Test**      | Executes integration tests (`vm-smoke`, `homeserver-vm-smoke`) booting full NixOS environments.                                       |
-| **Profile Tests**   | Runs specialized NixOS tests for Security, Observability, and Hardening profiles.                                                     |
-| **Closure Diff**    | Automatically computes and comments the `nvd` diff of package closures on PRs.                                                        |
+| Job                  | Description                                                                                                        |
+| :------------------- | :----------------------------------------------------------------------------------------------------------------- |
+| **Flake Evaluation** | Verifies that the flake and all host configurations evaluate correctly (`nix flake check --no-build`).             |
+| **Light Checks**     | Builds lightweight blocking checks like invariants, generators, and library unit tests.                            |
+| **Linting**          | Runs `statix` (Nix), `deadnix` (dead code), `treefmt` (formatting), and `shellcheck` (shell scripts).              |
+| **Host Builds**      | Matrix-based build of the `toplevel` closure for every host defined in the registry.                               |
+| **Smoke Tests**      | Executes integration tests (`vm-smoke`, `homeserver-vm-smoke`) in full NixOS environments, gated by path changes.  |
+| **Profile Tests**    | Matrix-based NixOS tests for Security, Observability, and Hardening profiles.                                      |
+| **Closure Diff**     | Automatically computes and comments the package closure diff on PRs to visualize the impact of changes.            |
+| **Merge Gate**       | Consolidates all required checks into a single status; required for branch protection and automated flake updates. |
+| **Flake Update**     | Automated weekly `flake.lock` updates via GitHub Action; auto-merges if the `merge-gate` passes.                   |
 
 ### Path Filtering & Performance
 
-To optimize CI runtime, the **Smoke Test** only executes when changes are detected in paths that affect the server configuration (`hosts/homeserver*/**`, `modules/**`, `lib/**`).
+To optimize CI runtime, expensive **Smoke Tests** and **Profile Tests** only execute when changes are detected in relevant paths (e.g., `modules/`, `lib/`, or specific host directories).
 
 The workflow uses **Cachix** (`filipnowakowicz`) to accelerate builds. CI seeds the cache with successful builds (`cachix push`), which can then be consumed by local machines for rebuild acceleration.
+TANT] -->
 
-<!-- > [!IMPORTANT] -->
 <!-- > **KVM Requirement**: NixOS integration tests require KVM virtualization. While GitHub-hosted `ubuntu-latest` runners provide `/dev/kvm` for public repositories, private or self-hosted runners must have KVM support enabled to prevent silent job timeouts. -->
+
+->
+->
