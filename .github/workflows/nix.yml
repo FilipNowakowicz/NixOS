@@ -219,7 +219,7 @@ jobs:
           pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: vm smoke test
-        run: nix build .#packages.x86_64-linux.ci-vm-smoke --no-link --show-trace
+        run: nix build .#legacyPackages.x86_64-linux.ciTests.vm-smoke --no-link --show-trace
 
   smoke-homeserver:
     needs: [changes, hosts]
@@ -246,7 +246,7 @@ jobs:
           pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: homeserver-vm smoke test
-        run: nix build .#packages.x86_64-linux.ci-homeserver-vm-smoke --no-link --show-trace
+        run: nix build .#legacyPackages.x86_64-linux.ciTests.homeserver-vm-smoke --no-link --show-trace
 
   profile-tests:
     needs: [changes, hosts]
@@ -257,11 +257,11 @@ jobs:
       matrix:
         include:
           - name: profile-security
-            attr: .#packages.x86_64-linux.ci-profile-security
+            attr: .#legacyPackages.x86_64-linux.ciTests.profile-security
           - name: profile-observability
-            attr: .#packages.x86_64-linux.ci-profile-observability
+            attr: .#legacyPackages.x86_64-linux.ciTests.profile-observability
           - name: profile-hardening
-            attr: .#packages.x86_64-linux.ci-profile-hardening
+            attr: .#legacyPackages.x86_64-linux.ciTests.profile-hardening
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 

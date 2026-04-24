@@ -269,28 +269,37 @@
               '';
         };
 
-      cveReportPackages = {
-        cve-main = cveChecks.mkCveCheck "main" allNixosConfigs.main.config.system.build.toplevel;
-        cve-homeserver =
-          cveChecks.mkCveCheck "homeserver" allNixosConfigs.homeserver.config.system.build.toplevel;
-      };
+      cveReportPackagesFor =
+        system:
+        let
+          targetPkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
+          targetCveChecks = import ./lib/cve-checks.nix { pkgs = targetPkgs; };
+        in
+        {
+          main = targetCveChecks.mkCveCheck "main" allNixosConfigs.main.config.system.build.toplevel;
+          homeserver =
+            targetCveChecks.mkCveCheck "homeserver" allNixosConfigs.homeserver.config.system.build.toplevel;
+        };
 
-      ciPackagesFor =
+      ciTestsFor =
         system:
         {
-          ci-vm-smoke = import ./tests/nixos/vm-smoke.nix {
+          vm-smoke = import ./tests/nixos/vm-smoke.nix {
             inherit nixpkgs system inputs;
           };
-          ci-homeserver-vm-smoke = import ./tests/nixos/homeserver-vm-smoke.nix {
+          homeserver-vm-smoke = import ./tests/nixos/homeserver-vm-smoke.nix {
             inherit nixpkgs system inputs;
           };
-          ci-profile-security = import ./tests/nixos/profile-security.nix {
+          profile-security = import ./tests/nixos/profile-security.nix {
             inherit nixpkgs system;
           };
-          ci-profile-observability = import ./tests/nixos/profile-observability.nix {
+          profile-observability = import ./tests/nixos/profile-observability.nix {
             inherit nixpkgs system;
           };
-          ci-profile-hardening = import ./tests/nixos/profile-hardening.nix {
+          profile-hardening = import ./tests/nixos/profile-hardening.nix {
             inherit nixpkgs system;
           };
         };
@@ -374,9 +383,7 @@
                   specialArgs = { inherit inputs; };
                   modules = [ ./hosts/installer/default.nix ];
                 }).config.system.build.isoImage;
-            }
-            // ciPackagesFor system
-            // cveReportPackages;
+            };
 
           # ── Formatter ───────────────────────────────────────────────────────
           formatter = treefmtEval.config.build.wrapper;
@@ -461,6 +468,14 @@
 
         # ── Deploy-RS ───────────────────────────────────────────────────────
         deploy.nodes = allDeployNodes;
+
+        # ── CI-only derivations ─────────────────────────────────────────────
+        # Keep these out of `packages` and `checks`: `nix flake check` inspects
+        # both outputs, which defeats path-gating and can trip VM-test eval.
+        legacyPackages.${defaultSystem} = {
+          ciTests = ciTestsFor defaultSystem;
+          ciReports = cveReportPackagesFor defaultSystem;
+        };
 
         # ── Home Manager Configurations ─────────────────────────────────────
         homeConfigurations = {
