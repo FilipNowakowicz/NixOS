@@ -41,6 +41,7 @@ in
     ingestAuth = {
       username = "telemetry";
       passwordFile = config.sops.secrets.observability_ingest_password.path;
+      serviceEnvironmentFile = config.sops.templates."otel-env".path;
     };
   };
 
@@ -60,6 +61,10 @@ in
   # ── Sops ────────────────────────────────────────────────────────────────────
   sops = {
     defaultSopsFile = ./secrets/secrets.yaml;
+    templates."otel-env" = {
+      content = "BASICAUTH_PASSWORD=${config.sops.placeholder.observability_ingest_password}";
+      mode = "0400";
+    };
     secrets = {
       example_secret = { };
       user_password.neededForUsers = true;
