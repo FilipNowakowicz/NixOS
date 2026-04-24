@@ -93,10 +93,10 @@ let
     ];
   };
 
-  # Read golden files from repo
-  goldenDir = ../../tests/lib/generators.golden.d;
-  goldenAlloyBasic = builtins.readFile "${goldenDir}/alloy-basic.txt";
-  goldenDashboard = builtins.readFile "${goldenDir}/dashboard-example.golden";
+  # Read each golden file directly so pure flake evaluation only needs the
+  # concrete tracked files, not an intermediate directory store path.
+  goldenAlloyBasic = builtins.readFile ./generators.golden.d/alloy-basic.txt;
+  goldenDashboard = builtins.readFile ./generators.golden.d/dashboard-example.golden;
 
   # Test: compare generated alloy config against golden
   testAlloyBasicSnapshot = {
