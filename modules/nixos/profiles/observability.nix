@@ -11,6 +11,7 @@ let
   mkFileDirective = path: "$__file{${toString path}}";
 
   shouldUseIngestAuth = cfg.ingestAuth.username != null && cfg.ingestAuth.passwordFile != null;
+  shouldUseRemoteTraceAuth = shouldUseIngestAuth && cfg.collectors.traces.exportURL != null;
   metricsRemoteWriteAuth = lib.optionalAttrs shouldUseIngestAuth {
     basic_auth = {
       inherit (cfg.ingestAuth) username;
@@ -334,6 +335,17 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = !shouldUseRemoteTraceAuth || cfg.ingestAuth.serviceEnvironmentFile != null;
+        message = ''
+          profiles.observability.ingestAuth.serviceEnvironmentFile must be set when
+          authenticated remote trace export is enabled, because the OpenTelemetry
+          collector basicauth extension reads BASICAUTH_PASSWORD from an env file.
+        '';
+      }
+    ];
+
     services = {
       loki = lib.mkIf cfg.loki.enable {
         enable = true;
