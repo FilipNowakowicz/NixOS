@@ -71,16 +71,16 @@
       ...
     }:
     let
-      hostSystem = "x86_64-linux";
+      defaultSystem = "x86_64-linux";
+
+      hostRegistry = import ./lib/hosts.nix;
 
       pkgs = import nixpkgs {
-        system = hostSystem;
+        system = defaultSystem;
         config.allowUnfree = true;
       };
 
       inherit (nixpkgs) lib;
-
-      hostRegistry = import ./lib/hosts.nix;
 
       homeManagerRoleModules = {
         desktop = ./home/users/user/home.nix;
@@ -115,7 +115,7 @@
           hostMeta = hostRegistry.${host};
         in
         nixpkgs.lib.nixosSystem {
-          system = hostSystem;
+          system = hostMeta.system;
           specialArgs = {
             inherit inputs self hostMeta;
           };
@@ -152,7 +152,7 @@
         autoRollback = true;
         profiles.system = {
           user = "root";
-          path = deploy-rs.lib.${hostSystem}.activate.nixos self.nixosConfigurations.${name};
+          path = deploy-rs.lib.${cfg.system}.activate.nixos self.nixosConfigurations.${name};
         };
       }) deployableHosts;
 
@@ -284,7 +284,7 @@
         ) hostsToCheck;
     in
     flake-parts.lib.mkFlake { inherit inputs; } {
-      systems = [ hostSystem ];
+      systems = [ defaultSystem ];
 
       perSystem =
         { system, ... }:
