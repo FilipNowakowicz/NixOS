@@ -20,6 +20,8 @@ in
     ./disko.nix
     ./hardware-configuration.nix
     ../../modules/nixos/profiles/base.nix
+    ../../modules/nixos/profiles/impermanence-base.nix
+    ../../modules/nixos/profiles/machine-common.nix
     ../../modules/nixos/profiles/security.nix
     ../../modules/nixos/profiles/sops-base.nix
     ../../modules/nixos/profiles/user.nix
@@ -99,7 +101,6 @@ in
   };
 
   # ── Services ────────────────────────────────────────────────────────────────
-  # Override the mkDefault false from security.nix — SSH is required on a headless server
   services = {
     hardened = {
       tailscale-cert = {
@@ -142,11 +143,6 @@ in
           ];
         };
       };
-    };
-
-    openssh = {
-      enable = true;
-      openFirewall = true;
     };
 
     # Tailscale VPN for secure remote access
@@ -253,27 +249,14 @@ in
   };
 
   # ── Impermanence ────────────────────────────────────────────────────────────
-  fileSystems."/persist".neededForBoot = true;
-
-  environment.persistence."/persist" = {
-    hideMounts = true;
-    directories = [
-      "/var/log"
-      "/var/lib/nixos"
-      "/var/lib/systemd/coredump"
-      "/var/lib/tailscale" # Persist Tailscale auth state and certs across reboots
-      "/var/lib/syncthing" # Persist Syncthing config, database, and synced files
-      "/var/lib/vaultwarden" # Persist Vaultwarden database and config
-      "/var/lib/grafana"
-      "/var/lib/loki"
-      "/var/lib/prometheus2"
-    ];
-    files = [
-      "/etc/machine-id"
-      "/etc/ssh/ssh_host_ed25519_key"
-      "/etc/ssh/ssh_host_ed25519_key.pub"
-    ];
-  };
+  environment.persistence."/persist".directories = [
+    "/var/lib/tailscale" # Persist Tailscale auth state and certs across reboots
+    "/var/lib/syncthing" # Persist Syncthing config, database, and synced files
+    "/var/lib/vaultwarden" # Persist Vaultwarden database and config
+    "/var/lib/grafana"
+    "/var/lib/loki"
+    "/var/lib/prometheus2"
+  ];
 
   # ── User ────────────────────────────────────────────────────────────────────
   users.users.user = {
