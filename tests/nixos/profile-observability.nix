@@ -47,23 +47,33 @@ in
             };
           };
 
-          # Minimal stub: netcat loops accepting connections and captures headers.
+          # HTTP stub: responds 204 so Prometheus doesn't back off, appends headers to file.
           systemd.services.stub-ingest = {
-            description = "Stub ingest endpoint that logs Authorization headers";
+            description = "Stub ingest endpoint that captures Authorization headers";
             wantedBy = [ "multi-user.target" ];
             script = ''
-              mkdir -p /tmp/stub
-              while true; do
-                ${pkgs.netcat}/bin/nc -l -p 19090 > /tmp/stub/last-request 2>&1 || true
-              done
+                            mkdir -p /tmp/stub
+                            ${pkgs.python3}/bin/python3 - <<'EOF'
+              import http.server
+
+              class Handler(http.server.BaseHTTPRequestHandler):
+                  def do_POST(self):
+                      with open("/tmp/stub/last-request", "a") as f:
+                          f.write(str(self.headers))
+                      self.send_response(204)
+                      self.end_headers()
+                  def log_message(self, *a): pass
+
+              http.server.HTTPServer(("127.0.0.1", 19090), Handler).serve_forever()
+              EOF
             '';
-            serviceConfig.Restart = "always";
+            serviceConfig = {
+              Restart = "always";
+              Type = "simple";
+            };
           };
 
-          environment.systemPackages = [
-            pkgs.curl
-            pkgs.netcat
-          ];
+          environment.systemPackages = [ pkgs.curl ];
         };
     };
 
@@ -93,10 +103,11 @@ in
       obs_auth.wait_for_unit("stub-ingest.service")
       obs_auth.wait_for_unit("prometheus.service")
 
-      # Give Prometheus time to attempt a remoteWrite scrape cycle
-      obs_auth.sleep(20)
-
-      # Verify the Authorization: Basic header appeared in the captured request
-      obs_auth.succeed("grep -q 'Authorization: Basic' /tmp/stub/last-request")
+      # Wait for Prometheus to complete a scrape+remoteWrite cycle (15s interval + startup).
+      # The stub responds 204 so Prometheus doesn't back off between attempts.
+      obs_auth.wait_until_succeeds(
+          "grep -q 'Authorization: Basic' /tmp/stub/last-request",
+          timeout=90,
+      )
     '';
   }
