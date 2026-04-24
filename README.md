@@ -349,9 +349,9 @@ nix fmt
 nix fmt -- --fail-on-change
 ```
 
-### Pre-commit hooks
+### Git hooks
 
-Pre-commit hooks are configured in [`pre-commit-hooks.nix`](./pre-commit-hooks.nix) and auto-installed when entering `nix develop`.
+Pre-commit hooks are configured in [`pre-commit-hooks.nix`](./pre-commit-hooks.nix), and `nix develop` also installs a flake-managed `commit-msg` hook that removes `Co-authored-by:` trailers.
 
 ```bash
 # Run the full hook set manually

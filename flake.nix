@@ -346,6 +346,13 @@
               treefmtEval
               ;
           };
+
+          commitMsgHook = pkgs.writeShellScript "commit-msg-hook" ''
+            set -euo pipefail
+
+            # Keep commit attribution single-author unless explicitly rewritten later.
+            sed -i '/^Co-authored-by:/Id' "$1"
+          '';
         in
         {
           # ── Apps ────────────────────────────────────────────────────────────
@@ -410,6 +417,10 @@
                 ++ preCommitCheck.enabledPackages;
               shellHook = ''
                 ${preCommitCheck.shellHook}
+                common_git_dir="$(git rev-parse --git-common-dir 2>/dev/null || true)"
+                if [ -n "$common_git_dir" ]; then
+                  ${pkgs.coreutils}/bin/install -Dm755 ${commitMsgHook} "$common_git_dir/hooks/commit-msg"
+                fi
                 # Make 'vm' command available directly in the dev shell
                 alias vm="nix run '.#vm' --"
                 exec ${pkgs.zsh}/bin/zsh
