@@ -98,7 +98,8 @@ light)
     ".#checks.${system}.homeserver-sops-bootstrap" \
     ".#checks.${system}.lib-generators" \
     ".#checks.${system}.lib-generators-golden" \
-    ".#checks.${system}.lib-acl"
+    ".#checks.${system}.lib-acl" \
+    ".#checks.${system}.lib-invariants"
   ;;
 
 host)

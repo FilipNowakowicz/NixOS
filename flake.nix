@@ -157,6 +157,8 @@
       # ── Configuration Invariant Checks ──────────────────────────────────
       invariantChecks =
         let
+          registryAssertionsFor = hostName: invariants.mkRegistryAssertions hostName hostRegistry.${hostName};
+
           sshFail2banHardened = {
             name = "SSH hosts enforce hardened fail2ban";
             check =
@@ -172,71 +174,83 @@
           };
         in
         {
-          invariants-main = invariants.mkInvariantCheck "main" [
-            {
-              name = "has stateVersion";
-              check = cfg: cfg.system.stateVersion != null;
-            }
-            {
-              name = "no passwordless sudo";
-              check = cfg: cfg.security.sudo.wheelNeedsPassword;
-            }
-            {
-              name = "initrd secrets point to sops-managed paths";
-              check =
-                cfg:
-                let
-                  values = lib.attrValues cfg.boot.initrd.secrets;
-                  nonNull = lib.filter (v: v != null) values;
-                in
-                lib.all (lib.hasPrefix "/run/secrets/") nonNull;
-            }
-            sshFail2banHardened
-          ] allNixosConfigs.main.config;
+          invariants-main = invariants.mkInvariantCheck "main" (
+            [
+              {
+                name = "has stateVersion";
+                check = cfg: cfg.system.stateVersion != null;
+              }
+              {
+                name = "no passwordless sudo";
+                check = cfg: cfg.security.sudo.wheelNeedsPassword;
+              }
+              {
+                name = "initrd secrets point to sops-managed paths";
+                check =
+                  cfg:
+                  let
+                    values = lib.attrValues cfg.boot.initrd.secrets;
+                    nonNull = lib.filter (v: v != null) values;
+                  in
+                  lib.all (lib.hasPrefix "/run/secrets/") nonNull;
+              }
+              sshFail2banHardened
+            ]
+            ++ registryAssertionsFor "main"
+          ) allNixosConfigs.main.config;
 
-          invariants-vm = invariants.mkInvariantCheck "vm" [
-            {
-              name = "has stateVersion";
-              check = cfg: cfg.system.stateVersion != null;
-            }
-            {
-              name = "passwordless sudo enabled";
-              check = cfg: !cfg.security.sudo.wheelNeedsPassword;
-            }
-            sshFail2banHardened
-          ] allNixosConfigs.vm.config;
+          invariants-vm = invariants.mkInvariantCheck "vm" (
+            [
+              {
+                name = "has stateVersion";
+                check = cfg: cfg.system.stateVersion != null;
+              }
+              {
+                name = "passwordless sudo enabled";
+                check = cfg: !cfg.security.sudo.wheelNeedsPassword;
+              }
+              sshFail2banHardened
+            ]
+            ++ registryAssertionsFor "vm"
+          ) allNixosConfigs.vm.config;
 
-          invariants-homeserver-vm = invariants.mkInvariantCheck "homeserver-vm" [
-            {
-              name = "has stateVersion";
-              check = cfg: cfg.system.stateVersion != null;
-            }
-            {
-              name = "passwordless sudo enabled";
-              check = cfg: !cfg.security.sudo.wheelNeedsPassword;
-            }
-            {
-              name = "firewall enabled";
-              check = cfg: cfg.networking.firewall.enable;
-            }
-            sshFail2banHardened
-          ] allNixosConfigs.homeserver-vm.config;
+          invariants-homeserver-vm = invariants.mkInvariantCheck "homeserver-vm" (
+            [
+              {
+                name = "has stateVersion";
+                check = cfg: cfg.system.stateVersion != null;
+              }
+              {
+                name = "passwordless sudo enabled";
+                check = cfg: !cfg.security.sudo.wheelNeedsPassword;
+              }
+              {
+                name = "firewall enabled";
+                check = cfg: cfg.networking.firewall.enable;
+              }
+              sshFail2banHardened
+            ]
+            ++ registryAssertionsFor "homeserver-vm"
+          ) allNixosConfigs.homeserver-vm.config;
 
-          invariants-homeserver = invariants.mkInvariantCheck "homeserver" [
-            {
-              name = "has stateVersion";
-              check = cfg: cfg.system.stateVersion != null;
-            }
-            {
-              name = "firewall enabled";
-              check = cfg: cfg.networking.firewall.enable;
-            }
-            {
-              name = "sops uses SSH host key for decryption";
-              check = cfg: cfg.sops.age.sshKeyPaths != [ ];
-            }
-            sshFail2banHardened
-          ] allNixosConfigs.homeserver.config;
+          invariants-homeserver = invariants.mkInvariantCheck "homeserver" (
+            [
+              {
+                name = "has stateVersion";
+                check = cfg: cfg.system.stateVersion != null;
+              }
+              {
+                name = "firewall enabled";
+                check = cfg: cfg.networking.firewall.enable;
+              }
+              {
+                name = "sops uses SSH host key for decryption";
+                check = cfg: cfg.sops.age.sshKeyPaths != [ ];
+              }
+              sshFail2banHardened
+            ]
+            ++ registryAssertionsFor "homeserver"
+          ) allNixosConfigs.homeserver.config;
 
           # Fail-loud: pre-baked host key files must be present so reinstall-homeserver can inject
           # a stable age identity from first boot. Without them, sops secrets won't decrypt on boot.
@@ -459,6 +473,9 @@
                 inherit nixpkgs system;
               };
               lib-acl = import ./tests/lib/acl.nix {
+                inherit nixpkgs system;
+              };
+              lib-invariants = import ./tests/lib/invariants.nix {
                 inherit nixpkgs system;
               };
             };
