@@ -16,11 +16,13 @@
 ```nix
 {
   main = {
+    system = "x86_64-linux";
     role = "workstation";
     # No deploy — local-only via `nh os switch`
   };
 
   homeserver = {
+    system = "x86_64-linux";
     role = "homeserver";
     tailnetFQDN = "homeserver.filip-nowakowicz.ts.net";
     deploy.sshUser = "user";
@@ -28,6 +30,7 @@
   };
 
   vm = {
+    system = "x86_64-linux";
     role = "vm";
     sshPort = 2222;
     diskSize = "40G";
@@ -35,6 +38,7 @@
   };
 
   homeserver-vm = {
+    system = "x86_64-linux";
     role = "homeserver-vm";
     sshPort = 2223;
     diskSize = "20G";
@@ -47,6 +51,7 @@
 
 | Field            | Type   | Meaning                                                         |
 | ---------------- | ------ | --------------------------------------------------------------- |
+| `system`         | string | Nix system string for this host; drives `nixosSystem` and deploy activation |
 | `role`           | string | Human label; metadata only now, ready to drive modules later    |
 | `deploy.sshUser` | string | Presence triggers a deploy-rs node; absence = local-only (main) |
 | `sshPort`        | int    | VM-only; used to filter hosts for the VM script                 |
@@ -76,7 +81,7 @@ let
     autoRollback = false;
     profiles.system = {
       user = "root";
-      path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.${name};
+      path = deploy-rs.lib.${cfg.system}.activate.nixos self.nixosConfigurations.${name};
     };
   }) deployableHosts;
 

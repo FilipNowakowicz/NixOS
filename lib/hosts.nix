@@ -1,6 +1,7 @@
 # Host registry — single source of truth for all deployed hosts.
 # To add a new host: add an entry here, create hosts/<name>/default.nix.
 # Fields:
+#   system      — nixpkgs system string for this host (used for nixosSystem/deploy activation)
 #   role        — human label; ready to drive modules later
 #   deploy      — presence generates a deploy-rs node; absence = local-only (main)
 #   sshPort     — VM-only; used to filter hosts for the VM script
@@ -18,6 +19,7 @@
 #   ip          — static IP (e.g. microvm guest)
 let
   knownFields = [
+    "system"
     "role"
     "deploy"
     "sshPort"
@@ -52,6 +54,10 @@ let
         (ok (
           unknownFields == [ ]
         ) "${name}: unknown field(s): ${builtins.concatStringsSep ", " unknownFields}")
+        (ok (p "system") "${name}: missing required field 'system'")
+        (ok (builtins.isString cfg.system)
+          "${name}.system: must be a string, got ${builtins.typeOf (cfg.system or null)}"
+        )
         (ok (p "role") "${name}: missing required field 'role'")
         (ok (builtins.isString cfg.role) "${name}.role: must be a string, got ${builtins.typeOf cfg.role}")
         (ok (
@@ -115,6 +121,7 @@ let
 
   raw = {
     main = {
+      system = "x86_64-linux";
       role = "workstation";
       homeManager = {
         role = "desktop";
@@ -128,6 +135,7 @@ let
     };
 
     homeserver = {
+      system = "x86_64-linux";
       role = "homeserver";
       homeManager.role = "server";
       tailnetFQDN = "homeserver.filip-nowakowicz.ts.net";
@@ -137,6 +145,7 @@ let
     };
 
     vm = {
+      system = "x86_64-linux";
       role = "vm";
       homeManager = {
         role = "desktop";
@@ -151,6 +160,7 @@ let
     };
 
     homeserver-vm = {
+      system = "x86_64-linux";
       role = "homeserver-vm";
       homeManager.role = "server";
       ip = "10.0.100.2";
