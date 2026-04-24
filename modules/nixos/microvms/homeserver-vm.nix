@@ -16,7 +16,7 @@
     # ── microvm VM declaration ─────────────────────────────────────────────────
     microvm.vms.homeserver-vm = {
       flake = self;
-      autostart = true;
+      autostart = false;
     };
 
     # ── Bridge networking (host-only, managed by systemd-networkd) ────────────
