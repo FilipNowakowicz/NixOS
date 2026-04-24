@@ -171,6 +171,8 @@
             in
             lib.filter (v: !lib.hasPrefix "/run/secrets/" v) nonNull;
 
+          registryAssertionsFor = hostName: invariants.mkRegistryAssertions hostName hostRegistry.${hostName};
+
           sshFail2banHardened = {
             name = "SSH hosts enforce hardened fail2ban";
             check =
@@ -197,81 +199,93 @@
           };
         in
         {
-          invariants-main = invariants.mkInvariantCheck "main" [
-            {
-              name = "has stateVersion";
-              check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
-            }
-            {
-              name = "no passwordless sudo";
-              check =
-                cfg: require cfg.security.sudo.wheelNeedsPassword "security.sudo.wheelNeedsPassword must be true";
-            }
-            {
-              name = "initrd secrets point to sops-managed paths";
-              check =
-                cfg:
-                let
-                  invalid = invalidInitrdSecrets cfg;
-                in
-                mkResult (
-                  invalid == [ ]
-                ) "boot.initrd.secrets must point to /run/secrets/*, got: ${lib.concatStringsSep ", " invalid}";
-            }
-            sshFail2banHardened
-          ] allNixosConfigs.main.config;
+          invariants-main = invariants.mkInvariantCheck "main" (
+            [
+              {
+                name = "has stateVersion";
+                check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
+              }
+              {
+                name = "no passwordless sudo";
+                check =
+                  cfg: require cfg.security.sudo.wheelNeedsPassword "security.sudo.wheelNeedsPassword must be true";
+              }
+              {
+                name = "initrd secrets point to sops-managed paths";
+                check =
+                  cfg:
+                  let
+                    invalid = invalidInitrdSecrets cfg;
+                  in
+                  mkResult (
+                    invalid == [ ]
+                  ) "boot.initrd.secrets must point to /run/secrets/*, got: ${lib.concatStringsSep ", " invalid}";
+              }
+              sshFail2banHardened
+            ]
+            ++ registryAssertionsFor "main"
+          ) allNixosConfigs.main.config;
 
-          invariants-vm = invariants.mkInvariantCheck "vm" [
-            {
-              name = "has stateVersion";
-              check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
-            }
-            {
-              name = "passwordless sudo enabled";
-              check =
-                cfg:
-                require (!cfg.security.sudo.wheelNeedsPassword) "security.sudo.wheelNeedsPassword must be false";
-            }
-            sshFail2banHardened
-          ] allNixosConfigs.vm.config;
+          invariants-vm = invariants.mkInvariantCheck "vm" (
+            [
+              {
+                name = "has stateVersion";
+                check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
+              }
+              {
+                name = "passwordless sudo enabled";
+                check =
+                  cfg:
+                  require (!cfg.security.sudo.wheelNeedsPassword) "security.sudo.wheelNeedsPassword must be false";
+              }
+              sshFail2banHardened
+            ]
+            ++ registryAssertionsFor "vm"
+          ) allNixosConfigs.vm.config;
 
-          invariants-homeserver-vm = invariants.mkInvariantCheck "homeserver-vm" [
-            {
-              name = "has stateVersion";
-              check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
-            }
-            {
-              name = "passwordless sudo enabled";
-              check =
-                cfg:
-                require (!cfg.security.sudo.wheelNeedsPassword) "security.sudo.wheelNeedsPassword must be false";
-            }
-            {
-              name = "firewall enabled";
-              check = cfg: require cfg.networking.firewall.enable "networking.firewall.enable must be true";
-            }
-            sshFail2banHardened
-          ] allNixosConfigs.homeserver-vm.config;
+          invariants-homeserver-vm = invariants.mkInvariantCheck "homeserver-vm" (
+            [
+              {
+                name = "has stateVersion";
+                check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
+              }
+              {
+                name = "passwordless sudo enabled";
+                check =
+                  cfg:
+                  require (!cfg.security.sudo.wheelNeedsPassword) "security.sudo.wheelNeedsPassword must be false";
+              }
+              {
+                name = "firewall enabled";
+                check = cfg: require cfg.networking.firewall.enable "networking.firewall.enable must be true";
+              }
+              sshFail2banHardened
+            ]
+            ++ registryAssertionsFor "homeserver-vm"
+          ) allNixosConfigs.homeserver-vm.config;
 
-          invariants-homeserver = invariants.mkInvariantCheck "homeserver" [
-            {
-              name = "has stateVersion";
-              check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
-            }
-            {
-              name = "firewall enabled";
-              check = cfg: require cfg.networking.firewall.enable "networking.firewall.enable must be true";
-            }
-            {
-              name = "sops uses SSH host key for decryption";
-              check =
-                cfg:
-                require (
-                  cfg.sops.age.sshKeyPaths != [ ]
-                ) "sops.age.sshKeyPaths must contain at least one SSH host key path";
-            }
-            sshFail2banHardened
-          ] allNixosConfigs.homeserver.config;
+          invariants-homeserver = invariants.mkInvariantCheck "homeserver" (
+            [
+              {
+                name = "has stateVersion";
+                check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
+              }
+              {
+                name = "firewall enabled";
+                check = cfg: require cfg.networking.firewall.enable "networking.firewall.enable must be true";
+              }
+              {
+                name = "sops uses SSH host key for decryption";
+                check =
+                  cfg:
+                  require (
+                    cfg.sops.age.sshKeyPaths != [ ]
+                  ) "sops.age.sshKeyPaths must contain at least one SSH host key path";
+              }
+              sshFail2banHardened
+            ]
+            ++ registryAssertionsFor "homeserver"
+          ) allNixosConfigs.homeserver.config;
 
           # Fail-loud: pre-baked host key files must be present so reinstall-homeserver can inject
           # a stable age identity from first boot. Without them, sops secrets won't decrypt on boot.
