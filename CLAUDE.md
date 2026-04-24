@@ -92,7 +92,6 @@ nix run '.#vm' -- ssh <name>      # SSH into VM
 - `lib/acl.nix` — Tailscale ACL generator (derives rules from host registry)
 - `lib/pubkeys.nix` — centralized SSH public keys
 - `lib/syncthing.nix` — shared Syncthing device/folder registry
-- `lib/network.nix` — centralized network identifiers (tailnet FQDN)
 - `hosts/main/` — real machine config, disko layout, LUKS/LVM, Lanzaboote (Secure Boot)
 - `hosts/vm/` — dev/test VM config (desktop profile + home-manager)
 - `hosts/homeserver-vm/` — homeserver services in a VM (Vaultwarden, Syncthing)
@@ -102,7 +101,7 @@ nix run '.#vm' -- ssh <name>      # SSH into VM
 - `scripts/closure-diff.sh` — compute closure diffs in CI
 - `scripts/reinstall-homeserver.sh` — real homeserver reinstall (separate workflow)
 - `modules/nixos/microvms/` — microvm.nix VM definitions (homeserver-vm)
-- `modules/nixos/profiles/` — system profiles (base, desktop, security, observability, vm, sops-base)
+- `modules/nixos/profiles/` — system profiles (base, desktop, security, observability, observability-client, vm, sops-base)
 - `modules/nixos/services/` — standalone systemd services (hardened.nix, failure-notify)
 - `modules/nixos/hardware/` — hardware drivers and graphics (NVIDIA PRIME)
 - `home/profiles/` — home-manager profiles (base, desktop, workstation)

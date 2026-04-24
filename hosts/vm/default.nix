@@ -1,12 +1,10 @@
 { config, hostRegistry, ... }:
-let
-  inherit (hostRegistry.homeserver) tailnetFQDN;
-in
 {
   imports = [
     ../../modules/nixos/profiles/vm.nix
     ../../modules/nixos/profiles/base.nix
     ../../modules/nixos/profiles/desktop.nix
+    ../../modules/nixos/profiles/observability-client.nix
     ../../modules/nixos/profiles/security.nix
     ../../modules/nixos/profiles/sops-base.nix
     ../../modules/nixos/profiles/user.nix
@@ -20,27 +18,9 @@ in
     "/etc/NetworkManager/system-connections"
   ];
 
-  profiles.observability = {
+  profiles.observability-client = {
     enable = true;
-    collectors = {
-      metrics = {
-        enable = true;
-        remoteWriteURL = "https://${tailnetFQDN}/obs/mimir/api/v1/push";
-      };
-      logs = {
-        enable = true;
-        pushURL = "https://${tailnetFQDN}/obs/loki/loki/api/v1/push";
-      };
-      traces = {
-        enable = true;
-        exportURL = "https://${tailnetFQDN}/obs/otlp";
-      };
-    };
-    ingestAuth = {
-      username = "telemetry";
-      passwordFile = config.sops.secrets.observability_ingest_password.path;
-      serviceEnvironmentFile = config.sops.templates."otel-env".path;
-    };
+    remoteEndpoint.host = hostRegistry.homeserver.tailnetFQDN;
   };
 
   # ── Systemd Failure Notifications ──────────────────────────────────────────
@@ -59,10 +39,6 @@ in
   # ── Sops ────────────────────────────────────────────────────────────────────
   sops = {
     defaultSopsFile = ./secrets/secrets.yaml;
-    templates."otel-env" = {
-      content = "BASICAUTH_PASSWORD=${config.sops.placeholder.observability_ingest_password}";
-      mode = "0400";
-    };
     secrets = {
       example_secret = { };
       user_password.neededForUsers = true;

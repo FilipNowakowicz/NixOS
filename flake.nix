@@ -202,6 +202,19 @@
               else
                 mkResult (violations == [ ]) (lib.concatStringsSep "; " violations);
           };
+
+          obsClientUsesCanonicalUsername = {
+            name = "observability client uses canonical ingest username";
+            check =
+              cfg:
+              let
+                clientEnabled = cfg.profiles.observability-client.enable;
+                inherit (cfg.profiles.observability.ingestAuth) username;
+              in
+              require (
+                !clientEnabled || username == "telemetry"
+              ) "profiles.observability.ingestAuth.username must be 'telemetry', got '${username}'";
+          };
         in
         {
           invariants-main = invariants.mkInvariantCheck "main" (
@@ -227,6 +240,7 @@
                   ) "boot.initrd.secrets must point to /run/secrets/*, got: ${lib.concatStringsSep ", " invalid}";
               }
               sshFail2banHardened
+              obsClientUsesCanonicalUsername
             ]
             ++ registryAssertionsFor "main"
           ) allNixosConfigs.main.config;
@@ -244,6 +258,7 @@
                   require (!cfg.security.sudo.wheelNeedsPassword) "security.sudo.wheelNeedsPassword must be false";
               }
               sshFail2banHardened
+              obsClientUsesCanonicalUsername
             ]
             ++ registryAssertionsFor "vm"
           ) allNixosConfigs.vm.config;
