@@ -8,11 +8,21 @@ The repository separates hardware, host identity, system profiles, and user conf
 ## Overview
 
 - **Reproducible & Declarative**: NixOS defines the entire system state, services, and hardware. Home Manager manages the user environment and dotfiles.
-- **Multi-Host & Multi-Arch**: Built from reusable profiles to support a primary workstation (`main`), a headless `homeserver`, and multiple VMs. The host registry defines the target architecture (`system`) per-host for true multi-arch support.
+- **Multi-Host Ready**: Built from reusable profiles to support a primary workstation (`main`), a headless `homeserver`, a QEMU test VM, and a microvm-based homeserver development target. The host registry defines the target architecture (`system`) per host; the current fleet is `x86_64-linux`.
 - **Secrets Management**: Handled by [sops-nix](https://github.com/Mic92/sops-nix) with age encryption, with secrets decrypted at boot by the host itself.
 - **Impermanent Root**: VMs and the `homeserver` use an ephemeral root filesystem created with [impermanence](https://github.com/nix-community/impermanence). System state is reset on boot, with persistent data explicitly stored on a `/persist` volume.
-- **Declarative Disks**: Disk layouts for all hosts are managed declaratively with [disko](https://github.com/nix-community/disko).
+- **Declarative Disks**: Disk layouts for real hosts and the QEMU test VM are managed declaratively with [disko](https://github.com/nix-community/disko). The `homeserver-vm` microvm uses a `microvm.nix` volume for `/persist`.
 - **Runtime Theming**: A runtime-swappable color system allows changing themes without a full NixOS rebuild.
+
+---
+
+## Documentation Map
+
+- [Architecture](docs/architecture.md) - layer boundaries, global imports, host registry rules, and the microvm split.
+- [Operations](docs/operations.md) - deployment, VM workflows, homeserver bootstrap, validation, and formatting commands.
+- [Security Model](docs/security.md) - sops recipients, initrd SSH, Tailscale exposure, USBGuard, hardening, and backups.
+- [Backlog](docs/backlog.md) and [Goals](HSGOALS.md) - deferred and active work.
+- [Superpowers Design Records](docs/superpowers/README.md) - historical specs and implementation plans.
 
 ---
 
@@ -54,6 +64,12 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 .
 ├── flake.nix                          # Flake entry point
 ├── .sops.yaml                         # SOPS configuration for secret management
+├── docs/
+│   ├── architecture.md                 # Structural rules and module boundaries
+│   ├── operations.md                   # Deployment and validation runbook
+│   ├── security.md                     # Secrets, exposure, and hardening model
+│   ├── backlog.md                      # Deferred work
+│   └── superpowers/                    # Historical specs and implementation plans
 ├── lib/
 │   ├── hosts.nix                      # Host registry (typed schema; single source of truth for all hosts)
 │   ├── generators.nix                 # Typed Alloy HCL generators
@@ -62,8 +78,7 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 │   ├── cve-checks.nix                 # CVE scanning check builders
 │   ├── pubkeys.nix                    # Centralized SSH public keys
 │   ├── syncthing.nix                  # Shared Syncthing device/folder registry
-│   ├── acl.nix                        # Declarative Tailscale ACL generator
-│   └── network.nix                    # Centralized network identifiers (tailnet FQDN)
+│   └── acl.nix                        # Declarative Tailscale ACL generator
 ├── hosts/
 │   ├── main/                          # Primary workstation
 │   │   ├── default.nix
@@ -71,7 +86,8 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 │   │   └── hardware-configuration.nix
 │   ├── homeserver/                    # Headless server (Vaultwarden, Syncthing, Tailscale)
 │   │   ├── default.nix
-│   │   └── disko.nix
+│   │   ├── disko.nix
+│   │   └── hardware-configuration.nix
 │   ├── vm/                            # Dev/test VM (desktop + home-manager)
 │   │   ├── default.nix
 │   │   └── secrets/
@@ -81,7 +97,10 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 │   └── installer/                     # Minimal NixOS ISO for fresh installs
 │       └── default.nix
 ├── scripts/
-│   ├── vm.sh                          # Unified VM management (create/start/stop/etc.)
+│   ├── ci-plan.sh                     # CI path filtering and job matrix planner
+│   ├── closure-diff.sh                # Closure size diff helper for PR comments
+│   ├── validate.sh                    # Local/CI validation entry point
+│   ├── vm.sh                          # Archived QEMU VM management for hardware-style testing
 │   └── reinstall-homeserver.sh        # Real homeserver reinstall
 ├── modules/
 │   └── nixos/
@@ -91,7 +110,12 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 │       │   ├── base.nix               # Base system settings (Nix, locale)
 │       │   ├── desktop.nix            # Desktop environment (Hyprland, PipeWire)
 │       │   ├── security.nix           # Security hardening (Firewall, SSH)
-│       │   ├── observability.nix      # LGTM observability stack (Grafana, Loki, Tempo, Mimir)
+│       │   ├── observability/         # LGTM observability stack (Grafana, Loki, Tempo, Mimir)
+│       │   ├── observability-client.nix
+│       │   ├── backup.nix
+│       │   ├── machine-common.nix
+│       │   ├── microvm-guest.nix
+│       │   ├── sops-base.nix
 │       │   ├── user.nix               # User account and home-manager base
 │       │   └── vm.nix                 # Shared VM module (hardware, disko, impermanence)
 │       └── services/
@@ -131,9 +155,9 @@ The `homeserver-vm` runs as a lightweight microvm on the `main` host via `microv
 - **Control**: `sudo systemctl [start|stop|status] microvm@homeserver-vm.service`
 - **Logs**: `sudo journalctl -u microvm@homeserver-vm.service -f`
 
-### QEMU Development VMs (Secondary)
+### QEMU Development VM (Archived / Secondary)
 
-Traditional QEMU/KVM VMs for testing desktop environments, bootloaders, or full disk encryption. These are managed through a unified command derived from the host registry.
+Traditional QEMU/KVM VMs are kept for testing desktop environments, bootloaders, impermanence, or full disk encryption. This is not the day-to-day `homeserver-vm` workflow.
 
 ```bash
 nix run '.#vm' -- <action> <name>
@@ -168,20 +192,20 @@ Multiple VMs can run simultaneously — each has its own disk image, OVMF vars, 
 | `main`          | Primary workstation, running a full desktop environment with NVIDIA PRIME support. |
 | `homeserver`    | Headless server for self-hosted services with an ephemeral root filesystem.        |
 | `vm`            | QEMU/KVM dev/test VM with desktop profile. Port 2222.                              |
-| `homeserver-vm` | QEMU/KVM VM running homeserver services for development. Port 2223.                |
+| `homeserver-vm` | `microvm.nix` guest running homeserver services on `main`, static IP `10.0.100.2`. |
 | `installer`     | Minimal ISO configuration used to bootstrap new installations.                     |
 
 ### Deployment
 
-| Host            | Command                                  | Notes                                           |
-| --------------- | ---------------------------------------- | ----------------------------------------------- |
-| `main`          | `nh os switch --hostname main .`         | Modern Nix helper (`nh`) for fast rebuilds.     |
-| `homeserver`    | `deploy '.#homeserver'`                  | Standard remote deployment via `deploy-rs`.     |
-| `vm`            | `deploy '.#vm'`                          | After `nix run '.#vm' -- create vm`.            |
-| `homeserver-vm` | `deploy '.#homeserver-vm'`               | After `nix run '.#vm' -- create homeserver-vm`. |
-| `user@wsl`      | `home-manager switch --flake .#user@wsl` | Portable Home Manager for WSL.                  |
+| Host            | Command                                  | Notes                                                 |
+| --------------- | ---------------------------------------- | ----------------------------------------------------- |
+| `main`          | `nh os switch --hostname main .`         | Modern Nix helper (`nh`) for fast rebuilds.           |
+| `homeserver`    | `deploy '.#homeserver'`                  | Standard remote deployment via `deploy-rs`.           |
+| `vm`            | `deploy '.#vm'`                          | After `nix run '.#vm' -- create vm`.                  |
+| `homeserver-vm` | `nh os switch --hostname main .`         | Managed as `microvm@homeserver-vm.service` on `main`. |
+| `user@wsl`      | `home-manager switch --flake .#user@wsl` | Portable Home Manager for WSL.                        |
 
-**Cold Installs**: Use `reinstall-homeserver.sh` (which wraps `nixos-anywhere`) only for the initial installation on real hardware. Once bootstrapped, transition to the `deploy-rs` workflow for all configuration updates.
+**Cold Installs**: Use `nix run '.#reinstall-homeserver' -- <target-ip>` (which wraps `nixos-anywhere`) only for the initial installation on real hardware. Once bootstrapped, transition to the `deploy-rs` workflow for all configuration updates.
 
 ---
 
@@ -252,7 +276,7 @@ Authenticated ingest routes on `https://homeserver.<tailnet-name>.ts.net`:
 - `/obs/mimir/` → Mimir remote_write API
 - `/obs/otlp/` → OpenTelemetry Collector HTTP ingest
 
-Implementation is shared via `modules/nixos/profiles/observability.nix`, enabled as a full stack on `hosts/homeserver/default.nix`, and enabled as telemetry sources on `hosts/main/default.nix` and `hosts/vm/default.nix`.
+Implementation is shared via `modules/nixos/profiles/observability/`, enabled as a full stack on `homeserver` and `homeserver-vm`, and enabled as telemetry sources on `main` and `vm` through `modules/nixos/profiles/observability-client.nix`.
 
 Grafana admin credentials and ingest credentials are managed with `sops` secrets; keep a mirrored copy in Vaultwarden for operator recovery.
 
@@ -265,11 +289,12 @@ Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) and [age]
 ### How it works
 
 - `.sops.yaml` defines rules for which age public keys can decrypt which secret files.
-- Keys are grouped by name (e.g., `&user`, `&vm_host`, `&homeserver_vm_host`, `&main_host`).
+- Keys are grouped by name (e.g., `&user`, `&vm_host`, `&homeserver_vm_age`, `&main_host`, `&homeserver_host`).
 - Host keys are derived from their respective SSH host public keys using `ssh-to-age`.
 - This allows a host to decrypt its own secrets automatically during activation. The host's SSH key is persisted via `impermanence` to ensure the age key remains stable across reboots.
 - The user's personal age key (`user`) can decrypt all secrets.
-- Each VM has its own encrypted SSH host keys in `hosts/<name>/secrets/`, injected during `create`/`reinstall` so sops works from first boot.
+- The QEMU `vm` has encrypted SSH host keys in `hosts/vm/secrets/`, injected during `create`/`reinstall` so sops works from first boot.
+- `homeserver-vm` uses a dedicated age key whose private half is stored in `hosts/main/secrets/secrets.yaml`; `main` decrypts it and exposes it to the guest through a `virtiofs` share at `/run/age-keys/`.
 
 ### Setup
 
@@ -281,11 +306,11 @@ Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) and [age]
 
    Add the public key to `.sops.yaml` under the `&user` anchor.
 
-2. **Add a host's age key** after its first boot:
-   On the new host, get its SSH public key, convert it to an age key, and add it to `.sops.yaml`.
+2. **Add a host's age key** before granting it secret access:
+   For SSH-host-derived identities, get the host's SSH public key, convert it to an age key, and add it to `.sops.yaml`. The real `homeserver` uses a pre-generated encrypted SSH host key so this can be done before first boot.
 
    ```bash
-   # On the new host (e.g., homeserver)
+   # On the target host, or from a pre-generated host public key
    cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age
 
    # On your dev machine, add the resulting age key to .sops.yaml
@@ -311,7 +336,7 @@ The flake provides several `devShells` and `apps` for development and maintenanc
 | ---------- | ---------------------- | --------------------------------------------------------------------------------------- |
 | `devShell` | `default`              | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, `qemu`, `OVMF`, `nixd`, etc. |
 | `devShell` | `security`             | Includes common security tools: `nmap`, `gobuster`, `sqlmap`, `hydra`, `john`, etc.     |
-| `app`      | `vm`                   | Unified VM management: `nix run '.#vm' -- <action> <name>`                              |
+| `app`      | `vm`                   | Archived QEMU VM management: `nix run '.#vm' -- <action> <name>`                        |
 | `app`      | `reinstall-homeserver` | Runs `nixos-anywhere` for fresh homeserver install on real hardware.                    |
 | `package`  | `installer-iso`        | Minimal NixOS ISO: `nix build '.#installer-iso'`                                        |
 
@@ -450,6 +475,6 @@ Examples:
 - `flake.lock` and shared library changes run every host closure, smoke test, profile test, and closure diff.
 - Docs-only and WSL-only changes skip expensive host and VM jobs; the always-on eval, lint, and light checks still run.
 
-The workflow uses **Cachix** (`filipnowakowicz`) to accelerate builds. CI seeds the cache with successful builds (`cachix push`), which can then be consumed by local machines for rebuild acceleration.
+The workflow configures **Cachix** (`filipnowakowicz`) to accelerate builds. When `CACHIX_AUTH_TOKEN` is available, successful CI builds can seed the cache for local machines and later CI jobs.
 
 <!-- > **KVM Requirement**: NixOS integration tests require KVM virtualization. While GitHub-hosted `ubuntu-latest` runners provide `/dev/kvm` for public repositories, private or self-hosted runners must have KVM support enabled to prevent silent job timeouts. -->

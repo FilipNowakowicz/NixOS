@@ -8,12 +8,12 @@ This document defines the structural hierarchy and "Rules of Engagement" for the
 
 The configuration is organized into four distinct layers, with dependencies only flowing **downward**.
 
-| Layer                 | Location                  | Responsibility                                             | Side Effects?   |
-| :-------------------- | :------------------------ | :--------------------------------------------------------- | :-------------- |
-| **Layer 3: Hosts**    | `hosts/`                  | Final assembly. Combines hardware, identity, and profiles. | **High**        |
-| **Layer 2: Profiles** | `modules/nixos/profiles/` | Bundles modules into logical features (e.g., "Desktop").   | **High**        |
-| **Layer 1: Modules**  | `modules/nixos/services/` | Defines custom options and internal logic (DSL).           | **Conditional** |
-| **Layer 0: Lib**      | `lib/`                    | Pure logic, registries, and schema definitions.            | **None**        |
+| Layer                 | Location                                           | Responsibility                                             | Side Effects?   |
+| :-------------------- | :------------------------------------------------- | :--------------------------------------------------------- | :-------------- |
+| **Layer 3: Hosts**    | `hosts/`                                           | Final assembly. Combines hardware, identity, and profiles. | **High**        |
+| **Layer 2: Profiles** | `modules/nixos/profiles/`                          | Bundles modules into logical features (e.g., "Desktop").   | **High**        |
+| **Layer 1: Modules**  | `modules/nixos/services/`, option-focused profiles | Defines custom options and internal logic (DSL).           | **Conditional** |
+| **Layer 0: Lib**      | `lib/`                                             | Pure logic, registries, and schema definitions.            | **None**        |
 
 ---
 
@@ -38,10 +38,11 @@ graph TD
 
 ### Rule 1: The "Side-Effect" Gate
 
-Files that have **immediate side-effects** (e.g., adding packages to `environment.systemPackages` or enabling heavy services) **MUST NOT** be imported globally in `modules/nixos/default.nix`.
+Files that have **unconditional side-effects** (e.g., adding packages to `environment.systemPackages` or enabling heavy services for every host) **MUST NOT** be imported globally in `modules/nixos/default.nix`.
 
 - **Manual Opt-in:** Profiles like `desktop.nix`, `nvidia-prime.nix`, and `workstation.nix` must be imported explicitly by the host.
-- **Global Infrastructure:** Only modules that provide options (`mkOption`) or universal invariants (security assertions) belong in the global `imports` list.
+- **Global Infrastructure:** Globally imported files must either define reusable options or gate their effects behind explicit options/host metadata. The current global imports are `profiles/observability/`, `profiles/backup.nix`, `services/systemd-failure-notify.nix`, and `services/hardened.nix`.
+- **Conditional Global Profiles:** A profile such as `backup.nix` may be global only because it is inert unless `hostMeta.backup.class` is set.
 
 ### Rule 2: Closure Integrity
 
@@ -56,7 +57,7 @@ A host's Nix store closure should only contain what is explicitly requested.
 
 - **Multi-Arch Support:** Every host must define its target `system` (e.g., `x86_64-linux`), ensuring the flake evaluates correctly for heterogeneous fleets.
 - Network IDs, Tailscale tags, and roles must be defined in the registry, not hardcoded in modules.
-- Modules should consume this data via `config.repo.host` (or similar library helpers) to adapt their behavior.
+- Hosts and infrastructure modules receive this data through the `hostMeta` and `hostRegistry` special args. Avoid duplicating registry-owned values in host modules unless the local value is truly hardware-specific.
 - Generators may intentionally consume only a subset of the registry. For example, `lib/acl.nix` currently uses `tailscale.tag` only and does not infer host aliases or host-specific rules from richer metadata.
 
 ### Rule 4: Module vs. Profile
@@ -76,6 +77,12 @@ Pure Nix functions. These must be "cold" (no imports of system modules). They de
 
 The building blocks. These introduce new attributes to the `services` or `programs` namespace. They should use `lib.mkIf` to ensure they do nothing unless their specific `.enable` option is set.
 
+Current examples:
+
+- `modules/nixos/services/hardened.nix` defines the `services.hardened` DSL.
+- `modules/nixos/services/systemd-failure-notify.nix` defines failure notification options.
+- `modules/nixos/profiles/observability/` defines the observability option surface and implementation, but remains inert unless `profiles.observability.enable = true`.
+
 ### Layer 2: Profiles
 
 The "Features" of the system. A profile typically imports multiple modules and configures them to work together. Profiles are the primary unit of reuse between hosts.
@@ -93,3 +100,20 @@ Hand-maintained `hardware-configuration.nix` files must carry a short header
 with their regeneration policy and a `Last reviewed: YYYY-MM-DD` note so it is
 obvious when a checked-in hardware snapshot should be regenerated or manually
 revalidated.
+
+---
+
+## 5. Microvm Boundary
+
+`homeserver-vm` is a first-class `nixosConfigurations` entry, but its lifecycle is owned by `main`.
+
+| Side       | Files                                                                         | Responsibility                                                                                     |
+| :--------- | :---------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------- |
+| Host side  | `hosts/main/default.nix`, `modules/nixos/microvms/homeserver-vm.nix`          | Declares the microvm service, bridge/NAT networking, and age-key virtiofs source.                  |
+| Guest side | `hosts/homeserver-vm/default.nix`, `modules/nixos/profiles/microvm-guest.nix` | Defines the guest OS, tmpfs root, `/persist` volume, static guest IP, services, and sops key path. |
+
+Rules:
+
+- Do not add `deploy` metadata, `sshPort`, or `diskSize` to `homeserver-vm` in `lib/hosts.nix`; those fields are for QEMU VMs managed by `scripts/vm.sh`.
+- Deploying `homeserver-vm` means rebuilding `main` with `nh os switch --hostname main .`, then controlling `microvm@homeserver-vm.service`.
+- Guest secrets are encrypted to `&homeserver_vm_age`; the private age key is stored in `hosts/main/secrets/secrets.yaml` and shared to the guest at runtime.
