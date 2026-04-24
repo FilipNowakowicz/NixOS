@@ -8,7 +8,6 @@ in
     ../../modules/nixos/profiles/vm.nix
     ../../modules/nixos/profiles/base.nix
     ../../modules/nixos/profiles/desktop.nix
-    ../../modules/nixos/profiles/observability.nix
     ../../modules/nixos/profiles/security.nix
     ../../modules/nixos/profiles/sops-base.nix
     ../../modules/nixos/profiles/user.nix

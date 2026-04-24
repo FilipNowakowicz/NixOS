@@ -22,6 +22,7 @@ in
       {
         imports = [
           ../../hosts/vm/default.nix
+          ../../modules/nixos/profiles/observability.nix
           ../../modules/nixos/services/systemd-failure-notify.nix
           inputs.home-manager.nixosModules.home-manager
           inputs.sops-nix.nixosModules.sops
