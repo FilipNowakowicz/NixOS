@@ -9,13 +9,17 @@ let
     inherit system;
     config.allowUnfree = true;
   };
+  hostRegistry = import ../../lib/hosts.nix;
 in
 (import "${nixpkgs}/nixos/lib/testing-python.nix" {
   inherit system pkgs;
 }).runTest
   {
     name = "homeserver-vm-smoke";
-    node.specialArgs = { inherit inputs; };
+    node.specialArgs = {
+      inherit inputs hostRegistry;
+      hostMeta = hostRegistry.homeserver-vm;
+    };
 
     nodes.homeserver =
       { lib, config, ... }:

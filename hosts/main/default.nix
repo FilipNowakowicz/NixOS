@@ -3,11 +3,11 @@
   inputs,
   lib,
   pkgs,
+  hostRegistry,
   ...
 }:
 let
-  network = import ../../lib/network.nix;
-  inherit (network) tailnetFQDN;
+  inherit (hostRegistry.homeserver) tailnetFQDN;
 in
 {
   imports = [

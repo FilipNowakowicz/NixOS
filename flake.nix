@@ -115,7 +115,12 @@
         nixpkgs.lib.nixosSystem {
           inherit (hostMeta) system;
           specialArgs = {
-            inherit inputs self hostMeta;
+            inherit
+              inputs
+              self
+              hostMeta
+              hostRegistry
+              ;
           };
           modules = [
             ./hosts/${host}/default.nix
