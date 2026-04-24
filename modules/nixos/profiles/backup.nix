@@ -1,8 +1,6 @@
-{ config, lib, ... }:
+{ lib, hostMeta, ... }:
 let
-  hostRegistry = import ../../../lib/hosts.nix;
-  hostEntry = hostRegistry.${config.networking.hostName} or { };
-  backupClass = hostEntry.backup.class or null;
+  backupClass = hostMeta.backup.class or null;
 
   pruneOptsByClass = {
     critical = [
