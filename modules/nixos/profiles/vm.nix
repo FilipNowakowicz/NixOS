@@ -10,6 +10,8 @@
     inputs.disko.nixosModules.disko
     inputs.impermanence.nixosModules.impermanence
     "${inputs.nixpkgs}/nixos/modules/installer/scan/not-detected.nix"
+    ./impermanence-base.nix
+    ./machine-common.nix
   ];
 
   # ── Boot (virtio + UEFI) ──────────────────────────────────────────────────
@@ -75,38 +77,6 @@
       };
     };
   };
-
-  # ── Impermanence (base — hosts extend with service-specific dirs) ──────────
-  fileSystems."/persist".neededForBoot = true;
-
-  environment.persistence."/persist" = {
-    hideMounts = true;
-    directories = [
-      "/var/log"
-      "/var/lib/nixos"
-      "/var/lib/systemd/coredump"
-    ];
-    files = [
-      "/etc/machine-id"
-      "/etc/ssh/ssh_host_ed25519_key"
-      "/etc/ssh/ssh_host_ed25519_key.pub"
-    ];
-  };
-
-  # ── Sudo (passwordless — needed by deploy-rs, acceptable for VMs) ──────────
-  security.sudo.wheelNeedsPassword = false;
-
-  # ── SSH ────────────────────────────────────────────────────────────────────
-  services.openssh = {
-    enable = true;
-    openFirewall = true;
-  };
-
-  # ── Nix ────────────────────────────────────────────────────────────────────
-  nix.settings.trusted-users = [
-    "root"
-    "user"
-  ];
 
   # ── Networking ─────────────────────────────────────────────────────────────
   networking.networkmanager.enable = lib.mkDefault true;

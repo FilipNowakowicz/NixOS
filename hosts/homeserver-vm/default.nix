@@ -1,6 +1,7 @@
 {
   config,
   pkgs,
+  hostMeta,
   ...
 }:
 let
@@ -21,7 +22,7 @@ in
   systemd.network.networks."20-eth" = {
     matchConfig.MACAddress = "02:00:00:00:00:01";
     networkConfig = {
-      Address = "10.0.100.2/24";
+      Address = "${hostMeta.ip}/24";
       Gateway = "10.0.100.1";
       DNS = "1.1.1.1";
     };
