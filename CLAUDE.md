@@ -9,7 +9,7 @@ approaches proactively. Explain why, not just what.
 ## Environment
 
 - **Dev machine:** NixOS (main)
-- **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nh`, `nixd`, `statix`, `deadnix`, `pre-commit`, `sops`, `ssh-to-age`, `qemu`, `OVMF`
+- **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nixd`, `statix`, `deadnix`, `sops`, `ssh-to-age`, `qemu`, `OVMF`, `vulnix`, `direnv`, and the flake-managed pre-commit hook tooling.
 - **Per-project shells:** `direnv` enabled — use `use flake` in `.envrc` for automatic environment loading.
 - **Deploy (VM):** `deploy '.#vm'` (Note: `homeserver-vm` is managed via `main`'s microvm; QEMU `vm` is for testing only)
 - **Deploy (WSL):** `home-manager switch --flake .#user@wsl`
@@ -17,7 +17,7 @@ approaches proactively. Explain why, not just what.
 - **Validate flake eval:** `bash scripts/validate.sh flake-eval`
 - **Automated updates:** Weekly `flake.lock` updates (`flake-update.yml`); auto-merges if `merge-gate` status check passes.
 - **Merge Gate:** Consolidates all required checks (flake-check, invariants, smoke-tests) into a single required status check for branch protection.
-- **Module Topology:** `modules/nixos/default.nix` globally imports `observability.nix`, `backup.nix`, `systemd-failure-notify.nix`, and `hardened.nix` for all hosts. Hosts must explicitly import host-specific profiles (e.g., `desktop`, `security`, `base`) but must NOT re-import the globally-provided ones.
+- **Module Topology:** `modules/nixos/default.nix` globally imports `profiles/observability/`, `profiles/backup.nix`, `services/systemd-failure-notify.nix`, and `services/hardened.nix` for all hosts. Hosts must explicitly import host-specific profiles (e.g., `desktop`, `security`, `base`) but must NOT re-import the globally-provided ones.
 - **Host Registry:** `lib/hosts.nix` is the single source of truth and uses typed schema validation. It includes target architecture (`system`) for multi-arch support.
 - **Validate light CI suite:** `bash scripts/validate.sh light`
 - **Validate hosts:** `bash scripts/validate.sh hosts`
@@ -92,12 +92,15 @@ nix run '.#vm' -- ssh <name>      # SSH into VM
 - `lib/acl.nix` — Tailscale ACL generator (derives rules from host registry)
 - `lib/pubkeys.nix` — centralized SSH public keys
 - `lib/syncthing.nix` — shared Syncthing device/folder registry
+- `docs/architecture.md` — structural rules and module boundaries
+- `docs/operations.md` — deployment, VM workflows, and validation runbook
+- `docs/security.md` — secrets, exposure, and hardening model
 - `hosts/main/` — real machine config, disko layout, LUKS/LVM, Lanzaboote (Secure Boot)
 - `hosts/vm/` — dev/test VM config (desktop profile + home-manager)
 - `hosts/homeserver-vm/` — homeserver services in a VM (Vaultwarden, Syncthing)
 - `hosts/homeserver/` — real hardware homeserver (same services + Tailscale, Nginx, TLS)
 - `hosts/installer/` — minimal NixOS ISO config for fresh installs
-- `scripts/vm.sh` — unified VM management script
+- `scripts/vm.sh` — archived QEMU VM management script
 - `scripts/closure-diff.sh` — compute closure diffs in CI
 - `scripts/reinstall-homeserver.sh` — real homeserver reinstall (separate workflow)
 - `modules/nixos/microvms/` — microvm.nix VM definitions (homeserver-vm)
@@ -143,14 +146,14 @@ Managed with sops-nix + age. Edit secrets with `sops <file>`.
 
 ## Goals
 
-See [GOALS.md](./GOALS.md) for the full project roadmap and in-progress tasks.
+See [HSGOALS.md](./HSGOALS.md) for the full project roadmap and in-progress tasks.
 
 ---
 
 ## Security Preferences
 
-- **Passwordless sudo is for VMs and dev machines only.**
-- **VM and Homeserver users have no password** (rely on SSH keys).
+- **Passwordless sudo is for VMs/dev machines and `machine-common` hosts only.**
+- **Interactive access should rely on SSH keys.** Host user password hashes are still managed through sops where declared for login/recovery compatibility.
 - **Scope secrets appropriately.** Each host should only be able to decrypt
   the secrets it needs, as defined in `.sops.yaml`.
 

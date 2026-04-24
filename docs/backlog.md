@@ -1,6 +1,6 @@
 # Backlog
 
-Deferred work that is intentionally not in `GOALS.md`.
+Deferred work that is intentionally not in `HSGOALS.md`.
 
 ## Cross-System Check Strategy
 
