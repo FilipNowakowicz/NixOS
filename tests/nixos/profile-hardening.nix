@@ -26,8 +26,25 @@ in
           };
         };
 
+        services.hardened.test-relaxed = {
+          relaxBase = [
+            "PrivateDevices"
+            "ProtectHome"
+          ];
+          extraConfig = {
+            ExecStart = "${pkgs.coreutils}/bin/sleep infinity";
+            Type = "simple";
+            DynamicUser = true;
+          };
+        };
+
         systemd.services.test-sandboxed = {
           description = "Sandbox hardening score test service";
+          wantedBy = [ "multi-user.target" ];
+        };
+
+        systemd.services.test-relaxed = {
+          description = "Baseline relaxation test service";
           wantedBy = [ "multi-user.target" ];
         };
 
@@ -53,5 +70,10 @@ in
           " | python3 -c 'import sys; score=float(sys.stdin.read().strip());"
           " assert score < 2.0, f\"score {score} >= 2.0 (target: <2.0)\"'"
       )
+
+      machine.wait_for_unit("test-relaxed.service")
+      machine.succeed("systemctl cat test-relaxed.service | grep -q 'ProtectSystem=strict'")
+      machine.succeed("! systemctl cat test-relaxed.service | grep -q 'PrivateDevices='")
+      machine.succeed("! systemctl cat test-relaxed.service | grep -q 'ProtectHome='")
     '';
   }

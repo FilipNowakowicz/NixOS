@@ -38,13 +38,22 @@ let
         description = "Apply the hardening baseline to this service.";
       };
 
+      relaxBase = lib.mkOption {
+        type = lib.types.listOf (lib.types.enum (lib.attrNames baseHardening));
+        default = [ ];
+        description = ''
+          Baseline hardening keys to omit entirely for this service, leaving the
+          upstream unit or systemd default in place.
+        '';
+      };
+
       extraConfig = lib.mkOption {
         type = lib.types.attrsOf lib.types.anything;
         default = { };
         description = ''
           Additional serviceConfig options merged on top of the baseline.
-          Set any base option to null to remove it from the final config
-          (e.g. PrivateDevices = null for services that need /dev access).
+          Use relaxBase when a baseline key should be omitted instead of
+          overridden.
         '';
       };
     };
@@ -58,27 +67,35 @@ in
     default = { };
     description = ''
       Apply a security hardening baseline to the named systemd services.
-      Each entry merges the base sandbox options with per-service extraConfig.
+      Each entry merges the base sandbox options with per-service extraConfig
+      and optional relaxBase omissions.
     '';
   };
 
-  config.systemd.services = lib.mkMerge (
-    lib.mapAttrsToList (
-      name: serviceCfg:
-      lib.mkIf serviceCfg.enable {
-        ${name}.serviceConfig =
-          let
-            extraKeys = lib.attrNames serviceCfg.extraConfig;
-            # Base options not touched by extraConfig: apply at mkDefault so nixpkgs modules win.
-            passiveBase = lib.filterAttrs (k: v: v != null && !(lib.elem k extraKeys)) baseHardening;
-            # extraConfig non-null values: apply at regular priority to override nixpkgs and base.
-            activeExtra = lib.filterAttrs (_: v: v != null) serviceCfg.extraConfig;
-          in
-          lib.mkMerge [
-            (lib.mapAttrs (_: lib.mkDefault) passiveBase)
-            activeExtra
-          ];
-      }
-    ) cfg
-  );
+  config = {
+    assertions = lib.mapAttrsToList (name: serviceCfg: {
+      assertion = lib.all (v: v != null) (lib.attrValues serviceCfg.extraConfig);
+      message = "services.hardened.${name}.extraConfig does not support null; use relaxBase to omit baseline keys.";
+    }) cfg;
+
+    systemd.services = lib.mkMerge (
+      lib.mapAttrsToList (
+        name: serviceCfg:
+        lib.mkIf serviceCfg.enable {
+          ${name}.serviceConfig =
+            let
+              skippedKeys = serviceCfg.relaxBase ++ lib.attrNames serviceCfg.extraConfig;
+              # Base options not touched by extraConfig: apply at mkDefault so nixpkgs modules win.
+              passiveBase = lib.filterAttrs (k: _: !(lib.elem k skippedKeys)) baseHardening;
+              # extraConfig values apply at regular priority to override nixpkgs and base.
+              activeExtra = serviceCfg.extraConfig;
+            in
+            lib.mkMerge [
+              (lib.mapAttrs (_: lib.mkDefault) passiveBase)
+              activeExtra
+            ];
+        }
+      ) cfg
+    );
+  };
 }
