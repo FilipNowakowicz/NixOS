@@ -17,7 +17,11 @@
     enable = true;
     settings.user.name = "Filip Nowakowicz";
     settings.user.email = "filip.nowakowicz@gmail.com";
-    signing.format = null;
+    signing = {
+      format = "ssh";
+      key = "${config.home.homeDirectory}/.ssh/id_ed25519.pub";
+      signByDefault = true;
+    };
   };
 
   programs.zsh = {

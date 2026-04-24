@@ -203,18 +203,28 @@ in
   };
 
   services.hardened = {
-    # Hardware daemons: need /sys writes via dbus, no network, no private devices.
-    # Skip PrivateDevices (/sys access), SystemCallFilter (broad hw syscalls needed).
+    # thermald: Intel thermal daemon running in --adaptive mode.
+    # Needs /sys writes for thermal zones and perf_event_open for RAPL energy
+    # readings; upstream NixOS unit ships with no SystemCallFilter so the null
+    # baseline would leave it completely unfiltered without this explicit set.
     thermald = {
       extraConfig = {
         PrivateDevices = null;
-        SystemCallFilter = null;
+        SystemCallFilter = [
+          "@system-service"
+          "perf_event_open"
+        ];
         ProtectProc = "invisible";
         ProcSubset = "pid";
         RestrictAddressFamilies = [ "AF_UNIX" ];
       };
     };
 
+    # power-profiles-daemon: upstream unit ships its own tighter filter:
+    #   @system-service ~@resources ~@privileged
+    # SystemCallFilter = null here prevents our baseline @system-service from
+    # being appended after those denials (which would re-allow @resources /
+    # @privileged).  The upstream filter is intentionally preserved as-is.
     power-profiles-daemon = {
       extraConfig = {
         PrivateDevices = null;
@@ -228,7 +238,10 @@ in
     # fwupd: writes firmware to hardware and loads kernel modules.
     # Skip ProtectSystem (firmware writes), PrivateDevices (/dev access),
     # ProtectKernelModules/Tunables (capsule loading), ProtectClock (EFI time),
-    # MemoryDenyWriteExecute (plugin loading), SystemCallFilter (broad hw access).
+    # MemoryDenyWriteExecute (plugin loading).
+    # SystemCallFilter = null preserves fwupd's upstream custom allowlist
+    # (@basic-io @file-system @io-event ... ioctl uname fadvise64 ...) which is
+    # narrower than @system-service; appending @system-service would widen it.
     fwupd = {
       extraConfig = {
         PrivateDevices = null;
