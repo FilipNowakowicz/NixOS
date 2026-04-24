@@ -14,15 +14,17 @@ approaches proactively. Explain why, not just what.
 - **Deploy (VM):** `deploy '.#vm'` (Note: `homeserver-vm` is managed via `main`'s microvm; QEMU `vm` is for testing only)
 - **Deploy (WSL):** `home-manager switch --flake .#user@wsl`
 - **Deploy (main):** `nh os switch --hostname main .` (alias: `rebuild`)
-- **Validate flake:** `nix flake check`
+- **Validate flake eval:** `bash scripts/validate.sh flake-eval`
 - **Automated updates:** Weekly `flake.lock` updates (`flake-update.yml`); auto-merges if `merge-gate` status check passes.
 - **Merge Gate:** Consolidates all required checks (flake-check, invariants, smoke-tests) into a single required status check for branch protection.
 - **Module Topology:** Global profile imports in `modules/nixos/default.nix` have been removed. Hosts must explicitly import required profiles (e.g., `desktop`, `security`).
 - **Host Registry:** `lib/hosts.nix` is the single source of truth and uses typed schema validation. It includes target architecture (`system`) for multi-arch support.
-- **Validate invariants:** `nix build '.#checks.x86_64-linux.invariants-<host>'`
-- **Validate profile:** `nix build '.#legacyPackages.x86_64-linux.ciTests.profile-<name>'`
+- **Validate light CI suite:** `bash scripts/validate.sh light`
+- **Validate hosts:** `bash scripts/validate.sh hosts`
+- **Validate profile tests:** `bash scripts/validate.sh profile-tests`
+- **Validate heavy suite:** `bash scripts/validate.sh heavy`
 - **Golden tests:** `nix build '.#checks.x86_64-linux.lib-generators-golden'`
-- **CVE scan:** `nix build '.#legacyPackages.x86_64-linux.ciReports.<host>'`
+- **CVE scan:** `bash scripts/validate.sh cve-reports`
 - **Lint:** `statix check .` and `deadnix .`
 - **Pre-commit (manual run):** `pre-commit run --all-files`
 - **Git hooks:** `nix develop` installs a `commit-msg` hook that removes `Co-authored-by:` trailers to keep history single-author.
