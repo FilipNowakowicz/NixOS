@@ -157,20 +157,45 @@
       # ── Configuration Invariant Checks ──────────────────────────────────
       invariantChecks =
         let
+          mkResult = passed: message: {
+            inherit passed message;
+          };
+
+          require = condition: message: mkResult condition message;
+
+          invalidInitrdSecrets =
+            cfg:
+            let
+              values = lib.attrValues cfg.boot.initrd.secrets;
+              nonNull = lib.filter (v: v != null) values;
+            in
+            lib.filter (v: !lib.hasPrefix "/run/secrets/" v) nonNull;
+
           registryAssertionsFor = hostName: invariants.mkRegistryAssertions hostName hostRegistry.${hostName};
 
           sshFail2banHardened = {
             name = "SSH hosts enforce hardened fail2ban";
             check =
               cfg:
-              (!cfg.services.openssh.enable)
-              || (
-                cfg.services.fail2ban.enable
-                && cfg.services.fail2ban.maxretry <= 3
-                && cfg.services.fail2ban.bantime == "30m"
-                && cfg.services.fail2ban."bantime-increment".enable
-                && cfg.services.fail2ban."bantime-increment".maxtime != null
-              );
+              let
+                violations = lib.filter (msg: msg != "") [
+                  (lib.optionalString (!cfg.services.fail2ban.enable) "services.fail2ban.enable must be true")
+                  (lib.optionalString (cfg.services.fail2ban.maxretry > 3) "services.fail2ban.maxretry must be <= 3")
+                  (lib.optionalString (
+                    cfg.services.fail2ban.bantime != "30m"
+                  ) "services.fail2ban.bantime must be \"30m\"")
+                  (lib.optionalString (
+                    !cfg.services.fail2ban."bantime-increment".enable
+                  ) "services.fail2ban.bantime-increment.enable must be true")
+                  (lib.optionalString (
+                    cfg.services.fail2ban."bantime-increment".maxtime == null
+                  ) "services.fail2ban.bantime-increment.maxtime must be set")
+                ];
+              in
+              if !cfg.services.openssh.enable then
+                mkResult true "services.openssh.enable is false"
+              else
+                mkResult (violations == [ ]) (lib.concatStringsSep "; " violations);
           };
         in
         {
@@ -178,21 +203,23 @@
             [
               {
                 name = "has stateVersion";
-                check = cfg: cfg.system.stateVersion != null;
+                check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
               }
               {
                 name = "no passwordless sudo";
-                check = cfg: cfg.security.sudo.wheelNeedsPassword;
+                check =
+                  cfg: require cfg.security.sudo.wheelNeedsPassword "security.sudo.wheelNeedsPassword must be true";
               }
               {
                 name = "initrd secrets point to sops-managed paths";
                 check =
                   cfg:
                   let
-                    values = lib.attrValues cfg.boot.initrd.secrets;
-                    nonNull = lib.filter (v: v != null) values;
+                    invalid = invalidInitrdSecrets cfg;
                   in
-                  lib.all (lib.hasPrefix "/run/secrets/") nonNull;
+                  mkResult (
+                    invalid == [ ]
+                  ) "boot.initrd.secrets must point to /run/secrets/*, got: ${lib.concatStringsSep ", " invalid}";
               }
               sshFail2banHardened
             ]
@@ -203,11 +230,13 @@
             [
               {
                 name = "has stateVersion";
-                check = cfg: cfg.system.stateVersion != null;
+                check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
               }
               {
                 name = "passwordless sudo enabled";
-                check = cfg: !cfg.security.sudo.wheelNeedsPassword;
+                check =
+                  cfg:
+                  require (!cfg.security.sudo.wheelNeedsPassword) "security.sudo.wheelNeedsPassword must be false";
               }
               sshFail2banHardened
             ]
@@ -218,15 +247,17 @@
             [
               {
                 name = "has stateVersion";
-                check = cfg: cfg.system.stateVersion != null;
+                check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
               }
               {
                 name = "passwordless sudo enabled";
-                check = cfg: !cfg.security.sudo.wheelNeedsPassword;
+                check =
+                  cfg:
+                  require (!cfg.security.sudo.wheelNeedsPassword) "security.sudo.wheelNeedsPassword must be false";
               }
               {
                 name = "firewall enabled";
-                check = cfg: cfg.networking.firewall.enable;
+                check = cfg: require cfg.networking.firewall.enable "networking.firewall.enable must be true";
               }
               sshFail2banHardened
             ]
@@ -237,15 +268,19 @@
             [
               {
                 name = "has stateVersion";
-                check = cfg: cfg.system.stateVersion != null;
+                check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
               }
               {
                 name = "firewall enabled";
-                check = cfg: cfg.networking.firewall.enable;
+                check = cfg: require cfg.networking.firewall.enable "networking.firewall.enable must be true";
               }
               {
                 name = "sops uses SSH host key for decryption";
-                check = cfg: cfg.sops.age.sshKeyPaths != [ ];
+                check =
+                  cfg:
+                  require (
+                    cfg.sops.age.sshKeyPaths != [ ]
+                  ) "sops.age.sshKeyPaths must contain at least one SSH host key path";
               }
               sshFail2banHardened
             ]

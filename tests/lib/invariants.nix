@@ -8,6 +8,24 @@ let
   pkgs = nixpkgs.legacyPackages.${system};
   invariants = import ../../lib/invariants.nix { inherit lib pkgs; };
 
+  sampleResults = invariants.evaluateAssertions [
+    {
+      name = "bool checks remain supported";
+      check = _: true;
+    }
+    {
+      name = "rich message is preserved";
+      check = _: {
+        passed = false;
+        message = "detailed failure";
+      };
+    }
+    {
+      name = "missing message falls back to name";
+      check = _: { passed = false; };
+    }
+  ] { };
+
   baseConfig = {
     networking.hostName = "homeserver";
     services = {
@@ -35,6 +53,31 @@ let
     if assertion == null then throw "missing assertion '${name}'" else assertion.check cfg;
 
   failures = lib.runTests {
+    testBoolCheckPasses = {
+      expr = (lib.elemAt sampleResults 0).passed;
+      expected = true;
+    };
+
+    testBoolCheckDefaultsMessageToName = {
+      expr = (lib.elemAt sampleResults 0).message;
+      expected = "bool checks remain supported";
+    };
+
+    testRichMessageIsPreserved = {
+      expr = (lib.elemAt sampleResults 1).message;
+      expected = "detailed failure";
+    };
+
+    testMissingMessageFallsBackToName = {
+      expr = (lib.elemAt sampleResults 2).message;
+      expected = "missing message falls back to name";
+    };
+
+    testInvalidResultIsRejected = {
+      expr = (builtins.tryEval (invariants.normalizeCheckResult "broken" { nope = true; })).success;
+      expected = false;
+    };
+
     hostnameMatchesRegistryKey = {
       expr = runAssertion "networking.hostName matches registry key" baseConfig;
       expected = true;
