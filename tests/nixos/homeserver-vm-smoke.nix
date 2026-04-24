@@ -26,7 +26,7 @@ in
       {
         imports = [
           ../../hosts/homeserver-vm/default.nix
-          ../../modules/nixos/profiles/observability.nix
+          ../../modules/nixos/profiles/observability
           ../../modules/nixos/services/hardened.nix
           inputs.home-manager.nixosModules.home-manager
           inputs.sops-nix.nixosModules.sops

@@ -83,6 +83,7 @@ in
       logs.enable = true;
       traces.enable = true;
     };
+    dashboards.fleet.enable = true;
   };
 
   services = {

@@ -16,7 +16,7 @@ in
       obs =
         { ... }:
         {
-          imports = [ ../../modules/nixos/profiles/observability.nix ];
+          imports = [ ../../modules/nixos/profiles/observability ];
 
           profiles.observability = {
             enable = true;
@@ -32,7 +32,7 @@ in
       obs_auth =
         { pkgs, ... }:
         {
-          imports = [ ../../modules/nixos/profiles/observability.nix ];
+          imports = [ ../../modules/nixos/profiles/observability ];
 
           profiles.observability = {
             enable = true;
