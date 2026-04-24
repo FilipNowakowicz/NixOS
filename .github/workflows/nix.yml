@@ -31,12 +31,18 @@ jobs:
             max-jobs = auto
 
       - name: Cachix
+        id: cachix
+        continue-on-error: true
         uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
         with:
           name: filipnowakowicz
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           useDaemon: true
           pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
+
+      - name: Warn if Cachix is unavailable
+        if: steps.cachix.outcome == 'failure'
+        run: echo "::warning::Cachix setup failed; continuing without binary cache acceleration."
 
       - name: Flake evaluation
         run: bash scripts/validate.sh flake-eval
@@ -56,12 +62,18 @@ jobs:
             max-jobs = auto
 
       - name: Cachix
+        id: cachix
+        continue-on-error: true
         uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
         with:
           name: filipnowakowicz
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           useDaemon: true
           pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
+
+      - name: Warn if Cachix is unavailable
+        if: steps.cachix.outcome == 'failure'
+        run: echo "::warning::Cachix setup failed; continuing without binary cache acceleration."
 
       - name: Build lightweight blocking checks
         run: bash scripts/validate.sh light
@@ -81,12 +93,18 @@ jobs:
             max-jobs = auto
 
       - name: Cachix
+        id: cachix
+        continue-on-error: true
         uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
         with:
           name: filipnowakowicz
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           useDaemon: true
           pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
+
+      - name: Warn if Cachix is unavailable
+        if: steps.cachix.outcome == 'failure'
+        run: echo "::warning::Cachix setup failed; continuing without binary cache acceleration."
 
       - name: Lint (statix)
         run: nix run nixpkgs#statix -- check .
@@ -128,12 +146,18 @@ jobs:
             max-jobs = auto
 
       - name: Cachix
+        id: cachix
+        continue-on-error: true
         uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
         with:
           name: filipnowakowicz
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           useDaemon: true
           pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
+
+      - name: Warn if Cachix is unavailable
+        if: steps.cachix.outcome == 'failure'
+        run: echo "::warning::Cachix setup failed; continuing without binary cache acceleration."
 
       - name: Build ${{ matrix.name }}
         run: bash scripts/validate.sh host "${{ matrix.name }}"
@@ -195,12 +219,18 @@ jobs:
             max-jobs = auto
 
       - name: Cachix
+        id: cachix
+        continue-on-error: true
         uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
         with:
           name: filipnowakowicz
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           useDaemon: true
           pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
+
+      - name: Warn if Cachix is unavailable
+        if: steps.cachix.outcome == 'failure'
+        run: echo "::warning::Cachix setup failed; continuing without binary cache acceleration."
 
       - name: vm smoke test
         run: bash scripts/validate.sh smoke-vm
@@ -222,12 +252,18 @@ jobs:
             max-jobs = auto
 
       - name: Cachix
+        id: cachix
+        continue-on-error: true
         uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
         with:
           name: filipnowakowicz
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           useDaemon: true
           pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
+
+      - name: Warn if Cachix is unavailable
+        if: steps.cachix.outcome == 'failure'
+        run: echo "::warning::Cachix setup failed; continuing without binary cache acceleration."
 
       - name: homeserver-vm smoke test
         run: bash scripts/validate.sh smoke-homeserver
@@ -256,12 +292,18 @@ jobs:
             max-jobs = auto
 
       - name: Cachix
+        id: cachix
+        continue-on-error: true
         uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
         with:
           name: filipnowakowicz
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           useDaemon: true
           pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
+
+      - name: Warn if Cachix is unavailable
+        if: steps.cachix.outcome == 'failure'
+        run: echo "::warning::Cachix setup failed; continuing without binary cache acceleration."
 
       - name: Build ${{ matrix.name }}
         run: bash scripts/validate.sh profile-test "${{ matrix.name }}"
@@ -287,12 +329,18 @@ jobs:
             max-jobs = auto
 
       - name: Cachix
+        id: cachix
+        continue-on-error: true
         uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
         with:
           name: filipnowakowicz
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           useDaemon: true
           pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
+
+      - name: Warn if Cachix is unavailable
+        if: steps.cachix.outcome == 'failure'
+        run: echo "::warning::Cachix setup failed; continuing without binary cache acceleration."
 
       - name: Compute closure diffs
         id: diff
