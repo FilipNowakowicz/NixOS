@@ -426,17 +426,17 @@ Tailscale security rules are managed declaratively within the flake. The `lib/ac
 
 The repository uses GitHub Actions (`.github/workflows/nix.yml` and `flake-update.yml`) for automated validation and maintenance. The CI pipeline is designed for both correctness and performance, using path-filtering to skip expensive tests when possible.
 
-| Job                  | Description                                                                                                                                     |
-| :------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Job                  | Description                                                                                                                                   |
+| :------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Flake Evaluation** | Runs `bash scripts/validate.sh flake-eval`, which keeps `nix flake check --no-build` as a fast evaluation gate for flake outputs and configs. |
-| **Light Checks**     | Runs `bash scripts/validate.sh light` for deploy checks, invariants, SOPS bootstrap validation, and lightweight library tests.                 |
+| **Light Checks**     | Runs `bash scripts/validate.sh light` for deploy checks, invariants, SOPS bootstrap validation, and lightweight library tests.                |
 | **Linting**          | Runs `statix` (Nix), `deadnix` (dead code), `treefmt` (formatting), and `shellcheck` (shell scripts).                                         |
-| **Host Builds**      | Matrix-builds each host closure via `bash scripts/validate.sh host <name>`.                                                                    |
-| **Smoke Tests**      | Runs `bash scripts/validate.sh smoke-vm` and `smoke-homeserver` in full NixOS environments when relevant paths change.                         |
-| **Profile Tests**    | Matrix-builds each profile test via `bash scripts/validate.sh profile-test <name>`.                                                            |
-| **Closure Diff**     | Automatically computes and comments the `nvd` diff of package closures on PRs.                                                                 |
-| **Merge Gate**       | Consolidates all required checks into a single status; required for branch protection and automated flake updates.                              |
-| **Flake Update**     | Automated weekly `flake.lock` updates via GitHub Action; auto-merges if the `merge-gate` passes.                                               |
+| **Host Builds**      | Matrix-builds each host closure via `bash scripts/validate.sh host <name>`.                                                                   |
+| **Smoke Tests**      | Runs `bash scripts/validate.sh smoke-vm` and `smoke-homeserver` in full NixOS environments when relevant paths change.                        |
+| **Profile Tests**    | Matrix-builds each profile test via `bash scripts/validate.sh profile-test <name>`.                                                           |
+| **Closure Diff**     | Automatically computes and comments the `nvd` diff of package closures on PRs.                                                                |
+| **Merge Gate**       | Consolidates all required checks into a single status; required for branch protection and automated flake updates.                            |
+| **Flake Update**     | Automated weekly `flake.lock` updates via GitHub Action; auto-merges if the `merge-gate` passes.                                              |
 
 ### Path Filtering & Performance
 
