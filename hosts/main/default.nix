@@ -11,6 +11,7 @@ let
 in
 {
   imports = [
+    ./dashboard.nix
     ./disko.nix
     ./hardware-configuration.nix
     ../../modules/nixos/profiles/base.nix

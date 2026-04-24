@@ -12,7 +12,7 @@ in
     nodes.obs =
       { ... }:
       {
-        imports = [ ../../modules/nixos/profiles/observability.nix ];
+        imports = [ ../../modules/nixos/profiles/observability ];
 
         profiles.observability = {
           enable = true;

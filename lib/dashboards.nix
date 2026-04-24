@@ -35,6 +35,10 @@
   # Generic datasource reference
   datasource = uid: type: { inherit uid type; };
 
+  # PromQL/LogQL label selector for scoping queries to a specific host.
+  # Usage: expr = "node_cpu_seconds_total{${dash.hostSelector \"main\"},mode=\"idle\"}";
+  hostSelector = host: ''host="${host}"'';
+
   # Query target builder
   target =
     {
