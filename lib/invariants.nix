@@ -68,7 +68,7 @@ in
     ++ lib.optionals (hostMeta ? backup) [
       {
         name = "backup metadata configures local Restic backup";
-        check = cfg: hasLocalResticBackup cfg;
+        check = hasLocalResticBackup;
       }
     ]
     ++ lib.optionals ((hostMeta ? tailscale) || (hostMeta ? tailnetFQDN)) [
