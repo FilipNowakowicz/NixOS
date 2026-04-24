@@ -124,16 +124,12 @@ jobs:
           nix run nixpkgs#shellcheck -- "${shell_scripts[@]}"
 
   hosts:
-    needs: eval
+    needs: [eval, changes]
+    if: needs.changes.outputs.hosts == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - name: main-ci
-          - name: vm
-          - name: homeserver
-          - name: homeserver-vm
+      matrix: ${{ fromJSON(needs.changes.outputs.hosts_matrix) }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -165,9 +161,14 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
+      hosts: ${{ steps.filter.outputs.hosts }}
+      hosts_matrix: ${{ steps.filter.outputs.hosts_matrix }}
       homeserver: ${{ steps.filter.outputs.homeserver }}
       vm: ${{ steps.filter.outputs.vm }}
       profiles: ${{ steps.filter.outputs.profiles }}
+      closure: ${{ steps.filter.outputs.closure }}
+      closure_main: ${{ steps.filter.outputs.closure_main }}
+      closure_homeserver: ${{ steps.filter.outputs.closure_homeserver }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -177,6 +178,31 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
+          shared_host_change='^(\.github/workflows/nix\.yml|flake\.nix|flake\.lock|modules/|lib/|home/|tests/nixos/|scripts/validate\.sh)'
+          closure_change='^(\.github/workflows/nix\.yml|flake\.nix|flake\.lock|modules/|lib/|home/|scripts/closure-diff\.sh)'
+          main_change='^hosts/main/'
+          vm_change='^hosts/vm/'
+          homeserver_change='^hosts/homeserver/'
+          homeserver_vm_change='^hosts/homeserver-vm/'
+
+          main_ci=false
+          vm=false
+          homeserver=false
+          homeserver_vm=false
+          profiles=false
+          closure_main=false
+          closure_homeserver=false
+
+          if [[ "${GITHUB_EVENT_NAME}" != "pull_request" ]]; then
+            main_ci=true
+            vm=true
+            homeserver=true
+            homeserver_vm=true
+            profiles=true
+            closure_main=true
+            closure_homeserver=true
+          fi
+
           base_sha="$BASE_SHA"
           if ! git cat-file -e "$base_sha^{commit}" 2>/dev/null; then
             base_sha="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
@@ -184,23 +210,101 @@ jobs:
 
           changed_files="$(git diff --name-only "$base_sha" HEAD)"
 
-          if grep -qE '^(flake\.nix|flake\.lock|hosts/homeserver(-vm)?/|modules/|lib/|home/|tests/nixos/)' <<<"$changed_files"; then
+          if grep -qE "${shared_host_change}|${main_change}" <<<"$changed_files"; then
+            main_ci=true
+            closure_main=true
+          fi
+
+          if grep -qE "${shared_host_change}|${vm_change}" <<<"$changed_files"; then
+            vm=true
+          fi
+
+          if grep -qE "${shared_host_change}|${homeserver_change}" <<<"$changed_files"; then
+            homeserver=true
+            closure_homeserver=true
+          fi
+
+          if grep -qE "${shared_host_change}|${homeserver_vm_change}" <<<"$changed_files"; then
+            homeserver_vm=true
+          fi
+
+          if grep -qE "${shared_host_change}" <<<"$changed_files"; then
+            profiles=true
+          fi
+
+          if grep -qE "${closure_change}|${main_change}" <<<"$changed_files"; then
+            closure_main=true
+          fi
+
+          if grep -qE "${closure_change}|${homeserver_change}" <<<"$changed_files"; then
+            closure_homeserver=true
+          fi
+
+          if [[ "$main_ci" == "true" || "$vm" == "true" || "$homeserver" == "true" || "$homeserver_vm" == "true" ]]; then
+            echo "hosts=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "hosts=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          hosts_matrix='{"include":['
+          sep=""
+
+          if [[ "$main_ci" == "true" ]]; then
+            hosts_matrix+='{"name":"main-ci"}'
+            sep=","
+          fi
+
+          if [[ "$vm" == "true" ]]; then
+            hosts_matrix+="${sep}"'{"name":"vm"}'
+            sep=","
+          fi
+
+          if [[ "$homeserver" == "true" ]]; then
+            hosts_matrix+="${sep}"'{"name":"homeserver"}'
+            sep=","
+          fi
+
+          if [[ "$homeserver_vm" == "true" ]]; then
+            hosts_matrix+="${sep}"'{"name":"homeserver-vm"}'
+          fi
+
+          hosts_matrix+=']}'
+          {
+            echo "hosts_matrix<<EOF"
+            echo "$hosts_matrix"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          if [[ "$closure_main" == "true" || "$closure_homeserver" == "true" ]]; then
+            echo "closure=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "closure=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "closure_main=$closure_main" >> "$GITHUB_OUTPUT"
+          echo "closure_homeserver=$closure_homeserver" >> "$GITHUB_OUTPUT"
+
+          if [[ "$homeserver" == "true" || "$homeserver_vm" == "true" || "$profiles" == "true" ]]; then
             echo "homeserver=true" >> "$GITHUB_OUTPUT"
           else
             echo "homeserver=false" >> "$GITHUB_OUTPUT"
           fi
 
-          if grep -qE '^(flake\.nix|flake\.lock|hosts/vm/|modules/|lib/|home/|tests/nixos/)' <<<"$changed_files"; then
+          if [[ "$vm" == "true" || "$profiles" == "true" ]]; then
             echo "vm=true" >> "$GITHUB_OUTPUT"
           else
             echo "vm=false" >> "$GITHUB_OUTPUT"
           fi
 
-          if grep -qE '^(flake\.nix|flake\.lock|modules/|lib/|home/|tests/nixos/)' <<<"$changed_files"; then
+          if [[ "$profiles" == "true" ]]; then
             echo "profiles=true" >> "$GITHUB_OUTPUT"
           else
             echo "profiles=false" >> "$GITHUB_OUTPUT"
           fi
+
+          echo "Selected hosts: $hosts_matrix"
+          echo "Smoke/profile selectors: vm=$vm homeserver=$homeserver homeserver-vm=$homeserver_vm profiles=$profiles"
+          echo "Closure selectors: main=$closure_main homeserver=$closure_homeserver"
 
   smoke-vm:
     needs: [changes, hosts]
@@ -309,8 +413,8 @@ jobs:
         run: bash scripts/validate.sh profile-test "${{ matrix.name }}"
 
   closure-diff:
-    if: github.event_name == 'pull_request'
-    needs: hosts
+    if: github.event_name == 'pull_request' && needs.changes.outputs.closure == 'true'
+    needs: [changes]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -344,6 +448,9 @@ jobs:
 
       - name: Compute closure diffs
         id: diff
+        env:
+          DIFF_MAIN: ${{ needs.changes.outputs.closure_main }}
+          DIFF_HOMESERVER: ${{ needs.changes.outputs.closure_homeserver }}
         run: |
           BASE_REF="origin/${{ github.base_ref }}"
           TARGET_REF="HEAD"
@@ -352,9 +459,17 @@ jobs:
             echo "<!-- closure-diff-report -->"
             echo "# Closure Size Report"
             echo
-            bash scripts/closure-diff.sh "$BASE_REF" "$TARGET_REF" "main" || echo "Failed to diff main"
-            echo
-            bash scripts/closure-diff.sh "$BASE_REF" "$TARGET_REF" "homeserver" || echo "Failed to diff homeserver"
+
+            if [[ "$DIFF_MAIN" == "true" ]]; then
+              bash scripts/closure-diff.sh "$BASE_REF" "$TARGET_REF" "main" || echo "Failed to diff main"
+            fi
+
+            if [[ "$DIFF_HOMESERVER" == "true" ]]; then
+              if [[ "$DIFF_MAIN" == "true" ]]; then
+                echo
+              fi
+              bash scripts/closure-diff.sh "$BASE_REF" "$TARGET_REF" "homeserver" || echo "Failed to diff homeserver"
+            fi
           } > /tmp/closure-summary.md
 
           {
@@ -436,7 +551,8 @@ jobs:
           [[ "$RESULT_EVAL" == "success" ]] || { echo "FAIL: eval ($RESULT_EVAL)"; fail=1; }
           [[ "$RESULT_CHECKS_LIGHT" == "success" ]] || { echo "FAIL: checks-light ($RESULT_CHECKS_LIGHT)"; fail=1; }
           [[ "$RESULT_LINT" == "success" ]] || { echo "FAIL: lint ($RESULT_LINT)"; fail=1; }
-          [[ "$RESULT_HOSTS" == "success" ]] || { echo "FAIL: hosts ($RESULT_HOSTS)"; fail=1; }
+          [[ "$RESULT_HOSTS" == "success" || "$RESULT_HOSTS" == "skipped" ]] \
+            || { echo "FAIL: hosts ($RESULT_HOSTS)"; fail=1; }
           [[ "$RESULT_SMOKE_VM" == "success" || "$RESULT_SMOKE_VM" == "skipped" ]] \
             || { echo "FAIL: smoke-vm ($RESULT_SMOKE_VM)"; fail=1; }
           [[ "$RESULT_SMOKE_HOMESERVER" == "success" || "$RESULT_SMOKE_HOMESERVER" == "skipped" ]] \
