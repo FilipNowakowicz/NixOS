@@ -2,8 +2,10 @@ name: Nix flake check
 
 on:
   pull_request:
+  merge_group:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,35 +16,40 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  CACHIX_NAME: filipnowakowicz
   CACHIX_PUSH_FILTER: "(-source$|nixpkgs\\.tar\\.gz$)"
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      hosts: ${{ steps.plan.outputs.hosts }}
+      hosts_matrix: ${{ steps.plan.outputs.hosts_matrix }}
+      tests: ${{ steps.plan.outputs.tests }}
+      tests_matrix: ${{ steps.plan.outputs.tests_matrix }}
+      closure: ${{ steps.plan.outputs.closure }}
+      closure_main: ${{ steps.plan.outputs.closure_main }}
+      closure_homeserver: ${{ steps.plan.outputs.closure_homeserver }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - id: plan
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash scripts/ci-plan.sh
+
   eval:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@e4f4bde15728394ded896ef07491a85f2eb24956 # v31
+      - uses: ./.github/actions/setup-nix
         with:
-          nix_path: nixpkgs=channel:nixos-unstable
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-            max-jobs = auto
-
-      - name: Cachix
-        id: cachix
-        continue-on-error: true
-        uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
-        with:
-          name: filipnowakowicz
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          useDaemon: true
-          pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
-
-      - name: Warn if Cachix is unavailable
-        if: steps.cachix.outcome == 'failure'
-        run: echo "::warning::Cachix setup failed; continuing without binary cache acceleration."
+          cachix-name: ${{ env.CACHIX_NAME }}
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          cachix-push-filter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: Flake evaluation
         run: bash scripts/validate.sh flake-eval
@@ -53,27 +60,11 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@e4f4bde15728394ded896ef07491a85f2eb24956 # v31
+      - uses: ./.github/actions/setup-nix
         with:
-          nix_path: nixpkgs=channel:nixos-unstable
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-            max-jobs = auto
-
-      - name: Cachix
-        id: cachix
-        continue-on-error: true
-        uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
-        with:
-          name: filipnowakowicz
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          useDaemon: true
-          pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
-
-      - name: Warn if Cachix is unavailable
-        if: steps.cachix.outcome == 'failure'
-        run: echo "::warning::Cachix setup failed; continuing without binary cache acceleration."
+          cachix-name: ${{ env.CACHIX_NAME }}
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          cachix-push-filter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: Build lightweight blocking checks
         run: bash scripts/validate.sh light
@@ -84,27 +75,11 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@e4f4bde15728394ded896ef07491a85f2eb24956 # v31
+      - uses: ./.github/actions/setup-nix
         with:
-          nix_path: nixpkgs=channel:nixos-unstable
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-            max-jobs = auto
-
-      - name: Cachix
-        id: cachix
-        continue-on-error: true
-        uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
-        with:
-          name: filipnowakowicz
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          useDaemon: true
-          pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
-
-      - name: Warn if Cachix is unavailable
-        if: steps.cachix.outcome == 'failure'
-        run: echo "::warning::Cachix setup failed; continuing without binary cache acceleration."
+          cachix-name: ${{ env.CACHIX_NAME }}
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          cachix-push-filter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: Lint (statix)
         run: nix run nixpkgs#statix -- check .
@@ -124,7 +99,7 @@ jobs:
           nix run nixpkgs#shellcheck -- "${shell_scripts[@]}"
 
   hosts:
-    needs: [eval, changes]
+    needs: [changes, eval]
     if: needs.changes.outputs.hosts == 'true'
     runs-on: ubuntu-latest
     strategy:
@@ -133,288 +108,45 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@e4f4bde15728394ded896ef07491a85f2eb24956 # v31
+      - uses: ./.github/actions/setup-nix
         with:
-          nix_path: nixpkgs=channel:nixos-unstable
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-            max-jobs = auto
-
-      - name: Cachix
-        id: cachix
-        continue-on-error: true
-        uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
-        with:
-          name: filipnowakowicz
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          useDaemon: true
-          pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
-
-      - name: Warn if Cachix is unavailable
-        if: steps.cachix.outcome == 'failure'
-        run: echo "::warning::Cachix setup failed; continuing without binary cache acceleration."
+          cachix-name: ${{ env.CACHIX_NAME }}
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          cachix-push-filter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: Build ${{ matrix.name }}
         run: bash scripts/validate.sh host "${{ matrix.name }}"
 
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      hosts: ${{ steps.filter.outputs.hosts }}
-      hosts_matrix: ${{ steps.filter.outputs.hosts_matrix }}
-      homeserver: ${{ steps.filter.outputs.homeserver }}
-      vm: ${{ steps.filter.outputs.vm }}
-      profiles: ${{ steps.filter.outputs.profiles }}
-      closure: ${{ steps.filter.outputs.closure }}
-      closure_main: ${{ steps.filter.outputs.closure_main }}
-      closure_homeserver: ${{ steps.filter.outputs.closure_homeserver }}
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          fetch-depth: 0
-
-      - id: filter
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          shared_host_change='^(\.github/workflows/nix\.yml|flake\.nix|flake\.lock|modules/|lib/|home/|tests/nixos/|scripts/validate\.sh)'
-          closure_change='^(\.github/workflows/nix\.yml|flake\.nix|flake\.lock|modules/|lib/|home/|scripts/closure-diff\.sh)'
-          main_change='^hosts/main/'
-          vm_change='^hosts/vm/'
-          homeserver_change='^hosts/homeserver/'
-          homeserver_vm_change='^hosts/homeserver-vm/'
-
-          main_ci=false
-          vm=false
-          homeserver=false
-          homeserver_vm=false
-          profiles=false
-          closure_main=false
-          closure_homeserver=false
-
-          if [[ "${GITHUB_EVENT_NAME}" != "pull_request" ]]; then
-            main_ci=true
-            vm=true
-            homeserver=true
-            homeserver_vm=true
-            profiles=true
-            closure_main=true
-            closure_homeserver=true
-          fi
-
-          base_sha="$BASE_SHA"
-          if ! git cat-file -e "$base_sha^{commit}" 2>/dev/null; then
-            base_sha="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
-          fi
-
-          changed_files="$(git diff --name-only "$base_sha" HEAD)"
-
-          if grep -qE "${shared_host_change}|${main_change}" <<<"$changed_files"; then
-            main_ci=true
-            closure_main=true
-          fi
-
-          if grep -qE "${shared_host_change}|${vm_change}" <<<"$changed_files"; then
-            vm=true
-          fi
-
-          if grep -qE "${shared_host_change}|${homeserver_change}" <<<"$changed_files"; then
-            homeserver=true
-            closure_homeserver=true
-          fi
-
-          if grep -qE "${shared_host_change}|${homeserver_vm_change}" <<<"$changed_files"; then
-            homeserver_vm=true
-          fi
-
-          if grep -qE "${shared_host_change}" <<<"$changed_files"; then
-            profiles=true
-          fi
-
-          if grep -qE "${closure_change}|${main_change}" <<<"$changed_files"; then
-            closure_main=true
-          fi
-
-          if grep -qE "${closure_change}|${homeserver_change}" <<<"$changed_files"; then
-            closure_homeserver=true
-          fi
-
-          if [[ "$main_ci" == "true" || "$vm" == "true" || "$homeserver" == "true" || "$homeserver_vm" == "true" ]]; then
-            echo "hosts=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "hosts=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          hosts_matrix='{"include":['
-          sep=""
-
-          if [[ "$main_ci" == "true" ]]; then
-            hosts_matrix+='{"name":"main-ci"}'
-            sep=","
-          fi
-
-          if [[ "$vm" == "true" ]]; then
-            hosts_matrix+="${sep}"'{"name":"vm"}'
-            sep=","
-          fi
-
-          if [[ "$homeserver" == "true" ]]; then
-            hosts_matrix+="${sep}"'{"name":"homeserver"}'
-            sep=","
-          fi
-
-          if [[ "$homeserver_vm" == "true" ]]; then
-            hosts_matrix+="${sep}"'{"name":"homeserver-vm"}'
-          fi
-
-          hosts_matrix+=']}'
-          {
-            echo "hosts_matrix<<EOF"
-            echo "$hosts_matrix"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-          if [[ "$closure_main" == "true" || "$closure_homeserver" == "true" ]]; then
-            echo "closure=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "closure=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          echo "closure_main=$closure_main" >> "$GITHUB_OUTPUT"
-          echo "closure_homeserver=$closure_homeserver" >> "$GITHUB_OUTPUT"
-
-          if [[ "$homeserver" == "true" || "$homeserver_vm" == "true" || "$profiles" == "true" ]]; then
-            echo "homeserver=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "homeserver=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          if [[ "$vm" == "true" || "$profiles" == "true" ]]; then
-            echo "vm=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "vm=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          if [[ "$profiles" == "true" ]]; then
-            echo "profiles=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "profiles=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          echo "Selected hosts: $hosts_matrix"
-          echo "Smoke/profile selectors: vm=$vm homeserver=$homeserver homeserver-vm=$homeserver_vm profiles=$profiles"
-          echo "Closure selectors: main=$closure_main homeserver=$closure_homeserver"
-
-  smoke-vm:
-    needs: [changes, hosts]
-    if: needs.changes.outputs.vm == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@e4f4bde15728394ded896ef07491a85f2eb24956 # v31
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-            system-features = nixos-test benchmark big-parallel kvm
-            max-jobs = auto
-
-      - name: Cachix
-        id: cachix
-        continue-on-error: true
-        uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
-        with:
-          name: filipnowakowicz
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          useDaemon: true
-          pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
-
-      - name: Warn if Cachix is unavailable
-        if: steps.cachix.outcome == 'failure'
-        run: echo "::warning::Cachix setup failed; continuing without binary cache acceleration."
-
-      - name: vm smoke test
-        run: bash scripts/validate.sh smoke-vm
-
-  smoke-homeserver:
-    needs: [changes, hosts]
-    if: needs.changes.outputs.homeserver == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@e4f4bde15728394ded896ef07491a85f2eb24956 # v31
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-            system-features = nixos-test benchmark big-parallel kvm
-            max-jobs = auto
-
-      - name: Cachix
-        id: cachix
-        continue-on-error: true
-        uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
-        with:
-          name: filipnowakowicz
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          useDaemon: true
-          pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
-
-      - name: Warn if Cachix is unavailable
-        if: steps.cachix.outcome == 'failure'
-        run: echo "::warning::Cachix setup failed; continuing without binary cache acceleration."
-
-      - name: homeserver-vm smoke test
-        run: bash scripts/validate.sh smoke-homeserver
-
-  profile-tests:
-    needs: [changes, hosts]
-    if: needs.changes.outputs.profiles == 'true'
+  tests:
+    needs: [changes, eval, hosts]
+    if: |
+      always()
+      && needs.changes.outputs.tests == 'true'
+      && needs.eval.result == 'success'
+      && (needs.hosts.result == 'success' || needs.hosts.result == 'skipped')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - name: profile-security
-          - name: profile-observability
-          - name: profile-hardening
+      matrix: ${{ fromJSON(needs.changes.outputs.tests_matrix) }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@e4f4bde15728394ded896ef07491a85f2eb24956 # v31
+      - uses: ./.github/actions/setup-nix
         with:
-          nix_path: nixpkgs=channel:nixos-unstable
-          extra_nix_config: |
+          cachix-name: ${{ env.CACHIX_NAME }}
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          cachix-push-filter: ${{ env.CACHIX_PUSH_FILTER }}
+          extra-nix-config: |
             experimental-features = nix-command flakes
             system-features = nixos-test benchmark big-parallel kvm
             max-jobs = auto
 
-      - name: Cachix
-        id: cachix
-        continue-on-error: true
-        uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
-        with:
-          name: filipnowakowicz
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          useDaemon: true
-          pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
-
-      - name: Warn if Cachix is unavailable
-        if: steps.cachix.outcome == 'failure'
-        run: echo "::warning::Cachix setup failed; continuing without binary cache acceleration."
-
       - name: Build ${{ matrix.name }}
-        run: bash scripts/validate.sh profile-test "${{ matrix.name }}"
+        run: bash scripts/validate.sh "${{ matrix.command }}" "${{ matrix.target }}"
 
   closure-diff:
     if: github.event_name == 'pull_request' && needs.changes.outputs.closure == 'true'
-    needs: [changes]
+    needs: changes
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -424,27 +156,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@e4f4bde15728394ded896ef07491a85f2eb24956 # v31
+      - uses: ./.github/actions/setup-nix
         with:
-          nix_path: nixpkgs=channel:nixos-unstable
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-            max-jobs = auto
-
-      - name: Cachix
-        id: cachix
-        continue-on-error: true
-        uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
-        with:
-          name: filipnowakowicz
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          useDaemon: true
-          pushFilter: ${{ env.CACHIX_PUSH_FILTER }}
-
-      - name: Warn if Cachix is unavailable
-        if: steps.cachix.outcome == 'failure'
-        run: echo "::warning::Cachix setup failed; continuing without binary cache acceleration."
+          cachix-name: ${{ env.CACHIX_NAME }}
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          cachix-push-filter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: Compute closure diffs
         id: diff
@@ -485,39 +201,8 @@ jobs:
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
-            const body = process.env.SUMMARY || '<!-- closure-diff-report -->\nClosure diff computation skipped or failed.';
-            const marker = '<!-- closure-diff-report -->';
-            try {
-              const comments = await github.paginate(github.rest.issues.listComments, {
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                per_page: 100,
-              });
-
-              const existing = comments.find((comment) =>
-                comment.user?.type === 'Bot' && comment.body?.includes(marker)
-              );
-
-              if (existing) {
-                await github.rest.issues.updateComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  comment_id: existing.id,
-                  body,
-                });
-              } else {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: context.issue.number,
-                  body,
-                });
-              }
-            } catch (error) {
-              core.warning(`Unable to upsert closure diff comment: ${error.message}`);
-              return;
-            }
+            const upsert = require("./.github/scripts/upsert-closure-comment.js");
+            await upsert({ github, context, core });
 
   merge-gate:
     needs:
@@ -525,9 +210,7 @@ jobs:
       - checks-light
       - lint
       - hosts
-      - smoke-vm
-      - smoke-homeserver
-      - profile-tests
+      - tests
       - closure-diff
     if: always()
     runs-on: ubuntu-latest
@@ -538,19 +221,15 @@ jobs:
           RESULT_CHECKS_LIGHT: ${{ needs.checks-light.result }}
           RESULT_LINT: ${{ needs.lint.result }}
           RESULT_HOSTS: ${{ needs.hosts.result }}
-          RESULT_SMOKE_VM: ${{ needs.smoke-vm.result }}
-          RESULT_SMOKE_HOMESERVER: ${{ needs.smoke-homeserver.result }}
-          RESULT_PROFILE_TESTS: ${{ needs.profile-tests.result }}
+          RESULT_TESTS: ${{ needs.tests.result }}
           RESULT_CLOSURE: ${{ needs.closure-diff.result }}
         run: |
-          echo "eval:              $RESULT_EVAL"
-          echo "checks-light:      $RESULT_CHECKS_LIGHT"
-          echo "lint:              $RESULT_LINT"
-          echo "hosts:             $RESULT_HOSTS"
-          echo "smoke-vm:          $RESULT_SMOKE_VM"
-          echo "smoke-homeserver:  $RESULT_SMOKE_HOMESERVER"
-          echo "profile-tests:     $RESULT_PROFILE_TESTS"
-          echo "closure-diff:      $RESULT_CLOSURE"
+          echo "eval:          $RESULT_EVAL"
+          echo "checks-light:  $RESULT_CHECKS_LIGHT"
+          echo "lint:          $RESULT_LINT"
+          echo "hosts:         $RESULT_HOSTS"
+          echo "tests:         $RESULT_TESTS"
+          echo "closure-diff:  $RESULT_CLOSURE"
 
           fail=0
           [[ "$RESULT_EVAL" == "success" ]] || { echo "FAIL: eval ($RESULT_EVAL)"; fail=1; }
@@ -558,12 +237,8 @@ jobs:
           [[ "$RESULT_LINT" == "success" ]] || { echo "FAIL: lint ($RESULT_LINT)"; fail=1; }
           [[ "$RESULT_HOSTS" == "success" || "$RESULT_HOSTS" == "skipped" ]] \
             || { echo "FAIL: hosts ($RESULT_HOSTS)"; fail=1; }
-          [[ "$RESULT_SMOKE_VM" == "success" || "$RESULT_SMOKE_VM" == "skipped" ]] \
-            || { echo "FAIL: smoke-vm ($RESULT_SMOKE_VM)"; fail=1; }
-          [[ "$RESULT_SMOKE_HOMESERVER" == "success" || "$RESULT_SMOKE_HOMESERVER" == "skipped" ]] \
-            || { echo "FAIL: smoke-homeserver ($RESULT_SMOKE_HOMESERVER)"; fail=1; }
-          [[ "$RESULT_PROFILE_TESTS" == "success" || "$RESULT_PROFILE_TESTS" == "skipped" ]] \
-            || { echo "FAIL: profile-tests ($RESULT_PROFILE_TESTS)"; fail=1; }
+          [[ "$RESULT_TESTS" == "success" || "$RESULT_TESTS" == "skipped" ]] \
+            || { echo "FAIL: tests ($RESULT_TESTS)"; fail=1; }
           [[ "$RESULT_CLOSURE" == "success" || "$RESULT_CLOSURE" == "skipped" ]] \
             || { echo "FAIL: closure-diff ($RESULT_CLOSURE)"; fail=1; }
 
