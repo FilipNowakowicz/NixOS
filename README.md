@@ -440,7 +440,15 @@ The repository uses GitHub Actions (`.github/workflows/nix.yml` and `flake-updat
 
 ### Path Filtering & Performance
 
-To optimize CI runtime, expensive **Smoke Tests** and **Profile Tests** only execute when changes are detected in relevant paths (e.g., `modules/`, `lib/`, or specific host directories).
+`scripts/ci-plan.sh` generates the host and test matrices for pull requests. The planner is intentionally conservative: dependency/core changes (`flake.nix`, `flake.lock`, `lib/`, CI wiring) run the full expensive suite, while role-specific changes only run the affected host closures and tests.
+
+Examples:
+
+- Desktop Home Manager changes build `main-ci` and `vm`, but skip homeserver closures.
+- Server Home Manager changes build `homeserver` and `homeserver-vm`, but skip desktop closures.
+- VM host changes run the `vm` closure and desktop VM smoke test.
+- `flake.lock` and shared library changes run every host closure, smoke test, profile test, and closure diff.
+- Docs-only and WSL-only changes skip expensive host and VM jobs; the always-on eval, lint, and light checks still run.
 
 The workflow uses **Cachix** (`filipnowakowicz`) to accelerate builds. CI seeds the cache with successful builds (`cachix push`), which can then be consumed by local machines for rebuild acceleration.
 
