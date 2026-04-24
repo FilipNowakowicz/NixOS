@@ -33,6 +33,51 @@ let
   # Get the active theme
   activeTheme = validThemes.${cfg.active} or (lib.head (lib.attrValues validThemes));
 
+  themeLinkTargets = [
+    {
+      source = "kitty-theme.conf";
+      target = "${config.xdg.configHome}/kitty/current-theme.conf";
+    }
+    {
+      source = "hypr-colors.conf";
+      target = "${config.xdg.configHome}/hypr/colors.conf";
+    }
+    {
+      source = "hyprlock-colors.conf";
+      target = "${config.xdg.configHome}/hypr/hyprlock-colors.conf";
+    }
+    {
+      source = "waybar-colors.css";
+      target = "${config.xdg.configHome}/waybar/colors.css";
+    }
+    {
+      source = "mako-config";
+      target = "${config.xdg.configHome}/mako/config";
+    }
+    {
+      source = "wallpaper";
+      target = "${config.home.homeDirectory}/.local/share/wallpapers/current.png";
+    }
+  ];
+
+  mkThemeLinkCommands =
+    themeDirExpr:
+    lib.concatMapStringsSep "\n" (link: ''
+      mkdir -p ${lib.escapeShellArg (builtins.dirOf link.target)}
+      ln -sf "${themeDirExpr}/${link.source}" ${lib.escapeShellArg link.target}
+    '') themeLinkTargets;
+
+  themeLinksSnippet = ''
+        link_theme_assets() {
+          local theme_dir="$1"
+          if [[ -z "$theme_dir" ]]; then
+            echo "link_theme_assets: missing theme directory" >&2
+            return 1
+          fi
+    ${mkThemeLinkCommands "$theme_dir"}
+        }
+  '';
+
   # Helper to generate theme config text
   mkThemeConfig = themeName: theme: {
     # Kitty theme
@@ -147,23 +192,14 @@ in
 
   config = {
     themes._activeThemeColors = activeTheme.colors;
-    xdg.configFile = themeConfigs;
+    xdg.configFile = themeConfigs // {
+      "themes/links.sh".text = themeLinksSnippet;
+    };
 
     # Symlink active theme configs into live app paths on every rebuild
     home.activation.linkActiveTheme = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      ln -sf "${config.xdg.configHome}/themes/${activeTheme.name}/kitty-theme.conf" \
-             "${config.xdg.configHome}/kitty/current-theme.conf"
-      ln -sf "${config.xdg.configHome}/themes/${activeTheme.name}/hypr-colors.conf" \
-             "${config.xdg.configHome}/hypr/colors.conf"
-      ln -sf "${config.xdg.configHome}/themes/${activeTheme.name}/hyprlock-colors.conf" \
-             "${config.xdg.configHome}/hypr/hyprlock-colors.conf"
-      ln -sf "${config.xdg.configHome}/themes/${activeTheme.name}/waybar-colors.css" \
-             "${config.xdg.configHome}/waybar/colors.css"
-      ln -sf "${config.xdg.configHome}/themes/${activeTheme.name}/mako-config" \
-             "${config.xdg.configHome}/mako/config"
-      mkdir -p "${config.home.homeDirectory}/.local/share/wallpapers"
-      ln -sf "${config.xdg.configHome}/themes/${activeTheme.name}/wallpaper" \
-             "${config.home.homeDirectory}/.local/share/wallpapers/current.png"
+      . "${config.xdg.configHome}/themes/links.sh"
+      link_theme_assets "${config.xdg.configHome}/themes/${activeTheme.name}"
     '';
   };
 }

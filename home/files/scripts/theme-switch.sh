@@ -4,6 +4,7 @@ set -euo pipefail
 THEME="${1:-}"
 THEMES_DIR="$HOME/.config/themes"
 ACTIVE_FILE="$NIX_REPO/home/theme/active.nix"
+LINKS_FILE="$THEMES_DIR/links.sh"
 
 # Get current theme from active.nix
 if [[ -f $ACTIVE_FILE ]]; then
@@ -50,13 +51,15 @@ fi
 echo "import ./themes/$THEME.nix" >"$ACTIVE_FILE"
 echo "Updated active.nix to $THEME"
 
-# Symlink new theme configs into live app paths
-ln -sf "$THEMES_DIR/$THEME/kitty-theme.conf" "$HOME/.config/kitty/current-theme.conf"
-ln -sf "$THEMES_DIR/$THEME/hypr-colors.conf" "$HOME/.config/hypr/colors.conf"
-ln -sf "$THEMES_DIR/$THEME/hyprlock-colors.conf" "$HOME/.config/hypr/hyprlock-colors.conf"
-ln -sf "$THEMES_DIR/$THEME/waybar-colors.css" "$HOME/.config/waybar/colors.css"
-ln -sf "$THEMES_DIR/$THEME/mako-config" "$HOME/.config/mako/config"
-ln -sf "$THEMES_DIR/$THEME/wallpaper" "$HOME/.local/share/wallpapers/current.png"
+# Reuse the generated symlink map from Home Manager to avoid duplicating paths.
+if [[ ! -f $LINKS_FILE ]]; then
+  echo "Error: $LINKS_FILE not found"
+  exit 1
+fi
+
+# shellcheck source=/dev/null
+source "$LINKS_FILE"
+link_theme_assets "$THEMES_DIR/$THEME"
 
 # Reload apps
 hyprctl reload >/dev/null 2>&1 || true
