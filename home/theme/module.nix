@@ -105,6 +105,22 @@ let
       @define-color text #${theme.colors.text};
     '';
 
+    # Mako notification colors
+    "themes/${themeName}/mako-config".text = ''
+      font=JetBrainsMono Nerd Font 11
+      background-color=#${theme.colors.bg}
+      text-color=#${theme.colors.text}
+      border-color=#${theme.colors.orange}
+      border-radius=8
+      border-size=2
+      anchor=top-right
+      margin=12
+      padding=10,14
+      width=300
+      default-timeout=5000
+      max-visible=5
+    '';
+
     # Wallpaper symlink
     "themes/${themeName}/wallpaper".source = theme.wallpaper;
   };
@@ -143,6 +159,8 @@ in
              "${config.xdg.configHome}/hypr/hyprlock-colors.conf"
       ln -sf "${config.xdg.configHome}/themes/${activeTheme.name}/waybar-colors.css" \
              "${config.xdg.configHome}/waybar/colors.css"
+      ln -sf "${config.xdg.configHome}/themes/${activeTheme.name}/mako-config" \
+             "${config.xdg.configHome}/mako/config"
       mkdir -p "${config.home.homeDirectory}/.local/share/wallpapers"
       ln -sf "${config.xdg.configHome}/themes/${activeTheme.name}/wallpaper" \
              "${config.home.homeDirectory}/.local/share/wallpapers/current.png"

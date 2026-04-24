@@ -201,7 +201,7 @@ A `theme-switch` script is available in the shell to list and apply themes. It u
     ```bash
     theme-switch <theme-name>
     ```
-    This command updates `home/theme/active.nix`, runs `home-manager switch` (via the flake) using `nh` to apply changes, and reloads running applications instantly. This also updates the symlink at `home/theme/wallpapers/current.png`, which is used by Hyprlock and other UI elements.
+    This command updates `home/theme/active.nix`, symlinks the new theme's pre-generated configs into place (Kitty, Hyprland, Hyprlock, Waybar, Mako, wallpaper), and reloads running applications — no rebuild required.
 
 ### How to Add a New Theme
 

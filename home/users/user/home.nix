@@ -171,23 +171,10 @@ in
     cliphist.enable = true;
 
     # ── Mako ───────────────────────────────────────────────────────────────
-    mako = {
-      enable = true;
-      settings = {
-        font = "JetBrainsMono Nerd Font 11";
-        background-color = "#${config.themes._activeThemeColors.bg}";
-        text-color = "#${config.themes._activeThemeColors.text}";
-        border-color = "#${config.themes._activeThemeColors.orange}";
-        border-radius = 8;
-        border-size = 2;
-        anchor = "top-right";
-        margin = "12";
-        padding = "10,14";
-        width = 300;
-        default-timeout = 5000;
-        max-visible = 5;
-      };
-    };
+    # Config is managed by home/theme/module.nix (per-theme mako-config file,
+    # symlinked at ~/.config/mako/config) so runtime theme-switch works without
+    # a rebuild. Do not manage mako config here to avoid conflicts.
+    mako.enable = true;
 
     # ── Hypridle ───────────────────────────────────────────────────────────
     # Hyprland-native idle daemon. Single source of truth for desktop idle

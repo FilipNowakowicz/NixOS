@@ -55,6 +55,7 @@ ln -sf "$THEMES_DIR/$THEME/kitty-theme.conf" "$HOME/.config/kitty/current-theme.
 ln -sf "$THEMES_DIR/$THEME/hypr-colors.conf" "$HOME/.config/hypr/colors.conf"
 ln -sf "$THEMES_DIR/$THEME/hyprlock-colors.conf" "$HOME/.config/hypr/hyprlock-colors.conf"
 ln -sf "$THEMES_DIR/$THEME/waybar-colors.css" "$HOME/.config/waybar/colors.css"
+ln -sf "$THEMES_DIR/$THEME/mako-config" "$HOME/.config/mako/config"
 ln -sf "$THEMES_DIR/$THEME/wallpaper" "$HOME/.local/share/wallpapers/current.png"
 
 # Reload apps
