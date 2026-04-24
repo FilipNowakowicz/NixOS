@@ -205,11 +205,12 @@ in
   services.hardened = {
     # thermald: Intel thermal daemon running in --adaptive mode.
     # Needs /sys writes for thermal zones and perf_event_open for RAPL energy
-    # readings; upstream NixOS unit ships with no SystemCallFilter so the null
-    # baseline would leave it completely unfiltered without this explicit set.
+    # readings; upstream NixOS unit ships with no SystemCallFilter so relaxing
+    # the baseline filter would leave it completely unfiltered without this
+    # explicit replacement.
     thermald = {
+      relaxBase = [ "PrivateDevices" ];
       extraConfig = {
-        PrivateDevices = null;
         SystemCallFilter = [
           "@system-service"
           "perf_event_open"
@@ -222,13 +223,15 @@ in
 
     # power-profiles-daemon: upstream unit ships its own tighter filter:
     #   @system-service ~@resources ~@privileged
-    # SystemCallFilter = null here prevents our baseline @system-service from
-    # being appended after those denials (which would re-allow @resources /
-    # @privileged).  The upstream filter is intentionally preserved as-is.
+    # Relax SystemCallFilter here so our baseline @system-service is not
+    # appended after those denials (which would re-allow @resources /
+    # @privileged). The upstream filter is intentionally preserved as-is.
     power-profiles-daemon = {
+      relaxBase = [
+        "PrivateDevices"
+        "SystemCallFilter"
+      ];
       extraConfig = {
-        PrivateDevices = null;
-        SystemCallFilter = null;
         ProtectProc = "invisible";
         ProcSubset = "pid";
         RestrictAddressFamilies = [ "AF_UNIX" ];
@@ -239,18 +242,21 @@ in
     # Skip ProtectSystem (firmware writes), PrivateDevices (/dev access),
     # ProtectKernelModules/Tunables (capsule loading), ProtectClock (EFI time),
     # MemoryDenyWriteExecute (plugin loading).
-    # SystemCallFilter = null preserves fwupd's upstream custom allowlist
-    # (@basic-io @file-system @io-event ... ioctl uname fadvise64 ...) which is
-    # narrower than @system-service; appending @system-service would widen it.
+    # Relaxing SystemCallFilter preserves fwupd's upstream custom allowlist
+    # (@basic-io @file-system @io-event ... ioctl uname fadvise64 ...), which
+    # is narrower than @system-service; appending @system-service would widen
+    # it.
     fwupd = {
+      relaxBase = [
+        "PrivateDevices"
+        "ProtectSystem"
+        "ProtectKernelTunables"
+        "ProtectKernelModules"
+        "ProtectClock"
+        "MemoryDenyWriteExecute"
+        "SystemCallFilter"
+      ];
       extraConfig = {
-        PrivateDevices = null;
-        ProtectSystem = null;
-        ProtectKernelTunables = null;
-        ProtectKernelModules = null;
-        ProtectClock = null;
-        MemoryDenyWriteExecute = null;
-        SystemCallFilter = null;
         RestrictAddressFamilies = [
           "AF_UNIX"
           "AF_INET"
@@ -263,9 +269,11 @@ in
     # bluetoothd: needs AF_BLUETOOTH + AF_NETLINK for HCI management.
     # Skip PrivateDevices (/dev/hci*), ProtectKernelModules (hci module loading).
     bluetooth = {
+      relaxBase = [
+        "PrivateDevices"
+        "ProtectKernelModules"
+      ];
       extraConfig = {
-        PrivateDevices = null;
-        ProtectKernelModules = null;
         RestrictAddressFamilies = [
           "AF_UNIX"
           "AF_BLUETOOTH"
