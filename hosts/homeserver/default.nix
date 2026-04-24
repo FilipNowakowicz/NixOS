@@ -6,11 +6,11 @@
   config,
   pkgs,
   inputs,
+  hostMeta,
   ...
 }:
 let
-  network = import ../../lib/network.nix;
-  inherit (network) tailnetFQDN;
+  inherit (hostMeta) tailnetFQDN;
   syncthing = import ../../lib/syncthing.nix;
 in
 {
