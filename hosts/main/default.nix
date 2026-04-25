@@ -38,7 +38,11 @@
     nameservers = [ "127.0.0.53" ];
   };
 
-  hardware.bluetooth.enable = true;
+  hardware = {
+    bluetooth.enable = true;
+    firmware = [ pkgs.linux-firmware ];
+    acpilight.enable = true;
+  };
 
   system.stateVersion = "24.11";
 
@@ -270,9 +274,6 @@
     greetd.fprintAuth = true;
   };
 
-  # Backlight control (using brightnessctl)
-  hardware.acpilight.enable = true;
-
   systemd.services = {
     prometheus.serviceConfig = {
       TimeoutStopSec = "20s";
@@ -280,6 +281,9 @@
     };
     "opentelemetry-collector".serviceConfig.SupplementaryGroups = lib.mkAfter [ "telemetry-ingest" ];
   };
+
+  # NetworkManager manages networking; disable wait-online to avoid timeout
+  systemd.services."systemd-networkd-wait-online".enable = lib.mkForce false;
 
   # ── USB Device Control ─────────────────────────────────────────────────────
   services.usbguard = {
@@ -291,6 +295,14 @@
       # Allow Logitech USB Receiver (mouse)
       # ID: 046d:c54d
       allow id 046d:c54d
+
+      # Allow Huawei EarPods (USB-C headphones)
+      # ID: 12d1:3a06
+      allow id 12d1:3a06
+
+      # Allow Intel CNVi Bluetooth (internal, Comet Lake AX201)
+      # ID: 8087:0026
+      allow id 8087:0026
 
       # Reject everything else
       reject

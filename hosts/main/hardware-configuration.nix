@@ -25,6 +25,8 @@
       "kvm-intel"
       "tpm_tis"
       "tpm_crb"
+      "btusb"
+      "btintel"
     ];
     extraModulePackages = [ ];
   };
