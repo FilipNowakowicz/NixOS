@@ -168,6 +168,13 @@
 
           require = condition: message: mkResult condition message;
 
+          requirePaths =
+            actual: expected:
+            let
+              missing = lib.filter (path: !(builtins.elem path actual)) expected;
+            in
+            mkResult (missing == [ ]) "missing expected path(s): ${lib.concatStringsSep ", " missing}";
+
           invalidInitrdSecrets =
             cfg:
             let
@@ -215,6 +222,68 @@
                 !clientEnabled || username == "telemetry"
               ) "profiles.observability.ingestAuth.username must be 'telemetry', got '${username}'";
           };
+
+          mainSshIsTailnetOnly = {
+            name = "main SSH stays tailnet-only";
+            check =
+              cfg:
+              let
+                violations = lib.filter (msg: msg != "") [
+                  (lib.optionalString (!cfg.services.openssh.enable) "services.openssh.enable must be true")
+                  (lib.optionalString cfg.services.openssh.openFirewall "services.openssh.openFirewall must be false")
+                  (lib.optionalString (!cfg.services.tailscale.enable) "services.tailscale.enable must be true")
+                  (lib.optionalString (
+                    !cfg.services.tailscale.openFirewall
+                  ) "services.tailscale.openFirewall must be true")
+                ];
+              in
+              mkResult (violations == [ ]) (lib.concatStringsSep "; " violations);
+          };
+
+          mainUsbguardIsDenyDefault = {
+            name = "main USBGuard stays deny-default";
+            check =
+              cfg:
+              let
+                rules = cfg.services.usbguard.rules or "";
+                violations = lib.filter (msg: msg != "") [
+                  (lib.optionalString (!cfg.services.usbguard.enable) "services.usbguard.enable must be true")
+                  (lib.optionalString (
+                    !lib.hasInfix "allow id " rules
+                  ) "services.usbguard.rules must whitelist at least one device")
+                  (lib.optionalString (
+                    !lib.hasInfix "reject" rules
+                  ) "services.usbguard.rules must include a default reject rule")
+                ];
+              in
+              mkResult (violations == [ ]) (lib.concatStringsSep "; " violations);
+          };
+
+          mainLocalBackupProtectsCriticalPaths = {
+            name = "main local backup covers critical operator data";
+            check =
+              cfg:
+              let
+                backup = cfg.services.restic.backups.local;
+                expectedPaths = [
+                  "/home/user/.ssh"
+                  "/home/user/.gnupg"
+                  "/home/user/nix"
+                ];
+                pathCheck = requirePaths backup.paths expectedPaths;
+                violations = lib.filter (msg: msg != "") [
+                  (lib.optionalString (
+                    !(lib.hasPrefix "/run/secrets/" (backup.passwordFile or ""))
+                  ) "services.restic.backups.local.passwordFile must come from /run/secrets/*")
+                  (lib.optionalString (!backup.initialize) "services.restic.backups.local.initialize must be true")
+                  (lib.optionalString (
+                    (backup.timerConfig.OnCalendar or null) != "daily"
+                  ) "services.restic.backups.local.timerConfig.OnCalendar must be \"daily\"")
+                  (lib.optionalString (!pathCheck.passed) pathCheck.message)
+                ];
+              in
+              mkResult (violations == [ ]) (lib.concatStringsSep "; " violations);
+          };
         in
         {
           invariants-main = invariants.mkInvariantCheck "main" (
@@ -241,6 +310,9 @@
               }
               sshFail2banHardened
               obsClientUsesCanonicalUsername
+              mainSshIsTailnetOnly
+              mainUsbguardIsDenyDefault
+              mainLocalBackupProtectsCriticalPaths
             ]
             ++ registryAssertionsFor "main"
           ) allNixosConfigs.main.config;
