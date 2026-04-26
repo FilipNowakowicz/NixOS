@@ -101,7 +101,7 @@
         ssh = {
           enable = true;
           port = 2222;
-          authorizedKeys = import ../../lib/pubkeys.nix;
+          authorizedKeys = import ../../lib/recovery-pubkeys.nix;
           hostKeys = [ "/etc/secrets/initrd/ssh_host_ed25519_key" ];
         };
       };
