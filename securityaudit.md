@@ -16,7 +16,7 @@ Enforcement: Tailscale enablement is enforced, tailnet-only exposure is only ass
 Small hardening: replace global networking.firewall.allowedTCPPorts = [ 443 ]; with
 networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 443 ];; optionally bind
 nginx to the Tailscale IP/interface. 3. Medium: homeserver secrets are decryptable by main, expanding blast radius across hosts.
-Attack surface: .sops.yaml encrypts hosts/homeserver/secrets/* to both *main_host and
+Attack surface: .sops.yaml encrypts hosts/homeserver/secrets/* to both *main*host and
 *homeserver_host in .sops.yaml:34. Those secrets include user_password,
 tailscale_auth_key, Grafana secrets, ingest htpasswd, and restic password in hosts/
 homeserver/default.nix:235. A compromised main root plus repo checkout can decrypt
@@ -24,7 +24,7 @@ server secrets.
 Enforcement: broad trust is enforced by SOPS recipients.
 Small hardening: remove *main_host from the homeserver rule after bootstrap, rotate
 affected secrets, and keep bootstrap decryption on the operator key or a dedicated
-short-lived bootstrap recipient. 4. Medium: plaintext secrets under hosts/_/secrets/_ can bypass the hook by path
+short-lived bootstrap recipient. 4. Medium: plaintext secrets under hosts/*/secrets/_ can bypass the hook by path
 convention.
 Attack surface: the plaintext scanner skips all hosts/_/secrets/_ paths in pre-commit-
 hooks.nix:42. If someone adds an unencrypted YAML/text secret in that directory, the
@@ -56,7 +56,7 @@ loss exposes service databases and tailnet state.
 Enforcement: no at-rest encryption is enforced for the server.
 Small hardening: put at least /persist behind LUKS; use TPM2 unlock plus a documented
 recovery passphrase if unattended boot is required. 8. Low: Tailscale ACLs are broad and generated, but not a strong repo-enforced perimeter.
-Attack surface: lib/acl.nix:28 allows tag:workstation to tag:server:_ and admins to _:_;
+Attack surface: lib/acl.nix:28 allows tag:workstation to tag:server:_ and admins to _:\_;
 flake.nix:440 only builds the ACL artifact. If Tailscale is the intended boundary, all
 server ports are reachable from workstation-tagged nodes.
 Enforcement: ACL generation is enforced; application and least-privilege port scope are
