@@ -22,11 +22,11 @@ tailscale_auth_key, Grafana secrets, ingest htpasswd, and restic password in hos
 homeserver/default.nix:235. A compromised main root plus repo checkout can decrypt
 server secrets.
 Enforcement: broad trust is enforced by SOPS recipients.
-Small hardening: remove *main_host from the homeserver rule after bootstrap, rotate
+Small hardening: remove *main*host from the homeserver rule after bootstrap, rotate
 affected secrets, and keep bootstrap decryption on the operator key or a dedicated
 short-lived bootstrap recipient. 4. Medium: plaintext secrets under hosts/*/secrets/* can bypass the hook by path
 convention.
-Attack surface: the plaintext scanner skips all hosts/_/secrets/_ paths in pre-commit-
+Attack surface: the plaintext scanner skips all hosts/*/secrets/_ paths in pre-commit-
 hooks.nix:42. If someone adds an unencrypted YAML/text secret in that directory, the
 hook intentionally ignores it.
 Enforcement: encrypted-at-rest is assumed by directory naming; not verified per file.
@@ -56,7 +56,7 @@ loss exposes service databases and tailnet state.
 Enforcement: no at-rest encryption is enforced for the server.
 Small hardening: put at least /persist behind LUKS; use TPM2 unlock plus a documented
 recovery passphrase if unattended boot is required. 8. Low: Tailscale ACLs are broad and generated, but not a strong repo-enforced perimeter.
-Attack surface: lib/acl.nix:28 allows tag:workstation to tag:server:_ and admins to \_:\_;
+Attack surface: lib/acl.nix:28 allows tag:workstation to tag:server:\_ and admins to \_:\_;
 flake.nix:440 only builds the ACL artifact. If Tailscale is the intended boundary, all
 server ports are reachable from workstation-tagged nodes.
 Enforcement: ACL generation is enforced; application and least-privilege port scope are
