@@ -46,6 +46,8 @@
 
   system.stateVersion = "24.11";
 
+  time.timeZone = lib.mkForce "Europe/London";
+
   environment.systemPackages = with pkgs; [ sbctl ];
 
   boot = {
@@ -303,6 +305,11 @@
       # Allow Intel CNVi Bluetooth (internal, Comet Lake AX201)
       # ID: 8087:0026
       allow id 8087:0026
+
+      # Allow GenesysLogic USB extender hub (USB 2.1 + USB 3.1 interfaces)
+      # ID: 05e3:0610, 05e3:0626
+      allow id 05e3:0610
+      allow id 05e3:0626
 
       # Reject everything else
       reject
