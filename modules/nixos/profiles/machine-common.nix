@@ -1,6 +1,7 @@
+{ lib, ... }:
 {
   services.openssh = {
     enable = true;
-    openFirewall = false;
+    openFirewall = lib.mkDefault false;
   };
 }
