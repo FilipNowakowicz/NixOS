@@ -32,6 +32,10 @@ in
 
   boot.loader.systemd-boot.configurationLimit = 5;
 
+  security.sudo.wheelNeedsPassword = lib.mkForce true;
+
+  nix.settings.trusted-users = lib.mkForce [ "root" ];
+
   networking = {
     hostName = "homeserver";
     useNetworkd = true;
@@ -104,6 +108,11 @@ in
 
   # ── Services ────────────────────────────────────────────────────────────────
   services = {
+    openssh = {
+      enable = true;
+      openFirewall = false;
+    };
+
     hardened = {
       tailscale-cert = {
         extraConfig = {
@@ -226,13 +235,7 @@ in
       repository = "/persist/restic-repo";
       passwordFile = config.sops.secrets.restic_password.path;
     };
-
-    openssh.openFirewall = lib.mkForce false;
   };
-
-  security.sudo.wheelNeedsPassword = lib.mkForce true;
-
-  nix.settings.trusted-users = lib.mkForce [ "root" ];
 
   networking.firewall.interfaces.tailscale0.allowedTCPPorts = [
     22

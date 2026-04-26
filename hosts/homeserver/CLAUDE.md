@@ -8,6 +8,7 @@ Accessible via Tailscale at `homeserver.filip-nowakowicz.ts.net`.
 - **Vaultwarden** — `127.0.0.1:8222`, proxied via Nginx over HTTPS
 - **Syncthing** — web UI via SSH tunnel: `ssh -L 8384:localhost:8384 homeserver`
 - **Nginx** — reverse proxy, TLS via Tailscale cert (not ACME)
+- **SSH** — enabled for deploy/break-glass access, but firewall exposure is limited to `tailscale0`
 - **Tailscale** — auth key from sops secret `tailscale_auth_key`
 
 ## Sops Bootstrap
@@ -53,6 +54,8 @@ After initial hardware bootstrap, always use normal deployment tools for config 
 ## Gotchas
 
 - **TLS cert is not ACME** — `tailscale-cert.service` fetches it; nginx depends on that service. Don't configure `enableACME`.
+- **Access posture is tailnet-only** — `tailscale0` is the only interface that permits inbound SSH or HTTPS.
 - **nginx starts after tailscale-cert** — first boot may take a minute for cert to be provisioned.
+- **Sudo requires a password** — the shared `user` account stays in `wheel`, but `security.sudo.wheelNeedsPassword = true` on the real homeserver.
 - **Impermanence** — `/var/lib/vaultwarden`, `/var/lib/syncthing`, `/var/lib/tailscale` are persisted; everything else resets on reboot.
 - **Sops decryption requires host key** — host's SSH key must be added to `.sops.yaml` _before_ secrets can be decrypted on boot. The reinstall script injects a pre-generated host key to ensure this from first boot.

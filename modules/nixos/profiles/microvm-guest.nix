@@ -5,6 +5,7 @@
     inputs.impermanence.nixosModules.impermanence
     ./impermanence-base.nix
     ./machine-common.nix
+    ./machine-dev.nix
   ];
 
   # ── Boot ──────────────────────────────────────────────────────────────────

@@ -1,13 +1,7 @@
+{ lib, ... }:
 {
-  security.sudo.wheelNeedsPassword = false;
-
   services.openssh = {
     enable = true;
-    openFirewall = true;
+    openFirewall = lib.mkDefault false;
   };
-
-  nix.settings.trusted-users = [
-    "root"
-    "user"
-  ];
 }
