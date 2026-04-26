@@ -4,6 +4,7 @@
 # or during a fresh install via: nixos-anywhere --generate-hardware-config ...
 {
   config,
+  lib,
   pkgs,
   inputs,
   hostMeta,
@@ -225,10 +226,18 @@ in
       repository = "/persist/restic-repo";
       passwordFile = config.sops.secrets.restic_password.path;
     };
+
+    openssh.openFirewall = lib.mkForce false;
   };
 
-  # Open firewall for HTTPS
-  networking.firewall.allowedTCPPorts = [ 443 ];
+  security.sudo.wheelNeedsPassword = lib.mkForce true;
+
+  nix.settings.trusted-users = lib.mkForce [ "root" ];
+
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [
+    22
+    443
+  ];
 
   # The host key's age identity is added to .sops.yaml as &homeserver_host before deployment,
   # ensuring the homeserver can decrypt its own secrets (user_password, tailscale_auth_key) from first boot.
