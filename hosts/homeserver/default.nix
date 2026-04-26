@@ -32,7 +32,7 @@ in
 
   boot.loader.systemd-boot.configurationLimit = 5;
 
-  security.sudo.wheelNeedsPassword = true;
+  security.sudo.wheelNeedsPassword = lib.mkForce true;
 
   nix.settings.trusted-users = lib.mkForce [ "root" ];
 

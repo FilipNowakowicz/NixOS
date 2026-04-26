@@ -363,8 +363,33 @@
                 check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
               }
               {
+                name = "no passwordless sudo";
+                check =
+                  cfg: require cfg.security.sudo.wheelNeedsPassword "security.sudo.wheelNeedsPassword must be true";
+              }
+              {
                 name = "firewall enabled";
                 check = cfg: require cfg.networking.firewall.enable "networking.firewall.enable must be true";
+              }
+              {
+                name = "nix trusted-users stay root-only";
+                check = cfg: invariants.checkExpectedTrustedUsers [ "root" ] cfg;
+              }
+              {
+                name = "SSH and HTTPS are not globally open";
+                check = cfg: invariants.checkNoGlobalTCPPorts [ 22 443 ] cfg;
+              }
+              {
+                name = "SSH and HTTPS stay Tailscale-only";
+                check =
+                  cfg:
+                  invariants.checkTCPPortsRestrictedToInterface {
+                    interface = "tailscale0";
+                    ports = [
+                      22
+                      443
+                    ];
+                  } cfg;
               }
               {
                 name = "sops uses SSH host key for decryption";

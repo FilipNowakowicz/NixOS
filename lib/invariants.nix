@@ -24,6 +24,111 @@ let
     && cfg.services.restic.backups.local.repository != null;
 in
 rec {
+  formatList = values: lib.concatStringsSep ", " values;
+
+  formatIntList = values: formatList (map builtins.toString values);
+
+  interfaceAllowedTCPPorts =
+    cfg: interface:
+    let
+      interfaces = cfg.networking.firewall.interfaces or { };
+    in
+    if builtins.hasAttr interface interfaces then
+      interfaces.${interface}.allowedTCPPorts or [ ]
+    else
+      [ ];
+
+  interfaceTCPExposureViolations =
+    {
+      interface,
+      ports,
+    }:
+    cfg:
+    let
+      globalPorts = cfg.networking.firewall.allowedTCPPorts or [ ];
+      interfaces = cfg.networking.firewall.interfaces or { };
+      targetPorts = interfaceAllowedTCPPorts cfg interface;
+      globallyOpen = lib.filter (port: builtins.elem port globalPorts) ports;
+      missingOnTarget = lib.filter (port: !(builtins.elem port targetPorts)) ports;
+      exposedElsewhere = lib.filterAttrs (
+        name: value:
+        name != interface && lib.any (port: builtins.elem port (value.allowedTCPPorts or [ ])) ports
+      ) interfaces;
+      elsewhereMessages = lib.mapAttrsToList (
+        name: value:
+        let
+          offending = lib.filter (port: builtins.elem port (value.allowedTCPPorts or [ ])) ports;
+        in
+        "${name} (${formatIntList offending})"
+      ) exposedElsewhere;
+    in
+    lib.filter (msg: msg != "") [
+      (lib.optionalString (
+        globallyOpen != [ ]
+      ) "ports must not be globally open: ${formatIntList globallyOpen}")
+      (lib.optionalString (missingOnTarget != [ ])
+        "networking.firewall.interfaces.${interface}.allowedTCPPorts must include: ${formatIntList missingOnTarget}"
+      )
+      (lib.optionalString (
+        elsewhereMessages != [ ]
+      ) "ports must not be exposed on non-${interface} interfaces: ${formatList elsewhereMessages}")
+    ];
+
+  checkExpectedTrustedUsers =
+    expectedUsers: cfg:
+    let
+      actualUsers = cfg.nix.settings.trusted-users or [ ];
+      missingUsers = lib.filter (user: !(builtins.elem user actualUsers)) expectedUsers;
+      unexpectedUsers = lib.filter (user: !(builtins.elem user expectedUsers)) actualUsers;
+      violations = lib.filter (msg: msg != "") [
+        (lib.optionalString (missingUsers != [ ]) "missing trusted users: ${formatList missingUsers}")
+        (lib.optionalString (
+          unexpectedUsers != [ ]
+        ) "unexpected trusted users: ${formatList unexpectedUsers}")
+      ];
+    in
+    {
+      passed = violations == [ ];
+      message =
+        if violations == [ ] then
+          "trusted users match expected set"
+        else
+          lib.concatStringsSep "; " violations;
+    };
+
+  checkNoGlobalTCPPorts =
+    ports: cfg:
+    let
+      globalPorts = cfg.networking.firewall.allowedTCPPorts or [ ];
+      globallyOpen = lib.filter (port: builtins.elem port globalPorts) ports;
+    in
+    {
+      passed = globallyOpen == [ ];
+      message =
+        if globallyOpen == [ ] then
+          "ports are not globally open"
+        else
+          "ports must not be globally open: ${formatIntList globallyOpen}";
+    };
+
+  checkTCPPortsRestrictedToInterface =
+    {
+      interface,
+      ports,
+    }:
+    cfg:
+    let
+      violations = interfaceTCPExposureViolations { inherit interface ports; } cfg;
+    in
+    {
+      passed = violations == [ ];
+      message =
+        if violations == [ ] then
+          "ports are restricted to ${interface}"
+        else
+          lib.concatStringsSep "; " violations;
+    };
+
   normalizeCheckResult =
     assertionName: result:
     if builtins.isBool result then

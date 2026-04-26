@@ -27,7 +27,15 @@ let
   ] { };
 
   baseConfig = {
+    nix.settings.trusted-users = [ "root" ];
     networking.hostName = "homeserver";
+    networking.firewall = {
+      allowedTCPPorts = [ ];
+      interfaces.tailscale0.allowedTCPPorts = [
+        22
+        443
+      ];
+    };
     services = {
       openssh.enable = true;
       tailscale.enable = true;
@@ -132,6 +140,110 @@ let
         }
       );
       expected = false;
+    };
+
+    trustedUsersMatchExpectedSet = {
+      expr = (invariants.checkExpectedTrustedUsers [ "root" ] baseConfig).passed;
+      expected = true;
+    };
+
+    trustedUsersRejectUnexpectedUsers = {
+      expr =
+        (invariants.checkExpectedTrustedUsers [ "root" ] (
+          baseConfig
+          // {
+            nix.settings.trusted-users = [
+              "root"
+              "user"
+            ];
+          }
+        )).message;
+      expected = "unexpected trusted users: user";
+    };
+
+    trustedUsersRejectMissingExpectedUsers = {
+      expr =
+        (invariants.checkExpectedTrustedUsers [
+          "root"
+          "builder"
+        ] baseConfig).message;
+      expected = "missing trusted users: builder";
+    };
+
+    noGlobalTcpPortsPasses = {
+      expr = (invariants.checkNoGlobalTCPPorts [ 22 443 ] baseConfig).passed;
+      expected = true;
+    };
+
+    noGlobalTcpPortsRejectsExposure = {
+      expr =
+        (invariants.checkNoGlobalTCPPorts [ 22 443 ] (
+          baseConfig
+          // {
+            networking.firewall = baseConfig.networking.firewall // {
+              allowedTCPPorts = [ 443 ];
+            };
+          }
+        )).message;
+      expected = "ports must not be globally open: 443";
+    };
+
+    tcpPortsRestrictedToInterfacePasses = {
+      expr =
+        (invariants.checkTCPPortsRestrictedToInterface {
+          interface = "tailscale0";
+          ports = [
+            22
+            443
+          ];
+        } baseConfig).passed;
+      expected = true;
+    };
+
+    tcpPortsRestrictedToInterfaceRejectsMissingTargetPort = {
+      expr =
+        (invariants.checkTCPPortsRestrictedToInterface
+          {
+            interface = "tailscale0";
+            ports = [
+              22
+              443
+            ];
+          }
+          (
+            baseConfig
+            // {
+              networking.firewall = baseConfig.networking.firewall // {
+                interfaces.tailscale0.allowedTCPPorts = [ 22 ];
+              };
+            }
+          )
+        ).message;
+      expected = "networking.firewall.interfaces.tailscale0.allowedTCPPorts must include: 443";
+    };
+
+    tcpPortsRestrictedToInterfaceRejectsOtherInterfaces = {
+      expr =
+        (invariants.checkTCPPortsRestrictedToInterface
+          {
+            interface = "tailscale0";
+            ports = [
+              22
+              443
+            ];
+          }
+          (
+            baseConfig
+            // {
+              networking.firewall = baseConfig.networking.firewall // {
+                interfaces = baseConfig.networking.firewall.interfaces // {
+                  eth0.allowedTCPPorts = [ 22 ];
+                };
+              };
+            }
+          )
+        ).message;
+      expected = "ports must not be exposed on non-tailscale0 interfaces: eth0 (22)";
     };
   };
 in
