@@ -22,12 +22,12 @@ Remove development-grade access posture from `homeserver` and make remote access
 
 ## Tasks
 
-- [ ] identify which settings in `machine-common.nix` are VM/dev-only
-- [ ] create a production-safe split that preserves existing behavior on `vm` and `homeserver-vm`
-- [ ] update `homeserver` imports and explicit SSH/sudo/trusted-users settings
-- [ ] replace global `allowedTCPPorts = [ 443 ]` with `tailscale0`-scoped rules
-- [ ] decide whether `homeserver` SSH remains enabled for deploy/break-glass and encode that explicitly
-- [ ] update docs to match the new posture
+- [x] identify which settings in `machine-common.nix` are VM/dev-only
+- [x] create a production-safe split that preserves existing behavior on `vm` and `homeserver-vm`
+- [x] update `homeserver` imports and explicit SSH/sudo/trusted-users settings
+- [x] replace global `allowedTCPPorts = [ 443 ]` with `tailscale0`-scoped rules
+- [x] decide whether `homeserver` SSH remains enabled for deploy/break-glass and encode that explicitly
+- [x] update docs to match the new posture
 
 ## Acceptance Criteria
 

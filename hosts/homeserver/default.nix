@@ -4,6 +4,7 @@
 # or during a fresh install via: nixos-anywhere --generate-hardware-config ...
 {
   config,
+  lib,
   pkgs,
   inputs,
   hostMeta,
@@ -30,6 +31,10 @@ in
   system.stateVersion = "24.11";
 
   boot.loader.systemd-boot.configurationLimit = 5;
+
+  security.sudo.wheelNeedsPassword = true;
+
+  nix.settings.trusted-users = lib.mkForce [ "root" ];
 
   networking = {
     hostName = "homeserver";
@@ -103,6 +108,11 @@ in
 
   # ── Services ────────────────────────────────────────────────────────────────
   services = {
+    openssh = {
+      enable = true;
+      openFirewall = false;
+    };
+
     hardened = {
       tailscale-cert = {
         extraConfig = {
@@ -227,8 +237,10 @@ in
     };
   };
 
-  # Open firewall for HTTPS
-  networking.firewall.allowedTCPPorts = [ 443 ];
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [
+    22
+    443
+  ];
 
   # The host key's age identity is added to .sops.yaml as &homeserver_host before deployment,
   # ensuring the homeserver can decrypt its own secrets (user_password, tailscale_auth_key) from first boot.
