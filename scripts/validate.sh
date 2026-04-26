@@ -99,7 +99,8 @@ light)
     ".#checks.${system}.lib-generators" \
     ".#checks.${system}.lib-generators-golden" \
     ".#checks.${system}.lib-acl" \
-    ".#checks.${system}.lib-invariants"
+    ".#checks.${system}.lib-invariants" \
+    ".#checks.${system}.secrets-directory"
   ;;
 
 host)
