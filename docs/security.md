@@ -66,6 +66,8 @@ Then enter the LUKS passphrase when prompted.
 
 Tailscale is the primary remote-access layer.
 
+- `homeserver` keeps SSH enabled for deploy and break-glass access, but only on `tailscale0`.
+- `homeserver` exposes SSH and HTTPS only on `tailscale0`; it does not globally open TCP `22` or `443`.
 - `homeserver` exposes HTTPS on the tailnet FQDN from `lib/hosts.nix`.
 - `homeserver` obtains TLS material through `tailscale-cert.service`; do not enable ACME for that virtual host.
 - Observability ingest paths are protected with basic auth sourced from sops.

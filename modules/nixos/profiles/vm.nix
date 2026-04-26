@@ -12,6 +12,7 @@
     "${inputs.nixpkgs}/nixos/modules/installer/scan/not-detected.nix"
     ./impermanence-base.nix
     ./machine-common.nix
+    ./machine-dev.nix
   ];
 
   # ── Boot (virtio + UEFI) ──────────────────────────────────────────────────
