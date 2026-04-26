@@ -605,6 +605,9 @@
               lib-invariants = import ./tests/lib/invariants.nix {
                 inherit nixpkgs system;
               };
+              secrets-directory = import ./tests/lib/secrets-directory.nix {
+                inherit nixpkgs system;
+              };
             };
 
         };

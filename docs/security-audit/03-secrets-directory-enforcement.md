@@ -19,11 +19,11 @@ Make plaintext files under `hosts/*/secrets/*` fail local hooks and CI.
 
 ## Tasks
 
-- [ ] remove the blanket skip for `hosts/*/secrets/*`
-- [ ] define valid file classes inside secrets directories
-- [ ] fail on plaintext YAML/text files without SOPS metadata
-- [ ] ensure the allowlist cannot silently bypass secrets-directory rules
-- [ ] add CI/flake coverage so the check runs outside pre-commit
+- [x] remove the blanket skip for `hosts/*/secrets/*`
+- [x] define valid file classes inside secrets directories
+- [x] fail on plaintext YAML/text files without SOPS metadata
+- [x] ensure the allowlist cannot silently bypass secrets-directory rules
+- [x] add CI/flake coverage so the check runs outside pre-commit
 
 ## Acceptance Criteria
 
@@ -34,8 +34,8 @@ Make plaintext files under `hosts/*/secrets/*` fail local hooks and CI.
 
 ## Validation
 
-- run the new secrets-directory check directly
-- `nix build '.#checks.x86_64-linux.pre-commit-check'`
+- `bash scripts/check-secrets-directory.sh --working-tree`
+- `bash scripts/validate.sh light`
 - `nix flake check --no-build`
 
 ## Notes
