@@ -50,9 +50,16 @@ TPM/LUKS unlock failures.
 Constraints:
 
 - Recovery requires wired Ethernet; WiFi is not available in stage 1.
-- Authorized keys come from `lib/pubkeys.nix`.
+- Authorized keys come from `lib/recovery-pubkeys.nix`.
+- Day-to-day SSH access remains on the standard `lib/pubkeys.nix` path.
 - The initrd SSH host key is stored as a sops secret.
 - `flush-network-before-stage2` tears down non-loopback interfaces before stage 2.
+
+Recovery key management:
+
+- Keep the recovery private key offline; it is not part of normal SSH access.
+- Rotate recovery access by updating `lib/recovery-pubkeys.nix`, removing the old
+  public key, and redeploying `main` before relying on the new key.
 
 Recovery flow:
 
