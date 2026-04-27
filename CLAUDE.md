@@ -146,7 +146,8 @@ Managed with sops-nix + age. Edit secrets with `sops <file>`.
 
 ## Goals
 
-See [HSGOALS.md](./HSGOALS.md) for the full project roadmap and in-progress tasks.
+See [docs/goals.md](./docs/goals.md) for the full project roadmap and in-progress tasks.
+See [docs/ideas.md](./docs/ideas.md) for longer-term ideas and directions.
 
 ---
 
