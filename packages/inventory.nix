@@ -49,6 +49,8 @@ let
   hostsData = lib.mapAttrsToList extractHost allNixosConfigs;
 
   dataJson = builtins.toJSON hostsData;
+  goalsJson = builtins.toJSON (builtins.readFile ../docs/goals.md);
+  ideasJson = builtins.toJSON (builtins.readFile ../docs/ideas.md);
 
   html = ''
     <!DOCTYPE html>
@@ -177,6 +179,165 @@ let
         .tag-profile { color: var(--purple); border-color: #7a5af855; }
         .tag-port { color: var(--orange); border-color: #6e3a1e; }
         .tag-gap { color: var(--orange); border-color: #6e3a1e; }
+
+        /* ── Roadmap & Ideas ── */
+        .section-panel-title {
+          font-size: 0.7rem;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          color: var(--muted);
+          font-weight: 600;
+        }
+        .panel-hdr {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 0.75rem;
+        }
+        .panel-meta {
+          font-size: 0.72rem;
+          color: var(--muted);
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+        .prog-bar {
+          display: inline-block;
+          width: 64px;
+          height: 3px;
+          background: var(--border);
+          border-radius: 2px;
+          overflow: hidden;
+        }
+        .prog-bar-fill { height: 100%; background: var(--green); }
+        .roadmap-tracks {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.75rem;
+        }
+        .roadmap-track {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          overflow: hidden;
+        }
+        .roadmap-track-header {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.45rem 0.75rem;
+          border-bottom: 1px solid var(--border);
+        }
+        .roadmap-track-label {
+          font-size: 0.68rem;
+          text-transform: uppercase;
+          letter-spacing: 0.07em;
+          font-weight: 600;
+          flex: 1;
+        }
+        .track-a .roadmap-track-label { color: var(--green); }
+        .track-b .roadmap-track-label { color: var(--yellow); }
+        .roadmap-track-badge {
+          font-size: 0.62rem;
+          padding: 1px 5px;
+          border-radius: 3px;
+          border: 1px solid;
+        }
+        .badge-cloud { color: var(--blue); border-color: var(--blue); }
+        .badge-blocked { color: var(--red); border-color: var(--red); }
+        .roadmap-connector-label {
+          text-align: center;
+          font-size: 0.68rem;
+          color: var(--muted);
+          padding: 0.4rem 0;
+          letter-spacing: 0.04em;
+        }
+        .roadmap-deferred {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          overflow: hidden;
+          margin-bottom: 1.25rem;
+        }
+        .roadmap-group-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.45rem 0.75rem;
+          border-bottom: 1px solid var(--border);
+        }
+        .roadmap-group-label {
+          font-size: 0.68rem;
+          text-transform: uppercase;
+          letter-spacing: 0.07em;
+          font-weight: 600;
+          color: var(--blue);
+        }
+        .roadmap-group-count { font-size: 0.68rem; color: var(--muted); }
+        .goal-items-list { padding: 0.3rem 0; }
+        .goal-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 0.5rem;
+          padding: 0.28rem 0.75rem;
+          cursor: pointer;
+          transition: background 0.1s;
+        }
+        .goal-item:hover { background: #1c2128; }
+        .goal-item.expanded { background: #161f2e; }
+        .goal-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          border: 1.5px solid var(--muted);
+          flex-shrink: 0;
+          margin-top: 5px;
+        }
+        .goal-dot.done { background: var(--green); border-color: var(--green); }
+        .goal-title { font-size: 0.78rem; color: var(--text); line-height: 1.4; }
+        .goal-title.done { color: var(--muted); text-decoration: line-through; }
+        .goal-desc {
+          font-size: 0.72rem;
+          color: var(--muted);
+          line-height: 1.55;
+          margin-top: 0.25rem;
+        }
+        .goal-desc.hidden { display: none; }
+        .ideas-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+          gap: 0.75rem;
+        }
+        .idea-card {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          padding: 0.75rem;
+          cursor: pointer;
+          transition: border-color 0.15s;
+        }
+        .idea-card:hover { border-color: var(--muted); }
+        .idea-card.expanded { border-color: var(--purple); }
+        .idea-num {
+          font-size: 0.62rem;
+          color: var(--muted);
+          font-weight: 600;
+          letter-spacing: 0.06em;
+          margin-bottom: 0.3rem;
+          opacity: 0.6;
+        }
+        .idea-title { font-size: 0.8rem; color: var(--text); line-height: 1.35; }
+        .idea-desc {
+          display: none;
+          font-size: 0.72rem;
+          color: var(--muted);
+          line-height: 1.55;
+          margin-top: 0.4rem;
+          padding-top: 0.4rem;
+          border-top: 1px solid var(--border);
+        }
+        .idea-card.expanded .idea-desc { display: block; }
+
         footer { margin-top: 2rem; color: var(--muted); font-size: 0.8rem; }
       </style>
     </head>
@@ -187,10 +348,13 @@ let
       <div class="summary" id="summary"></div>
       <div class="filters" id="filters"></div>
       <div class="grid" id="grid"></div>
+      <div id="gi-section"></div>
       <footer id="footer"></footer>
 
       <script>
         const hosts = ${dataJson};
+        const goalsText = ${goalsJson};
+        const ideasText = ${ideasJson};
 
         const svcLabels = {
           openssh: 'SSH', tailscale: 'Tailscale', firewall: 'Firewall',
@@ -358,12 +522,195 @@ let
           }
         }
 
+        // ── Goals & Ideas panel ───────────────────────────────────────────
+
+        function stripBold(s) {
+          return s.replace(/\*\*([^*]+)\*\*/g, '$1');
+        }
+
+        function parseGoals(text) {
+          const sections = [];
+          let section = null, group = null, item = null;
+          for (const raw of text.split('\n')) {
+            const line = raw.trimEnd();
+            if (/^## /.test(line)) {
+              section = { label: line.slice(3), groups: [] };
+              sections.push(section);
+              group = null; item = null;
+            } else if (/^### /.test(line) && section) {
+              group = { label: line.slice(4), items: [] };
+              section.groups.push(group);
+              item = null;
+            } else if (/^- \[[ x]\] /i.test(line) && section) {
+              if (!group) { group = { label: null, items: [] }; section.groups.push(group); }
+              const done = line[3].toLowerCase() === 'x';
+              const rest = line.slice(6);
+              const m = rest.match(/^\*\*([^*]+)\*\*\s*(?:—\s*)?(.*)$/);
+              const title = m ? m[1] : rest.split(' — ')[0];
+              const desc = m ? m[2].trim() : rest.split(' — ').slice(1).join(' — ').trim();
+              item = { done, title, desc };
+              group.items.push(item);
+            } else if (item && line.trim() && !/^[#-]/.test(line)) {
+              item.desc += (item.desc ? ' ' : "") + stripBold(line.trim());
+            }
+          }
+          return sections.filter(s => s.groups.some(g => g.items.length > 0));
+        }
+
+        function parseIdeas(text) {
+          const items = [];
+          let item = null;
+          for (const raw of text.split('\n')) {
+            const line = raw.trimEnd();
+            const m = line.match(/^(\d+)\.\s+(.+)/);
+            if (m) {
+              item = { num: m[1], title: m[2], desc: "" };
+              items.push(item);
+            } else if (item && line.trim()) {
+              item.desc += (item.desc ? ' ' : "") + line.trim();
+            }
+          }
+          return items;
+        }
+
+        // ── Roadmap ───────────────────────────────────────────────────────
+
+        function buildGoalItem(it) {
+          const item = el('div', 'goal-item');
+          const dot = el('span', 'goal-dot' + (it.done ? ' done' : ""));
+          const textWrap = document.createElement('div');
+          textWrap.appendChild(el('div', 'goal-title' + (it.done ? ' done' : ""), it.title));
+          if (it.desc) {
+            const desc = el('div', 'goal-desc hidden', it.desc);
+            textWrap.appendChild(desc);
+            item.addEventListener('click', function() {
+              item.classList.toggle('expanded');
+              desc.classList.toggle('hidden');
+            });
+          }
+          item.appendChild(dot);
+          item.appendChild(textWrap);
+          return item;
+        }
+
+        function buildTrack(type, group) {
+          const track = el('div', 'roadmap-track track-' + type);
+          const header = el('div', 'roadmap-track-header');
+          header.appendChild(el('span', 'roadmap-track-label', group.label));
+          header.appendChild(el('span', 'roadmap-track-badge ' + (type === 'a' ? 'badge-cloud' : 'badge-blocked'), type === 'a' ? 'cloud' : 'blocked'));
+          track.appendChild(header);
+          const items = el('div', 'goal-items-list');
+          for (const it of group.items) items.appendChild(buildGoalItem(it));
+          track.appendChild(items);
+          return track;
+        }
+
+        function buildRoadmap() {
+          const wrap = document.createElement('div');
+          wrap.style.marginTop = '2rem';
+
+          const goalSections = parseGoals(goalsText);
+          let total = 0, done = 0;
+          for (const sec of goalSections)
+            for (const g of sec.groups)
+              for (const it of g.items) { total++; if (it.done) done++; }
+
+          const hdr = el('div', 'panel-hdr');
+          hdr.appendChild(el('span', 'section-panel-title', 'Roadmap'));
+          const metaWrap = el('span', 'panel-meta');
+          metaWrap.appendChild(document.createTextNode(done + ' / ' + total + ' complete\u00a0'));
+          const pb = el('span', 'prog-bar');
+          const pbf = el('span', 'prog-bar-fill');
+          pbf.style.width = (total ? Math.round(done / total * 100) : 0) + '%';
+          pb.appendChild(pbf);
+          metaWrap.appendChild(pb);
+          hdr.appendChild(metaWrap);
+          wrap.appendChild(hdr);
+
+          let pathA = null, pathB = null, deferred = null;
+          const others = [];
+          for (const sec of goalSections) {
+            for (const g of sec.groups) {
+              if (!g.label) continue;
+              if (/path\s+a/i.test(g.label)) pathA = g;
+              else if (/path\s+b/i.test(g.label)) pathB = g;
+              else if (/deferred/i.test(g.label)) deferred = g;
+              else others.push(g);
+            }
+          }
+
+          if (pathA || pathB) {
+            const tracks = el('div', 'roadmap-tracks');
+            if (pathA) tracks.appendChild(buildTrack('a', pathA));
+            if (pathB) tracks.appendChild(buildTrack('b', pathB));
+            wrap.appendChild(tracks);
+          }
+
+          if (deferred) {
+            wrap.appendChild(el('div', 'roadmap-connector-label', '\u2193 either path unlocks \u2193'));
+            const dcard = el('div', 'roadmap-deferred');
+            const dh = el('div', 'roadmap-group-header');
+            dh.appendChild(el('span', 'roadmap-group-label', 'Deferred'));
+            const remaining = deferred.items.filter(function(i) { return !i.done; }).length;
+            dh.appendChild(el('span', 'roadmap-group-count', remaining + ' pending'));
+            dcard.appendChild(dh);
+            const dItems = el('div', 'goal-items-list');
+            for (const it of deferred.items) dItems.appendChild(buildGoalItem(it));
+            dcard.appendChild(dItems);
+            wrap.appendChild(dcard);
+          }
+
+          for (const g of others) {
+            const gcard = el('div', 'roadmap-deferred');
+            const gh = el('div', 'roadmap-group-header');
+            gh.appendChild(el('span', 'roadmap-group-label', g.label || ""));
+            gcard.appendChild(gh);
+            const gItems = el('div', 'goal-items-list');
+            for (const it of g.items) gItems.appendChild(buildGoalItem(it));
+            gcard.appendChild(gItems);
+            wrap.appendChild(gcard);
+          }
+
+          return wrap;
+        }
+
+        // ── Ideas Backlog ─────────────────────────────────────────────────
+
+        function buildIdeas() {
+          const wrap = document.createElement('div');
+          wrap.style.marginTop = '1.5rem';
+
+          const ideas = parseIdeas(ideasText);
+
+          const hdr = el('div', 'panel-hdr');
+          hdr.appendChild(el('span', 'section-panel-title', 'Ideas Backlog'));
+          hdr.appendChild(el('span', 'panel-meta', ideas.length + ' ideas'));
+          wrap.appendChild(hdr);
+
+          const grid = el('div', 'ideas-grid');
+          for (const it of ideas) {
+            const card = el('div', 'idea-card');
+            card.appendChild(el('div', 'idea-num', String(it.num).padStart(2, '0')));
+            card.appendChild(el('div', 'idea-title', it.title));
+            if (it.desc) card.appendChild(el('div', 'idea-desc', it.desc));
+            card.addEventListener('click', function() { card.classList.toggle('expanded'); });
+            grid.appendChild(card);
+          }
+          wrap.appendChild(grid);
+
+          return wrap;
+        }
+
         // ── Render ────────────────────────────────────────────────────────
         buildSummary();
         buildFilters();
 
         const grid = document.getElementById('grid');
         for (const h of hosts) grid.appendChild(buildCard(h));
+
+        const gi = document.getElementById('gi-section');
+        gi.appendChild(buildRoadmap());
+        gi.appendChild(buildIdeas());
 
         document.getElementById('footer').textContent =
           'Hosts: ' + hosts.length + ' \u2022 Built from flake.nix \u2022 ' + hosts.map(h => h.name).join(', ');
