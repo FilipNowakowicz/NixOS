@@ -6,10 +6,10 @@
 #   sshPort     — VM-only; used to filter hosts for the VM script
 #   diskSize    — VM-only; used by nixos-anywhere and qemu-img
 #   tailnetFQDN — per-host Tailscale FQDN; passed via hostMeta specialArg to host configs
-#                 and the ACL generator intentionally ignores it for now
+#                 and used by the ACL generator for host-specific destinations when needed
 #   tailscale   — Tailscale metadata; presence means host is on the tailnet
-#     .tag      — Tailscale tag assigned to this host (without "tag:" prefix);
-#                 this is the only host field currently consumed by lib/acl.nix
+#     .tag        — Tailscale tag assigned to this host (without "tag:" prefix)
+#     .acceptFrom — source-tag -> allowed inbound TCP ports on this host
 #   homeManager — primary-user Home Manager mapping for this host
 #     .role     — entrypoint module under home/users/user
 #     .profiles — extra profile modules under home/profiles
@@ -71,8 +71,22 @@ let
         ) "${name}.tailnetFQDN: must be a string, got ${builtins.typeOf (cfg.tailnetFQDN or null)}")
         (ok (
           !p "tailscale"
-          || (builtins.isAttrs cfg.tailscale && cfg.tailscale ? tag && builtins.isString cfg.tailscale.tag)
-        ) "${name}.tailscale.tag: must be a string")
+          || (
+            builtins.isAttrs cfg.tailscale
+            && cfg.tailscale ? tag
+            && builtins.isString cfg.tailscale.tag
+            && (
+              !cfg.tailscale ? acceptFrom
+              || (
+                builtins.isAttrs cfg.tailscale.acceptFrom
+                && builtins.all (
+                  ports:
+                  builtins.isList ports && builtins.all (port: builtins.isInt port && port > 0 && port < 65536) ports
+                ) (builtins.attrValues cfg.tailscale.acceptFrom)
+              )
+            )
+          )
+        ) "${name}.tailscale: expected tag string and optional acceptFrom attrset of TCP ports (1-65535)")
         (ok
           (
             !p "homeManager"
@@ -133,7 +147,13 @@ let
       system = "x86_64-linux";
       homeManager.role = "server";
       tailnetFQDN = "homeserver.filip-nowakowicz.ts.net";
-      tailscale.tag = "server";
+      tailscale = {
+        tag = "server";
+        acceptFrom.workstation = [
+          22
+          443
+        ];
+      };
       deploy.sshUser = "user";
       backup.class = "critical";
     };
