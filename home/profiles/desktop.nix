@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, config, ... }:
 {
   home.packages = with pkgs; [
     # ── Terminal ──────────────────────────────────────────────────────────────
@@ -37,7 +37,10 @@
   # Firefox with VA-API hardware video decoding (Intel iGPU on Wayland)
   programs.firefox = {
     enable = true;
-    profiles.default = {
+    configPath = "${config.xdg.configHome}/mozilla/firefox";
+    profiles."ivx1ayzq.default" = {
+      id = 0;
+      isDefault = true;
       settings = {
         "media.ffmpeg.vaapi.enabled" = true;
         "media.hardware-video-decoding.force-enabled" = true;
@@ -48,7 +51,14 @@
   };
 
   # GTK theming
-  gtk.enable = true;
+  gtk = {
+    enable = true;
+    gtk3.extraConfig.gtk-application-prefer-dark-theme = true;
+    gtk4.extraConfig.gtk-application-prefer-dark-theme = true;
+  };
+
+  # XDG color-scheme preference (read by GTK4, libadwaita, portals)
+  dconf.settings."org/gnome/desktop/interface".color-scheme = "prefer-dark";
 
   # Cursor
   home.pointerCursor = {
