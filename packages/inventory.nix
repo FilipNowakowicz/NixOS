@@ -49,6 +49,8 @@ let
   hostsData = lib.mapAttrsToList extractHost allNixosConfigs;
 
   dataJson = builtins.toJSON hostsData;
+  goalsJson = builtins.toJSON (builtins.readFile ../docs/goals.md);
+  ideasJson = builtins.toJSON (builtins.readFile ../docs/ideas.md);
 
   html = ''
     <!DOCTYPE html>
@@ -177,6 +179,45 @@ let
         .tag-profile { color: var(--purple); border-color: #7a5af855; }
         .tag-port { color: var(--orange); border-color: #6e3a1e; }
         .tag-gap { color: var(--orange); border-color: #6e3a1e; }
+
+        /* ── Goals panel ── */
+        .goals-section {
+          margin-top: 2rem;
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          overflow: hidden;
+        }
+        .goals-toggle {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.65rem 1.25rem;
+          cursor: pointer;
+          border: none;
+          background: none;
+          width: 100%;
+          color: var(--text);
+          font-family: inherit;
+          font-size: 0.85rem;
+          font-weight: 600;
+          border-bottom: 1px solid var(--border);
+        }
+        .goals-toggle:hover { background: #1c2128; }
+        .goals-toggle .arrow { color: var(--muted); font-size: 0.7rem; transition: transform 0.2s; }
+        .goals-toggle.collapsed .arrow { transform: rotate(-90deg); }
+        .goals-body { padding: 1rem 1.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); gap: 0 2rem; }
+        .goals-body.hidden { display: none; }
+        .md-h2 { font-size: 0.85rem; font-weight: 600; color: var(--blue); margin: 1rem 0 0.4rem; }
+        .md-h3 { font-size: 0.78rem; font-weight: 600; color: var(--purple); margin: 0.75rem 0 0.3rem; }
+        .md-hr { border: none; border-top: 1px solid var(--border); margin: 0.5rem 0; grid-column: 1 / -1; }
+        .md-todo { display: flex; gap: 0.5rem; align-items: baseline; margin: 0.2rem 0; font-size: 0.78rem; }
+        .md-todo input[type=checkbox] { accent-color: var(--green); flex-shrink: 0; margin-top: 2px; pointer-events: none; }
+        .md-todo.done { color: var(--muted); text-decoration: line-through; }
+        .md-bullet { font-size: 0.78rem; margin: 0.2rem 0 0.2rem 1rem; color: var(--muted); }
+        .md-bullet::before { content: "•"; margin-right: 0.4rem; }
+        .md-p { font-size: 0.78rem; color: var(--muted); margin: 0.2rem 0; }
+
         footer { margin-top: 2rem; color: var(--muted); font-size: 0.8rem; }
       </style>
     </head>
@@ -187,10 +228,14 @@ let
       <div class="summary" id="summary"></div>
       <div class="filters" id="filters"></div>
       <div class="grid" id="grid"></div>
+      <div class="goals-section" id="goals-panel"></div>
+      <div class="goals-section" id="ideas-panel"></div>
       <footer id="footer"></footer>
 
       <script>
         const hosts = ${dataJson};
+        const goalsText = ${goalsJson};
+        const ideasText = ${ideasJson};
 
         const svcLabels = {
           openssh: 'SSH', tailscale: 'Tailscale', firewall: 'Firewall',
@@ -358,12 +403,73 @@ let
           }
         }
 
+        // ── Goals panels ──────────────────────────────────────────────────
+        function renderMarkdown(text) {
+          const frag = document.createDocumentFragment();
+          for (const rawLine of text.split('\n')) {
+            const line = rawLine.trimEnd();
+            let node;
+            if (/^## /.test(line)) {
+              node = el('div', 'md-h2', line.slice(3));
+            } else if (/^### /.test(line)) {
+              node = el('div', 'md-h3', line.slice(4));
+            } else if (/^---$/.test(line)) {
+              node = document.createElement('hr');
+              node.className = 'md-hr';
+            } else if (/^- \[x\] /i.test(line)) {
+              node = el('div', 'md-todo done');
+              const cb = document.createElement('input');
+              cb.type = 'checkbox';
+              cb.checked = true;
+              node.appendChild(cb);
+              node.appendChild(document.createTextNode(line.slice(6)));
+            } else if (/^- \[ \] /.test(line)) {
+              node = el('div', 'md-todo');
+              const cb = document.createElement('input');
+              cb.type = 'checkbox';
+              node.appendChild(cb);
+              node.appendChild(document.createTextNode(line.slice(6)));
+            } else if (/^- /.test(line)) {
+              node = el('div', 'md-bullet', line.slice(2));
+            } else if (line.trim()) {
+              node = el('div', 'md-p', line);
+            } else {
+              continue;
+            }
+            frag.appendChild(node);
+          }
+          return frag;
+        }
+
+        function buildGoalsPanel(id, title, text, startOpen) {
+          const panel = document.getElementById(id);
+          const toggle = document.createElement('button');
+          toggle.className = 'goals-toggle' + (startOpen ? "" : ' collapsed');
+          toggle.appendChild(el('span', null, title));
+          const arrow = el('span', 'arrow', '\u25be');
+          toggle.appendChild(arrow);
+          panel.appendChild(toggle);
+
+          const body = el('div', 'goals-body' + (startOpen ? "" : ' hidden'));
+          body.appendChild(renderMarkdown(text));
+          panel.appendChild(body);
+
+          toggle.addEventListener('click', () => {
+            const open = !body.classList.contains('hidden');
+            body.classList.toggle('hidden', open);
+            toggle.classList.toggle('collapsed', open);
+          });
+        }
+
         // ── Render ────────────────────────────────────────────────────────
         buildSummary();
         buildFilters();
 
         const grid = document.getElementById('grid');
         for (const h of hosts) grid.appendChild(buildCard(h));
+
+        buildGoalsPanel('goals-panel', 'Roadmap & Goals', goalsText, true);
+        buildGoalsPanel('ideas-panel', 'Ideas & Backlog', ideasText, false);
 
         document.getElementById('footer').textContent =
           'Hosts: ' + hosts.length + ' \u2022 Built from flake.nix \u2022 ' + hosts.map(h => h.name).join(', ');
