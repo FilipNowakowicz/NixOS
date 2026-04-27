@@ -32,6 +32,10 @@ in
 
   boot.loader.systemd-boot.configurationLimit = 5;
 
+  # /persist now lives inside a LUKS container. Keep it in the initrd boot path
+  # so persisted SSH host keys and service state are available before stage 2.
+  fileSystems."/persist".neededForBoot = lib.mkForce true;
+
   security.sudo.wheelNeedsPassword = lib.mkForce true;
 
   nix.settings.trusted-users = lib.mkForce [ "root" ];

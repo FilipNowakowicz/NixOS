@@ -30,13 +30,16 @@ Hardware not yet provisioned. Steps in order:
 1. **Replace hardware config** — run `nixos-generate-config` on target or use `nixos-anywhere --generate-hardware-config`
 2. **Set Tailscale auth key** — `sops hosts/homeserver/secrets/secrets.yaml`, set `tailscale_auth_key` (Tailscale admin → Settings → Keys → reusable + ephemeral)
 3. **Deploy** — `nix run '.#reinstall-homeserver' -- <target-ip>` (injects pre-baked host key via nixos-anywhere)
-4. **Create Vaultwarden account** — This is a one-time bootstrap operation. Set `SIGNUPS_ALLOWED = true` in the configuration, deploy, and create your account at `https://homeserver.filip-nowakowicz.ts.net`. **Immediately** set it back to `false` and redeploy. Access is assumed to be Tailscale-only; no public internet exposure is intended.
+4. **Unlock `/persist` on first boot** — the reinstall now creates a LUKS container named `crypt-persist`; boot blocks at the local console until its passphrase is entered
+5. **Create Vaultwarden account** — This is a one-time bootstrap operation. Set `SIGNUPS_ALLOWED = true` in the configuration, deploy, and create your account at `https://homeserver.filip-nowakowicz.ts.net`. **Immediately** set it back to `false` and redeploy. Access is assumed to be Tailscale-only; no public internet exposure is intended.
 
 No post-deploy sops key rotation needed — the host key is stable from first boot.
 
 ## Deployment Workflow
 
 **Cold-install (bootstrap only):** `nix run '.#reinstall-homeserver' -- <target-ip>` uses `--no-substitute-on-destination`, preventing package substitution on an empty target. This is slower (builds closures on-destination) but required for fresh deployments with no existing closure store.
+
+Cold boots are no longer unattended: the target blocks in early boot until `crypt-persist` is unlocked on the local console. This branch does not add TPM2 binding or initrd SSH recovery for `homeserver`.
 
 **Ongoing updates:** Use `deploy '.#homeserver'`, which substitutes pre-built closures and is orders of magnitude faster.
 
@@ -59,3 +62,5 @@ After initial hardware bootstrap, always use normal deployment tools for config 
 - **Sudo requires a password** — the shared `user` account stays in `wheel`, but `security.sudo.wheelNeedsPassword = true` on the real homeserver.
 - **Impermanence** — `/var/lib/vaultwarden`, `/var/lib/syncthing`, `/var/lib/tailscale` are persisted; everything else resets on reboot.
 - **Sops decryption requires host key** — host's SSH key must be added to `.sops.yaml` _before_ secrets can be decrypted on boot. The reinstall script injects a pre-generated host key to ensure this from first boot.
+- **`/persist` is encrypted but not unattended** — a cold boot requires local passphrase entry before Tailscale, SSH, and the persisted services come back.
+- **Migration needs an external copy** — the local Restic repository lives under `/persist`, so a reinstall-based migration must export that data off-host first.

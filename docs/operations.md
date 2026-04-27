@@ -80,6 +80,8 @@ blind TOFU is not accepted.
 2. Ensure `hosts/homeserver/secrets/ssh_host_ed25519_key.enc` and `.pub.enc` exist.
 3. Ensure `.sops.yaml` includes the matching `&homeserver_host` age key.
 4. Set required secrets in `hosts/homeserver/secrets/secrets.yaml`, including `tailscale_auth_key`.
+5. Run the reinstall app.
+6. Unlock `crypt-persist` on the local console during the first boot.
 
 ### Obtain the installer fingerprint
 
@@ -109,6 +111,10 @@ All subsequent SSH connections from `nixos-anywhere` are bound to the verified k
 (`StrictHostKeyChecking=yes`).
 
 After bootstrap, prefer `deploy '.#homeserver'` for routine updates.
+
+Current constraint: `homeserver` does not yet have a reviewed unattended unlock path. Cold boots stay blocked until a local operator enters the `/persist` LUKS passphrase.
+
+If migrating an existing plaintext `/persist`, use reinstall-and-restore rather than in-place conversion. Export the application state and the local Restic repository off-host first, because `/persist/restic-repo` is destroyed by the reinstall.
 
 ## Validation
 

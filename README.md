@@ -10,7 +10,7 @@ The repository separates hardware, host identity, system profiles, and user conf
 - **Reproducible & Declarative**: NixOS defines the entire system state, services, and hardware. Home Manager manages the user environment and dotfiles.
 - **Multi-Host Ready**: Built from reusable profiles to support a primary workstation (`main`), a headless `homeserver`, a QEMU test VM, and a microvm-based homeserver development target. The host registry defines the target architecture (`system`) per host; the current fleet is `x86_64-linux`.
 - **Secrets Management**: Handled by [sops-nix](https://github.com/Mic92/sops-nix) with age encryption, with secrets decrypted at boot by the host itself.
-- **Impermanent Root**: VMs and the `homeserver` use an ephemeral root filesystem created with [impermanence](https://github.com/nix-community/impermanence). System state is reset on boot, with persistent data explicitly stored on a `/persist` volume.
+- **Impermanent Root**: VMs and the `homeserver` use an ephemeral root filesystem created with [impermanence](https://github.com/nix-community/impermanence). System state is reset on boot, with persistent data explicitly stored on a `/persist` volume; the real `homeserver` now places that volume inside LUKS.
 - **Declarative Disks**: Disk layouts for real hosts and the QEMU test VM are managed declaratively with [disko](https://github.com/nix-community/disko). The `homeserver-vm` microvm uses a `microvm.nix` volume for `/persist`.
 - **Runtime Theming**: A runtime-swappable color system allows changing themes without a full NixOS rebuild.
 

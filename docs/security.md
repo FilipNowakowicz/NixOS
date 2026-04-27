@@ -78,6 +78,23 @@ ssh -i /path/to/id_ed25519_recovery -p 2222 root@<host-ip>
 
 Then enter the LUKS passphrase when prompted.
 
+## Homeserver Persist Encryption
+
+`homeserver` now encrypts `/persist` with LUKS under the mapper name `crypt-persist`.
+
+Constraints:
+
+- The encryption boundary is `/persist` only. `/` stays ephemeral and reproducible from the flake.
+- This host does not yet have TPM2 auto-unlock or initrd SSH recovery configured.
+- Cold boots therefore require local console access to enter the `crypt-persist` passphrase before stage 2.
+- Tailscale, SSH, and the persisted services remain unavailable until `/persist` is unlocked.
+
+Migration posture:
+
+- Fresh installs use the encrypted layout directly.
+- Existing plaintext `/persist` systems should migrate by external backup, reinstall, and restore.
+- The current local Restic repository also lives on `/persist`, so it must be copied off-host before using reinstall as the migration path.
+
 ## Network Exposure
 
 Tailscale is the primary remote-access layer.
