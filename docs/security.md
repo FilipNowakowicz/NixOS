@@ -22,6 +22,7 @@ Host behavior:
 
 - `main`, `vm`, and `homeserver` use SSH-host-derived age identities through `sops.age.sshKeyPaths`.
 - `homeserver-vm` disables SSH-host-derived sops identities and reads a dedicated age key from `/run/age-keys/homeserver-vm.txt`.
+- `homeserver` bootstrap decrypts the checked-in host key material with `&user` on the operator machine, injects it during reinstall, and then relies on `&homeserver_host` from first boot onward.
 - `boot.initrd.secrets` must point only at sops-managed `/run/secrets/*` paths; this is enforced by an invariant check.
 - Intentional plaintext exceptions must be narrow entries in `.plaintext-secrets-allowlist`.
 
@@ -41,6 +42,14 @@ For SSH-host-derived identities:
 For `homeserver-vm`, rotate the dedicated age key, store the private key in
 `hosts/main/secrets/secrets.yaml`, update `&homeserver_vm_age`, and re-encrypt
 `hosts/homeserver-vm/secrets/secrets.yaml`.
+
+For `homeserver`, no temporary bootstrap recipient is needed. The operator
+already decrypts `hosts/homeserver/secrets/ssh_host_ed25519_key{,.pub}.enc`
+with `&user` during `reinstall-homeserver`, injects that SSH host key onto the
+target, and `sops-nix` derives `&homeserver_host` from `/etc/ssh/ssh_host_ed25519_key`
+on first boot. Rotate that host identity by regenerating the encrypted key pair,
+updating `&homeserver_host`, and re-encrypting every file under
+`hosts/homeserver/secrets/` in the same change.
 
 ## Initrd SSH Recovery
 
