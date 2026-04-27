@@ -35,5 +35,4 @@ creation_rules:
     key_groups:
       - age:
           - *user
-          - *main_host
           - *homeserver_host

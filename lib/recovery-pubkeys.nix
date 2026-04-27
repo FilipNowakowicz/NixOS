@@ -1,0 +1,3 @@
+[
+  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHP9s2Gm+uuEMS5q+NxIzoQZk3VU04L4vtj9ETovy8YR recovery@main"
+]

@@ -35,13 +35,14 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 - **TPM Unlocking**: The system's TPM 2.0 is used to automatically unlock the LUKS-encrypted disk on boot.
 - **Hardware Pass-through**: IOMMU is enabled (`intel_iommu=on iommu=force`) for potential VM GPU pass-through.
 - **Graphics Drivers**: The configuration uses stable by-path device paths for `AQ_DRM_DEVICES` to ensure stable multi-GPU / monitor performance.
-- **Initrd SSH Recovery**: In case of TPM failure, an initrd SSH server (port 2222) is available for remote LUKS unlocking using the recovery key stored in `lib/pubkeys.nix`.
+- **Initrd SSH Recovery**: In case of TPM failure, an initrd SSH server (port 2222) is available for remote LUKS unlocking using the dedicated recovery key stored in `lib/recovery-pubkeys.nix`.
   - **Recovery Procedure**:
     1. Retrieve the `id_ed25519_recovery` private key from offline storage.
     2. Connect the host via wired Ethernet (WiFi is unavailable in stage 1).
     3. `ssh -i /path/to/id_ed25519_recovery -p 2222 root@<host-ip>`
     4. Enter the LUKS passphrase when prompted to unlock the disk.
     5. The system will continue booting into stage 2.
+  - **Rotation Expectation**: Rotate recovery access by updating `lib/recovery-pubkeys.nix` and redeploying `main`; keep the private key offline and separate from day-to-day SSH credentials.
 
 ---
 
@@ -53,7 +54,7 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 - **Systemd Hardening**: A custom DSL (`services.hardened`) applies a high-security sandbox baseline to critical services (Vaultwarden, Nginx, Syncthing).
 - **Intrusion Prevention**: Fail2ban integrated into the security profile with automated E2E testing.
 - **Idle Policy (desktop)**: Hypridle locks at 10 minutes of inactivity and suspends at 15 minutes.
-- **Centralized Keys**: SSH public keys are managed in `lib/pubkeys.nix` for easy access across the flake.
+- **Centralized Keys**: Normal SSH public keys live in `lib/pubkeys.nix`; initrd recovery-only keys live in `lib/recovery-pubkeys.nix`.
 - **Shared SSH Agent**: Home Manager runs a single user `ssh-agent` service; shells use one shared socket, so loaded keys are reused across terminals.
 
 ---
@@ -76,7 +77,8 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 │   ├── dashboards.nix                 # Typed Grafana dashboard builders
 │   ├── invariants.nix                 # Configuration invariant check builders
 │   ├── cve-checks.nix                 # CVE scanning check builders
-│   ├── pubkeys.nix                    # Centralized SSH public keys
+│   ├── pubkeys.nix                    # Standard SSH public keys
+│   ├── recovery-pubkeys.nix           # Initrd recovery-only SSH public keys
 │   ├── syncthing.nix                  # Shared Syncthing device/folder registry
 │   └── acl.nix                        # Declarative Tailscale ACL generator
 ├── hosts/
