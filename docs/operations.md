@@ -70,19 +70,43 @@ QEMU VM metadata comes from `lib/hosts.nix`; entries need `sshPort` and
 
 ## Homeserver Bootstrap
 
-Cold installs use the flake app that wraps `nixos-anywhere`:
+Cold installs use the flake app that wraps `nixos-anywhere`.
+The script **refuses to proceed without verified host key trust material** —
+blind TOFU is not accepted.
 
-```bash
-nix run '.#reinstall-homeserver' -- <target-ip>
-```
-
-Before the first hardware install:
+### Pre-flight checklist
 
 1. Replace `hosts/homeserver/hardware-configuration.nix` with reviewed target hardware config.
 2. Ensure `hosts/homeserver/secrets/ssh_host_ed25519_key.enc` and `.pub.enc` exist.
 3. Ensure `.sops.yaml` includes the matching `&homeserver_host` age key.
 4. Set required secrets in `hosts/homeserver/secrets/secrets.yaml`, including `tailscale_auth_key`.
-5. Run the reinstall app.
+
+### Obtain the installer fingerprint
+
+The NixOS installer generates a fresh ephemeral SSH host key on each boot.
+Obtain its fingerprint **before** running the reinstall script, using one of:
+
+- **Serial/video console** — read the fingerprint printed at the login prompt.
+- **Manual scan** (run from a trusted network position, verify visually):
+  ```bash
+  ssh-keyscan -t ed25519 <target-ip> | ssh-keygen -lf /dev/stdin
+  ```
+
+### Run the reinstall
+
+```bash
+# Verify by fingerprint (recommended — you confirmed the fingerprint out of band)
+nix run '.#reinstall-homeserver' -- <target-ip> \
+  --expected-fingerprint SHA256:...
+
+# Verify via a pre-populated known_hosts file
+nix run '.#reinstall-homeserver' -- <target-ip> \
+  --known-hosts /path/to/known_hosts
+```
+
+The script scans the target, compares the fingerprint, and aborts on mismatch.
+All subsequent SSH connections from `nixos-anywhere` are bound to the verified key
+(`StrictHostKeyChecking=yes`).
 
 After bootstrap, prefer `deploy '.#homeserver'` for routine updates.
 

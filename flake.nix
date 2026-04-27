@@ -525,6 +525,8 @@
                 pkgs.writeShellScript "reinstall-homeserver" ''
                   export SOPS_BIN="${pkgs.sops}/bin/sops"
                   export NIXOS_ANYWHERE_BIN="${nixos-anywhere.packages.${system}.nixos-anywhere}/bin/nixos-anywhere"
+                  export SSH_KEYSCAN_BIN="${pkgs.openssh}/bin/ssh-keyscan"
+                  export SSH_KEYGEN_BIN="${pkgs.openssh}/bin/ssh-keygen"
                   exec ${pkgs.bash}/bin/bash ${./scripts/reinstall-homeserver.sh} "$@"
                 ''
               );
