@@ -536,6 +536,15 @@
 
           # ── Packages ────────────────────────────────────────────────────────
           packages = {
+            inventory = import ./packages/inventory.nix {
+              inherit
+                lib
+                pkgs
+                hostRegistry
+                allNixosConfigs
+                ;
+            };
+
             tailscale-acl =
               pkgs.runCommand "tailscale-acl"
                 {
