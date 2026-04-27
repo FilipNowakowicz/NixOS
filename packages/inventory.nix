@@ -180,90 +180,163 @@ let
         .tag-port { color: var(--orange); border-color: #6e3a1e; }
         .tag-gap { color: var(--orange); border-color: #6e3a1e; }
 
-        /* ── Goals & Ideas panel ── */
-        .gi-panel {
-          margin-top: 2rem;
+        /* ── Roadmap & Ideas ── */
+        .section-panel-title {
+          font-size: 0.7rem;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          color: var(--muted);
+          font-weight: 600;
+        }
+        .panel-hdr {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 0.75rem;
+        }
+        .panel-meta {
+          font-size: 0.72rem;
+          color: var(--muted);
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+        .prog-bar {
+          display: inline-block;
+          width: 64px;
+          height: 3px;
+          background: var(--border);
+          border-radius: 2px;
+          overflow: hidden;
+        }
+        .prog-bar-fill { height: 100%; background: var(--green); }
+        .roadmap-tracks {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.75rem;
+        }
+        .roadmap-track {
           background: var(--surface);
           border: 1px solid var(--border);
           border-radius: 6px;
           overflow: hidden;
         }
-        .gi-panel-toggle {
+        .roadmap-track-header {
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          padding: 0.65rem 1.25rem;
-          cursor: pointer;
-          border: none;
+          gap: 0.4rem;
+          padding: 0.45rem 0.75rem;
           border-bottom: 1px solid var(--border);
-          background: none;
-          width: 100%;
-          color: var(--text);
-          font-family: inherit;
-          font-size: 0.85rem;
-          font-weight: 600;
         }
-        .gi-panel-toggle:hover { background: #1c2128; }
-        .gi-panel-body { padding: 0 1.25rem 1rem; }
-        .gi-panel-body.hidden { display: none; }
-        .gi-section { margin-top: 1rem; }
-        .gi-section-toggle {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          width: 100%;
-          border: none;
-          background: none;
-          font-family: inherit;
-          font-size: 0.78rem;
-          font-weight: 600;
-          color: var(--blue);
-          cursor: pointer;
-          padding: 0.3rem 0;
-          border-bottom: 1px solid var(--border);
-          margin-bottom: 0.4rem;
-        }
-        .gi-section-toggle:hover { color: var(--text); }
-        .gi-section-body.hidden { display: none; }
-        .gi-group-label {
-          font-size: 0.7rem;
+        .roadmap-track-label {
+          font-size: 0.68rem;
           text-transform: uppercase;
           letter-spacing: 0.07em;
-          color: var(--purple);
-          margin: 0.75rem 0 0.3rem 0.5rem;
+          font-weight: 600;
+          flex: 1;
         }
-        .gi-item {
-          border: 1px solid transparent;
-          border-radius: 4px;
-          margin: 0.2rem 0;
+        .track-a .roadmap-track-label { color: var(--green); }
+        .track-b .roadmap-track-label { color: var(--yellow); }
+        .roadmap-track-badge {
+          font-size: 0.62rem;
+          padding: 1px 5px;
+          border-radius: 3px;
+          border: 1px solid;
         }
-        .gi-item-toggle {
-          display: flex;
-          align-items: baseline;
-          gap: 0.5rem;
-          width: 100%;
-          border: none;
-          background: none;
-          font-family: inherit;
-          font-size: 0.78rem;
-          color: var(--text);
-          cursor: pointer;
-          padding: 0.3rem 0.5rem;
-          text-align: left;
-        }
-        .gi-item-toggle:hover { background: #1c2128; border-radius: 4px; }
-        .gi-item-toggle input[type=checkbox] { accent-color: var(--green); flex-shrink: 0; pointer-events: none; }
-        .gi-item-toggle.done { color: var(--muted); text-decoration: line-through; }
-        .gi-item-toggle .gi-arrow { color: var(--muted); font-size: 0.65rem; flex-shrink: 0; transition: transform 0.15s; margin-left: auto; padding-left: 0.5rem; }
-        .gi-item-toggle.open .gi-arrow { transform: rotate(90deg); }
-        .gi-item-body {
-          font-size: 0.75rem;
+        .badge-cloud { color: var(--blue); border-color: var(--blue); }
+        .badge-blocked { color: var(--red); border-color: var(--red); }
+        .roadmap-connector-label {
+          text-align: center;
+          font-size: 0.68rem;
           color: var(--muted);
-          padding: 0.3rem 0.75rem 0.5rem 2rem;
-          line-height: 1.6;
+          padding: 0.4rem 0;
+          letter-spacing: 0.04em;
         }
-        .gi-item-body.hidden { display: none; }
-        .gi-num { color: var(--muted); flex-shrink: 0; }
+        .roadmap-deferred {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          overflow: hidden;
+          margin-bottom: 1.25rem;
+        }
+        .roadmap-group-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.45rem 0.75rem;
+          border-bottom: 1px solid var(--border);
+        }
+        .roadmap-group-label {
+          font-size: 0.68rem;
+          text-transform: uppercase;
+          letter-spacing: 0.07em;
+          font-weight: 600;
+          color: var(--blue);
+        }
+        .roadmap-group-count { font-size: 0.68rem; color: var(--muted); }
+        .goal-items-list { padding: 0.3rem 0; }
+        .goal-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 0.5rem;
+          padding: 0.28rem 0.75rem;
+          cursor: pointer;
+          transition: background 0.1s;
+        }
+        .goal-item:hover { background: #1c2128; }
+        .goal-item.expanded { background: #161f2e; }
+        .goal-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          border: 1.5px solid var(--muted);
+          flex-shrink: 0;
+          margin-top: 5px;
+        }
+        .goal-dot.done { background: var(--green); border-color: var(--green); }
+        .goal-title { font-size: 0.78rem; color: var(--text); line-height: 1.4; }
+        .goal-title.done { color: var(--muted); text-decoration: line-through; }
+        .goal-desc {
+          font-size: 0.72rem;
+          color: var(--muted);
+          line-height: 1.55;
+          margin-top: 0.25rem;
+        }
+        .goal-desc.hidden { display: none; }
+        .ideas-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+          gap: 0.75rem;
+        }
+        .idea-card {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          padding: 0.75rem;
+          cursor: pointer;
+          transition: border-color 0.15s;
+        }
+        .idea-card:hover { border-color: var(--muted); }
+        .idea-card.expanded { border-color: var(--purple); }
+        .idea-num {
+          font-size: 0.62rem;
+          color: var(--muted);
+          font-weight: 600;
+          letter-spacing: 0.06em;
+          margin-bottom: 0.3rem;
+          opacity: 0.6;
+        }
+        .idea-title { font-size: 0.8rem; color: var(--text); line-height: 1.35; }
+        .idea-desc {
+          display: none;
+          font-size: 0.72rem;
+          color: var(--muted);
+          line-height: 1.55;
+          margin-top: 0.4rem;
+          padding-top: 0.4rem;
+          border-top: 1px solid var(--border);
+        }
+        .idea-card.expanded .idea-desc { display: block; }
 
         footer { margin-top: 2rem; color: var(--muted); font-size: 0.8rem; }
       </style>
@@ -275,7 +348,7 @@ let
       <div class="summary" id="summary"></div>
       <div class="filters" id="filters"></div>
       <div class="grid" id="grid"></div>
-      <div class="gi-panel" id="gi-panel"></div>
+      <div id="gi-section"></div>
       <footer id="footer"></footer>
 
       <script>
@@ -500,84 +573,132 @@ let
           return items;
         }
 
-        function makeToggle(cls, label, startOpen) {
-          const btn = document.createElement('button');
-          btn.className = cls;
-          btn.appendChild(el('span', null, label));
-          btn.appendChild(el('span', 'gi-arrow', '\u25b6'));
-          if (startOpen) btn.classList.add('open');
-          return btn;
-        }
+        // ── Roadmap ───────────────────────────────────────────────────────
 
-        function wireToggle(btn, body) {
-          btn.addEventListener('click', () => {
-            const open = btn.classList.toggle('open');
-            body.classList.toggle('hidden', !open);
-          });
-        }
-
-        function buildAccordionItem(title, desc, done, prefix) {
-          const item = el('div', 'gi-item');
-          const toggle = document.createElement('button');
-          toggle.className = 'gi-item-toggle' + (done ? ' done' : "");
-          if (prefix !== undefined) {
-            const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.checked = done;
-            toggle.appendChild(cb);
-          } else {
-            toggle.appendChild(el('span', 'gi-num', prefix));
+        function buildGoalItem(it) {
+          const item = el('div', 'goal-item');
+          const dot = el('span', 'goal-dot' + (it.done ? ' done' : ""));
+          const textWrap = document.createElement('div');
+          textWrap.appendChild(el('div', 'goal-title' + (it.done ? ' done' : ""), it.title));
+          if (it.desc) {
+            const desc = el('div', 'goal-desc hidden', it.desc);
+            textWrap.appendChild(desc);
+            item.addEventListener('click', function() {
+              item.classList.toggle('expanded');
+              desc.classList.toggle('hidden');
+            });
           }
-          toggle.appendChild(document.createTextNode(title));
-          toggle.appendChild(el('span', 'gi-arrow', '\u25b6'));
-          item.appendChild(toggle);
-          const body = el('div', 'gi-item-body hidden', desc || 'No description.');
-          item.appendChild(body);
-          wireToggle(toggle, body);
+          item.appendChild(dot);
+          item.appendChild(textWrap);
           return item;
         }
 
-        function buildGIPanel() {
-          const panel = document.getElementById('gi-panel');
+        function buildTrack(type, group) {
+          const track = el('div', 'roadmap-track track-' + type);
+          const header = el('div', 'roadmap-track-header');
+          header.appendChild(el('span', 'roadmap-track-label', group.label));
+          header.appendChild(el('span', 'roadmap-track-badge ' + (type === 'a' ? 'badge-cloud' : 'badge-blocked'), type === 'a' ? 'cloud' : 'blocked'));
+          track.appendChild(header);
+          const items = el('div', 'goal-items-list');
+          for (const it of group.items) items.appendChild(buildGoalItem(it));
+          track.appendChild(items);
+          return track;
+        }
 
-          const panelToggle = makeToggle('gi-panel-toggle', 'Goals & Ideas', true);
-          panel.appendChild(panelToggle);
-          const panelBody = el('div', 'gi-panel-body');
-          panel.appendChild(panelBody);
-          wireToggle(panelToggle, panelBody);
+        function buildRoadmap() {
+          const wrap = document.createElement('div');
+          wrap.style.marginTop = '2rem';
 
-          // ── Homeserver Roadmap (from goals.md) ──
           const goalSections = parseGoals(goalsText);
-          const roadmapSection = el('div', 'gi-section');
-          const roadmapToggle = makeToggle('gi-section-toggle', 'Homeserver Roadmap', true);
-          roadmapSection.appendChild(roadmapToggle);
-          const roadmapBody = el('div', 'gi-section-body');
-          roadmapSection.appendChild(roadmapBody);
-          wireToggle(roadmapToggle, roadmapBody);
+          let total = 0, done = 0;
+          for (const sec of goalSections)
+            for (const g of sec.groups)
+              for (const it of g.items) { total++; if (it.done) done++; }
 
+          const hdr = el('div', 'panel-hdr');
+          hdr.appendChild(el('span', 'section-panel-title', 'Roadmap'));
+          const metaWrap = el('span', 'panel-meta');
+          metaWrap.appendChild(document.createTextNode(done + ' / ' + total + ' complete\u00a0'));
+          const pb = el('span', 'prog-bar');
+          const pbf = el('span', 'prog-bar-fill');
+          pbf.style.width = (total ? Math.round(done / total * 100) : 0) + '%';
+          pb.appendChild(pbf);
+          metaWrap.appendChild(pb);
+          hdr.appendChild(metaWrap);
+          wrap.appendChild(hdr);
+
+          let pathA = null, pathB = null, deferred = null;
+          const others = [];
           for (const sec of goalSections) {
-            for (const group of sec.groups) {
-              if (group.label) roadmapBody.appendChild(el('div', 'gi-group-label', group.label));
-              for (const it of group.items) {
-                roadmapBody.appendChild(buildAccordionItem(it.title, it.desc, it.done, undefined));
-              }
+            for (const g of sec.groups) {
+              if (!g.label) continue;
+              if (/path\s+a/i.test(g.label)) pathA = g;
+              else if (/path\s+b/i.test(g.label)) pathB = g;
+              else if (/deferred/i.test(g.label)) deferred = g;
+              else others.push(g);
             }
           }
-          panelBody.appendChild(roadmapSection);
 
-          // ── Ideas (from ideas.md) ──
-          const ideas = parseIdeas(ideasText);
-          const ideasSection = el('div', 'gi-section');
-          const ideasToggle = makeToggle('gi-section-toggle', 'Ideas', false);
-          ideasSection.appendChild(ideasToggle);
-          const ideasBody = el('div', 'gi-section-body hidden');
-          ideasSection.appendChild(ideasBody);
-          wireToggle(ideasToggle, ideasBody);
-
-          for (const it of ideas) {
-            ideasBody.appendChild(buildAccordionItem(it.title, it.desc, false, it.num + '.'));
+          if (pathA || pathB) {
+            const tracks = el('div', 'roadmap-tracks');
+            if (pathA) tracks.appendChild(buildTrack('a', pathA));
+            if (pathB) tracks.appendChild(buildTrack('b', pathB));
+            wrap.appendChild(tracks);
           }
-          panelBody.appendChild(ideasSection);
+
+          if (deferred) {
+            wrap.appendChild(el('div', 'roadmap-connector-label', '\u2193 either path unlocks \u2193'));
+            const dcard = el('div', 'roadmap-deferred');
+            const dh = el('div', 'roadmap-group-header');
+            dh.appendChild(el('span', 'roadmap-group-label', 'Deferred'));
+            const remaining = deferred.items.filter(function(i) { return !i.done; }).length;
+            dh.appendChild(el('span', 'roadmap-group-count', remaining + ' pending'));
+            dcard.appendChild(dh);
+            const dItems = el('div', 'goal-items-list');
+            for (const it of deferred.items) dItems.appendChild(buildGoalItem(it));
+            dcard.appendChild(dItems);
+            wrap.appendChild(dcard);
+          }
+
+          for (const g of others) {
+            const gcard = el('div', 'roadmap-deferred');
+            const gh = el('div', 'roadmap-group-header');
+            gh.appendChild(el('span', 'roadmap-group-label', g.label || ""));
+            gcard.appendChild(gh);
+            const gItems = el('div', 'goal-items-list');
+            for (const it of g.items) gItems.appendChild(buildGoalItem(it));
+            gcard.appendChild(gItems);
+            wrap.appendChild(gcard);
+          }
+
+          return wrap;
+        }
+
+        // ── Ideas Backlog ─────────────────────────────────────────────────
+
+        function buildIdeas() {
+          const wrap = document.createElement('div');
+          wrap.style.marginTop = '1.5rem';
+
+          const ideas = parseIdeas(ideasText);
+
+          const hdr = el('div', 'panel-hdr');
+          hdr.appendChild(el('span', 'section-panel-title', 'Ideas Backlog'));
+          hdr.appendChild(el('span', 'panel-meta', ideas.length + ' ideas'));
+          wrap.appendChild(hdr);
+
+          const grid = el('div', 'ideas-grid');
+          for (const it of ideas) {
+            const card = el('div', 'idea-card');
+            card.appendChild(el('div', 'idea-num', String(it.num).padStart(2, '0')));
+            card.appendChild(el('div', 'idea-title', it.title));
+            if (it.desc) card.appendChild(el('div', 'idea-desc', it.desc));
+            card.addEventListener('click', function() { card.classList.toggle('expanded'); });
+            grid.appendChild(card);
+          }
+          wrap.appendChild(grid);
+
+          return wrap;
         }
 
         // ── Render ────────────────────────────────────────────────────────
@@ -587,7 +708,9 @@ let
         const grid = document.getElementById('grid');
         for (const h of hosts) grid.appendChild(buildCard(h));
 
-        buildGIPanel();
+        const gi = document.getElementById('gi-section');
+        gi.appendChild(buildRoadmap());
+        gi.appendChild(buildIdeas());
 
         document.getElementById('footer').textContent =
           'Hosts: ' + hosts.length + ' \u2022 Built from flake.nix \u2022 ' + hosts.map(h => h.name).join(', ');
