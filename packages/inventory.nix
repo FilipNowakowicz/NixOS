@@ -22,6 +22,15 @@ let
       backupClass = meta.backup.class or null;
       homeManagerRole = meta.homeManager.role or null;
       homeManagerProfiles = meta.homeManager.profiles or [ ];
+      impermanence = (c.environment.persistence or { }) != { };
+      openTCPPorts = c.networking.firewall.allowedTCPPorts or [ ];
+      openUDPPorts = c.networking.firewall.allowedUDPPorts or [ ];
+      profiles = {
+        desktop = c.programs.hyprland.enable or false;
+        security = c.services.fail2ban.enable or false;
+        observability = c.profiles.observability.enable or false;
+        observabilityClient = c.profiles.observability-client.enable or false;
+      };
       services = {
         openssh = c.services.openssh.enable;
         tailscale = c.services.tailscale.enable;
@@ -60,6 +69,7 @@ let
           --blue: #58a6ff;
           --yellow: #d29922;
           --purple: #bc8cff;
+          --orange: #f0883e;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -71,7 +81,49 @@ let
           line-height: 1.5;
         }
         h1 { font-size: 1.4rem; color: var(--blue); margin-bottom: 0.25rem; }
-        .subtitle { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        .subtitle { color: var(--muted); font-size: 0.85rem; margin-bottom: 1.25rem; }
+
+        /* ── Summary strip ── */
+        .summary {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 1.5rem;
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          padding: 0.75rem 1.25rem;
+          margin-bottom: 1.25rem;
+          font-size: 0.8rem;
+        }
+        .stat { display: flex; flex-direction: column; }
+        .stat-value { font-size: 1.3rem; font-weight: 600; color: var(--text); line-height: 1.2; }
+        .stat-label { color: var(--muted); font-size: 0.72rem; }
+        .stat-warn .stat-value { color: var(--yellow); }
+
+        /* ── Filter bar ── */
+        .filters {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.4rem;
+          margin-bottom: 1.25rem;
+          align-items: center;
+        }
+        .filter-label { color: var(--muted); font-size: 0.75rem; margin-right: 0.25rem; }
+        .filter-btn {
+          font-family: inherit;
+          font-size: 0.72rem;
+          padding: 3px 10px;
+          border-radius: 10px;
+          border: 1px solid var(--border);
+          background: var(--surface);
+          color: var(--muted);
+          cursor: pointer;
+          transition: border-color 0.15s, color 0.15s;
+        }
+        .filter-btn:hover { color: var(--text); border-color: var(--muted); }
+        .filter-btn.active { color: var(--blue); border-color: var(--blue); background: #1c2d4a; }
+
+        /* ── Grid ── */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1rem; }
         .card {
           background: var(--surface);
@@ -79,6 +131,8 @@ let
           border-radius: 6px;
           padding: 1rem 1.25rem;
         }
+        .card.hidden { display: none; }
+        .card.has-gaps { border-color: #6e3a1e; }
         .card-header {
           display: flex;
           align-items: baseline;
@@ -86,6 +140,7 @@ let
           margin-bottom: 0.75rem;
           border-bottom: 1px solid var(--border);
           padding-bottom: 0.5rem;
+          flex-wrap: wrap;
         }
         .hostname { font-size: 1rem; font-weight: 600; color: var(--blue); }
         .badge {
@@ -97,6 +152,8 @@ let
         .badge-deploy { color: var(--green); border-color: var(--green); }
         .badge-backup-critical { color: var(--yellow); border-color: var(--yellow); }
         .badge-backup-standard { color: var(--muted); border-color: var(--muted); }
+        .badge-gap { color: var(--orange); border-color: var(--orange); }
+        .badge-imperf { color: var(--purple); border-color: #7a5af855; }
         .meta-row { display: flex; justify-content: space-between; margin-bottom: 0.4rem; }
         .meta-label { color: var(--muted); }
         .meta-value { color: var(--text); }
@@ -117,13 +174,18 @@ let
         }
         .tag-on { color: var(--green); border-color: #238636; }
         .tag-off { color: var(--muted); opacity: 0.5; }
-        .tag-hm { color: var(--purple); border-color: #7a5af855; }
+        .tag-profile { color: var(--purple); border-color: #7a5af855; }
+        .tag-port { color: var(--orange); border-color: #6e3a1e; }
+        .tag-gap { color: var(--orange); border-color: #6e3a1e; }
         footer { margin-top: 2rem; color: var(--muted); font-size: 0.8rem; }
       </style>
     </head>
     <body>
       <h1>NixOS Fleet Inventory</h1>
       <p class="subtitle">Generated from flake evaluation &bull; nix build '.#inventory'</p>
+
+      <div class="summary" id="summary"></div>
+      <div class="filters" id="filters"></div>
       <div class="grid" id="grid"></div>
       <footer id="footer"></footer>
 
@@ -137,6 +199,20 @@ let
           usbguard: 'USBGuard', lanzaboote: 'Lanzaboote',
         };
 
+        const profileLabels = {
+          desktop: 'Desktop', security: 'Security',
+          observability: 'LGTM stack', observabilityClient: 'OTel client',
+        };
+
+        function securityGaps(h) {
+          const gaps = [];
+          if (h.services.openssh && !h.services.fail2ban) gaps.push('SSH w/o fail2ban');
+          if (h.services.openssh && !h.services.firewall) gaps.push('SSH w/o firewall');
+          if (h.services.tailscale && !h.services.firewall) gaps.push('Tailscale w/o firewall');
+          if (h.profiles.desktop && !h.services.usbguard) gaps.push('Desktop w/o USBGuard');
+          return gaps;
+        }
+
         function el(tag, cls, text) {
           const e = document.createElement(tag);
           if (cls) e.className = cls;
@@ -145,7 +221,9 @@ let
         }
 
         function buildCard(h) {
-          const card = el('div', 'card');
+          const gaps = securityGaps(h);
+          const card = el('div', 'card' + (gaps.length ? ' has-gaps' : ""));
+          card._host = h;
 
           // Header
           const header = el('div', 'card-header');
@@ -153,6 +231,8 @@ let
           if (h.deployable) header.appendChild(el('span', 'badge badge-deploy', 'deploy-rs'));
           if (h.backupClass === 'critical') header.appendChild(el('span', 'badge badge-backup-critical', 'backup:critical'));
           if (h.backupClass === 'standard') header.appendChild(el('span', 'badge badge-backup-standard', 'backup:standard'));
+          if (h.impermanence) header.appendChild(el('span', 'badge badge-imperf', 'impermanence'));
+          if (gaps.length) header.appendChild(el('span', 'badge badge-gap', gaps.length + ' gap' + (gaps.length > 1 ? 's' : "")));
           card.appendChild(header);
 
           // Meta rows
@@ -172,6 +252,15 @@ let
             card.appendChild(row);
           }
 
+          // Profiles
+          const activeProfiles = Object.entries(h.profiles).filter(([, v]) => v).map(([k]) => profileLabels[k] ?? k);
+          if (activeProfiles.length) {
+            card.appendChild(el('div', 'section-title', 'Profiles'));
+            const ptags = el('div', 'tags');
+            for (const p of activeProfiles) ptags.appendChild(el('span', 'tag tag-profile', p));
+            card.appendChild(ptags);
+          }
+
           // Services
           card.appendChild(el('div', 'section-title', 'Services'));
           const svcs = el('div', 'tags');
@@ -180,8 +269,98 @@ let
           }
           card.appendChild(svcs);
 
+          // Open ports
+          const allPorts = [
+            ...h.openTCPPorts.map(p => 'TCP/' + p),
+            ...h.openUDPPorts.map(p => 'UDP/' + p),
+          ];
+          if (allPorts.length) {
+            card.appendChild(el('div', 'section-title', 'Open Ports'));
+            const portTags = el('div', 'tags');
+            for (const p of allPorts) portTags.appendChild(el('span', 'tag tag-port', p));
+            card.appendChild(portTags);
+          }
+
+          // Security gaps
+          if (gaps.length) {
+            card.appendChild(el('div', 'section-title', 'Security Gaps'));
+            const gapTags = el('div', 'tags');
+            for (const g of gaps) gapTags.appendChild(el('span', 'tag tag-gap', g));
+            card.appendChild(gapTags);
+          }
+
           return card;
         }
+
+        // ── Summary strip ──────────────────────────────────────────────────
+        function buildSummary() {
+          const deployCount = hosts.filter(h => h.deployable).length;
+          const critBackup  = hosts.filter(h => h.backupClass === 'critical').length;
+          const tsCount     = hosts.filter(h => h.services.tailscale).length;
+          const gapCount    = hosts.filter(h => securityGaps(h).length > 0).length;
+          const imperfCount = hosts.filter(h => h.impermanence).length;
+
+          const stats = [
+            { value: hosts.length,  label: 'hosts' },
+            { value: deployCount,   label: 'deploy-rs' },
+            { value: tsCount,       label: 'on Tailscale' },
+            { value: critBackup,    label: 'backup:critical' },
+            { value: imperfCount,   label: 'impermanence' },
+            { value: gapCount,      label: 'security gaps', warn: gapCount > 0 },
+          ];
+
+          const summary = document.getElementById('summary');
+          for (const s of stats) {
+            const stat = el('div', 'stat' + (s.warn ? ' stat-warn' : ""));
+            stat.appendChild(el('span', 'stat-value', String(s.value)));
+            stat.appendChild(el('span', 'stat-label', s.label));
+            summary.appendChild(stat);
+          }
+        }
+
+        // ── Filter bar ────────────────────────────────────────────────────
+        let activeFilter = null;
+
+        function applyFilter() {
+          document.querySelectorAll('.card').forEach(card => {
+            const show = !activeFilter || activeFilter(card._host);
+            card.classList.toggle('hidden', !show);
+          });
+          document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn._filter === activeFilter);
+          });
+        }
+
+        function buildFilters() {
+          const bar = document.getElementById('filters');
+          bar.appendChild(el('span', 'filter-label', 'Filter:'));
+
+          const filters = [
+            { label: 'All',             fn: null },
+            { label: 'deploy-rs',       fn: h => h.deployable },
+            { label: 'Tailscale',       fn: h => h.services.tailscale },
+            { label: 'backup:critical', fn: h => h.backupClass === 'critical' },
+            { label: 'Impermanence',    fn: h => h.impermanence },
+            { label: 'Has gaps',        fn: h => securityGaps(h).length > 0 },
+            { label: 'Desktop',         fn: h => h.profiles.desktop },
+            { label: 'LGTM',            fn: h => h.services.observabilityStack },
+          ];
+
+          for (const f of filters) {
+            const btn = el('button', 'filter-btn' + (f.fn === null ? ' active' : ""), f.label);
+            btn._filter = f.fn;
+            btn.addEventListener('click', () => {
+              activeFilter = (activeFilter === f.fn && f.fn !== null) ? null : f.fn;
+              if (f.fn === null) activeFilter = null;
+              applyFilter();
+            });
+            bar.appendChild(btn);
+          }
+        }
+
+        // ── Render ────────────────────────────────────────────────────────
+        buildSummary();
+        buildFilters();
 
         const grid = document.getElementById('grid');
         for (const h of hosts) grid.appendChild(buildCard(h));
