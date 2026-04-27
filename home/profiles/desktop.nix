@@ -20,7 +20,6 @@
 
     # ── Browsers / Apps ──────────────────────────────────────────────────────
     discord
-    firefox
     keepassxc
     mpv
     wasistlos
@@ -34,6 +33,19 @@
     cbonsai
     cmatrix
   ];
+
+  # Firefox with VA-API hardware video decoding (Intel iGPU on Wayland)
+  programs.firefox = {
+    enable = true;
+    profiles.default = {
+      settings = {
+        "media.ffmpeg.vaapi.enabled" = true;
+        "media.hardware-video-decoding.force-enabled" = true;
+        "gfx.webrender.all" = true;
+        "widget.wayland-dmabuf-vaapi.enabled" = true;
+      };
+    };
+  };
 
   # GTK theming
   gtk.enable = true;
