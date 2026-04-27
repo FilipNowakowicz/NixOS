@@ -58,7 +58,7 @@ A host's Nix store closure should only contain what is explicitly requested.
 - **Multi-Arch Support:** Every host must define its target `system` (e.g., `x86_64-linux`), ensuring the flake evaluates correctly for heterogeneous fleets.
 - Network IDs, Tailscale tags, and roles must be defined in the registry, not hardcoded in modules.
 - Hosts and infrastructure modules receive this data through the `hostMeta` and `hostRegistry` special args. Avoid duplicating registry-owned values in host modules unless the local value is truly hardware-specific.
-- Generators may intentionally consume only a subset of the registry. For example, `lib/acl.nix` currently uses `tailscale.tag` only and does not infer host aliases or host-specific rules from richer metadata.
+- Generators may intentionally consume only a subset of the registry. For example, `lib/acl.nix` consumes `tailscale` metadata needed for explicit host:port policy (`tag`, `acceptFrom`, and `tailnetFQDN` when present) rather than inferring service exposure from host modules.
 
 ### Rule 4: Module vs. Profile
 

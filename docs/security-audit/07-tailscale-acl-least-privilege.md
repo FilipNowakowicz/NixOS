@@ -19,10 +19,16 @@ Replace broad `tag:server:*` access with explicit host:port policy that matches 
 
 ## Tasks
 
-- [ ] inventory intended cross-tag access paths
-- [ ] replace wildcard server access with explicit destinations
-- [ ] preserve required admin access intentionally, not accidentally
-- [ ] add checks that fail on reintroduction of wildcard server exposure
+- [x] inventory intended cross-tag access paths
+- [x] replace wildcard server access with explicit destinations
+- [x] preserve required admin access intentionally, not accidentally
+- [x] add checks that fail on reintroduction of wildcard server exposure
+
+## Implemented Access Paths
+
+- `tag:workstation` -> `homeserver.filip-nowakowicz.ts.net:22`
+- `tag:workstation` -> `homeserver.filip-nowakowicz.ts.net:443`
+- `autogroup:admin` -> `*:*` for deliberate break-glass access
 
 ## Acceptance Criteria
 

@@ -18,7 +18,14 @@ let
     homeserver = {
       role = "homeserver";
       tailnetFQDN = "homeserver.example.ts.net";
-      tailscale.tag = "server";
+      tailscale = {
+        tag = "server";
+        acceptFrom.workstation = [
+          443
+          22
+          443
+        ];
+      };
       backup.class = "critical";
     };
     homeserver-vm = {
@@ -29,6 +36,7 @@ let
   };
 
   result = acl.mkAcl testRegistry;
+  rendered = builtins.toJSON result;
 
   failures = lib.runTests {
     testTagOwnersWorkstation = {
@@ -71,7 +79,10 @@ let
 
     testFirstAclDst = {
       expr = (lib.elemAt result.acls 0).dst;
-      expected = [ "tag:server:*" ];
+      expected = [
+        "homeserver.example.ts.net:22"
+        "homeserver.example.ts.net:443"
+      ];
     };
 
     testSecondAclSrc = {
@@ -87,6 +98,26 @@ let
     testSecondAclDst = {
       expr = (lib.elemAt result.acls 1).dst;
       expected = [ "*:*" ];
+    };
+
+    testNoWildcardServerDestination = {
+      expr = lib.any (rule: lib.any (dst: dst == "tag:server:*") rule.dst) result.acls;
+      expected = false;
+    };
+
+    testRenderedAclContainsExplicitPort22 = {
+      expr = lib.hasInfix "\"homeserver.example.ts.net:22\"" rendered;
+      expected = true;
+    };
+
+    testRenderedAclContainsExplicitPort443 = {
+      expr = lib.hasInfix "\"homeserver.example.ts.net:443\"" rendered;
+      expected = true;
+    };
+
+    testRenderedAclOmitsWildcardServerExposure = {
+      expr = lib.hasInfix "\"tag:server:*\"" rendered;
+      expected = false;
     };
 
     testNonTailscaleHostExcludedFromTagOwners = {
