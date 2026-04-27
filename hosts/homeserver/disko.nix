@@ -35,13 +35,17 @@
         persist = {
           size = "100%";
           content = {
-            type = "filesystem";
-            format = "ext4";
-            mountpoint = "/persist";
-            extraArgs = [
-              "-L"
-              "persist"
-            ];
+            type = "luks";
+            name = "crypt-persist";
+            content = {
+              type = "filesystem";
+              format = "ext4";
+              mountpoint = "/persist";
+              extraArgs = [
+                "-L"
+                "persist"
+              ];
+            };
           };
         };
       };

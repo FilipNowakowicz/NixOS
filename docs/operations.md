@@ -83,8 +83,13 @@ Before the first hardware install:
 3. Ensure `.sops.yaml` includes the matching `&homeserver_host` age key.
 4. Set required secrets in `hosts/homeserver/secrets/secrets.yaml`, including `tailscale_auth_key`.
 5. Run the reinstall app.
+6. Unlock `crypt-persist` on the local console during the first boot.
 
 After bootstrap, prefer `deploy '.#homeserver'` for routine updates.
+
+Current constraint: `homeserver` does not yet have a reviewed unattended unlock path. Cold boots stay blocked until a local operator enters the `/persist` LUKS passphrase.
+
+If migrating an existing plaintext `/persist`, use reinstall-and-restore rather than in-place conversion. Export the application state and the local Restic repository off-host first, because `/persist/restic-repo` is destroyed by the reinstall.
 
 ## Validation
 
