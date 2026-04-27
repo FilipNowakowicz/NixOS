@@ -180,43 +180,90 @@ let
         .tag-port { color: var(--orange); border-color: #6e3a1e; }
         .tag-gap { color: var(--orange); border-color: #6e3a1e; }
 
-        /* ── Goals panel ── */
-        .goals-section {
+        /* ── Goals & Ideas panel ── */
+        .gi-panel {
           margin-top: 2rem;
           background: var(--surface);
           border: 1px solid var(--border);
           border-radius: 6px;
           overflow: hidden;
         }
-        .goals-toggle {
+        .gi-panel-toggle {
           display: flex;
           align-items: center;
           justify-content: space-between;
           padding: 0.65rem 1.25rem;
           cursor: pointer;
           border: none;
+          border-bottom: 1px solid var(--border);
           background: none;
           width: 100%;
           color: var(--text);
           font-family: inherit;
           font-size: 0.85rem;
           font-weight: 600;
-          border-bottom: 1px solid var(--border);
         }
-        .goals-toggle:hover { background: #1c2128; }
-        .goals-toggle .arrow { color: var(--muted); font-size: 0.7rem; transition: transform 0.2s; }
-        .goals-toggle.collapsed .arrow { transform: rotate(-90deg); }
-        .goals-body { padding: 1rem 1.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); gap: 0 2rem; }
-        .goals-body.hidden { display: none; }
-        .md-h2 { font-size: 0.85rem; font-weight: 600; color: var(--blue); margin: 1rem 0 0.4rem; }
-        .md-h3 { font-size: 0.78rem; font-weight: 600; color: var(--purple); margin: 0.75rem 0 0.3rem; }
-        .md-hr { border: none; border-top: 1px solid var(--border); margin: 0.5rem 0; grid-column: 1 / -1; }
-        .md-todo { display: flex; gap: 0.5rem; align-items: baseline; margin: 0.2rem 0; font-size: 0.78rem; }
-        .md-todo input[type=checkbox] { accent-color: var(--green); flex-shrink: 0; margin-top: 2px; pointer-events: none; }
-        .md-todo.done { color: var(--muted); text-decoration: line-through; }
-        .md-bullet { font-size: 0.78rem; margin: 0.2rem 0 0.2rem 1rem; color: var(--muted); }
-        .md-bullet::before { content: "•"; margin-right: 0.4rem; }
-        .md-p { font-size: 0.78rem; color: var(--muted); margin: 0.2rem 0; }
+        .gi-panel-toggle:hover { background: #1c2128; }
+        .gi-panel-body { padding: 0 1.25rem 1rem; }
+        .gi-panel-body.hidden { display: none; }
+        .gi-section { margin-top: 1rem; }
+        .gi-section-toggle {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          border: none;
+          background: none;
+          font-family: inherit;
+          font-size: 0.78rem;
+          font-weight: 600;
+          color: var(--blue);
+          cursor: pointer;
+          padding: 0.3rem 0;
+          border-bottom: 1px solid var(--border);
+          margin-bottom: 0.4rem;
+        }
+        .gi-section-toggle:hover { color: var(--text); }
+        .gi-section-body.hidden { display: none; }
+        .gi-group-label {
+          font-size: 0.7rem;
+          text-transform: uppercase;
+          letter-spacing: 0.07em;
+          color: var(--purple);
+          margin: 0.75rem 0 0.3rem 0.5rem;
+        }
+        .gi-item {
+          border: 1px solid transparent;
+          border-radius: 4px;
+          margin: 0.2rem 0;
+        }
+        .gi-item-toggle {
+          display: flex;
+          align-items: baseline;
+          gap: 0.5rem;
+          width: 100%;
+          border: none;
+          background: none;
+          font-family: inherit;
+          font-size: 0.78rem;
+          color: var(--text);
+          cursor: pointer;
+          padding: 0.3rem 0.5rem;
+          text-align: left;
+        }
+        .gi-item-toggle:hover { background: #1c2128; border-radius: 4px; }
+        .gi-item-toggle input[type=checkbox] { accent-color: var(--green); flex-shrink: 0; pointer-events: none; }
+        .gi-item-toggle.done { color: var(--muted); text-decoration: line-through; }
+        .gi-item-toggle .gi-arrow { color: var(--muted); font-size: 0.65rem; flex-shrink: 0; transition: transform 0.15s; margin-left: auto; padding-left: 0.5rem; }
+        .gi-item-toggle.open .gi-arrow { transform: rotate(90deg); }
+        .gi-item-body {
+          font-size: 0.75rem;
+          color: var(--muted);
+          padding: 0.3rem 0.75rem 0.5rem 2rem;
+          line-height: 1.6;
+        }
+        .gi-item-body.hidden { display: none; }
+        .gi-num { color: var(--muted); flex-shrink: 0; }
 
         footer { margin-top: 2rem; color: var(--muted); font-size: 0.8rem; }
       </style>
@@ -228,8 +275,7 @@ let
       <div class="summary" id="summary"></div>
       <div class="filters" id="filters"></div>
       <div class="grid" id="grid"></div>
-      <div class="goals-section" id="goals-panel"></div>
-      <div class="goals-section" id="ideas-panel"></div>
+      <div class="gi-panel" id="gi-panel"></div>
       <footer id="footer"></footer>
 
       <script>
@@ -403,62 +449,135 @@ let
           }
         }
 
-        // ── Goals panels ──────────────────────────────────────────────────
-        function renderMarkdown(text) {
-          const frag = document.createDocumentFragment();
-          for (const rawLine of text.split('\n')) {
-            const line = rawLine.trimEnd();
-            let node;
-            if (/^## /.test(line)) {
-              node = el('div', 'md-h2', line.slice(3));
-            } else if (/^### /.test(line)) {
-              node = el('div', 'md-h3', line.slice(4));
-            } else if (/^---$/.test(line)) {
-              node = document.createElement('hr');
-              node.className = 'md-hr';
-            } else if (/^- \[x\] /i.test(line)) {
-              node = el('div', 'md-todo done');
-              const cb = document.createElement('input');
-              cb.type = 'checkbox';
-              cb.checked = true;
-              node.appendChild(cb);
-              node.appendChild(document.createTextNode(line.slice(6)));
-            } else if (/^- \[ \] /.test(line)) {
-              node = el('div', 'md-todo');
-              const cb = document.createElement('input');
-              cb.type = 'checkbox';
-              node.appendChild(cb);
-              node.appendChild(document.createTextNode(line.slice(6)));
-            } else if (/^- /.test(line)) {
-              node = el('div', 'md-bullet', line.slice(2));
-            } else if (line.trim()) {
-              node = el('div', 'md-p', line);
-            } else {
-              continue;
-            }
-            frag.appendChild(node);
-          }
-          return frag;
+        // ── Goals & Ideas panel ───────────────────────────────────────────
+
+        function stripBold(s) {
+          return s.replace(/\*\*([^*]+)\*\*/g, '$1');
         }
 
-        function buildGoalsPanel(id, title, text, startOpen) {
-          const panel = document.getElementById(id);
-          const toggle = document.createElement('button');
-          toggle.className = 'goals-toggle' + (startOpen ? "" : ' collapsed');
-          toggle.appendChild(el('span', null, title));
-          const arrow = el('span', 'arrow', '\u25be');
-          toggle.appendChild(arrow);
-          panel.appendChild(toggle);
+        function parseGoals(text) {
+          const sections = [];
+          let section = null, group = null, item = null;
+          for (const raw of text.split('\n')) {
+            const line = raw.trimEnd();
+            if (/^## /.test(line)) {
+              section = { label: line.slice(3), groups: [] };
+              sections.push(section);
+              group = null; item = null;
+            } else if (/^### /.test(line) && section) {
+              group = { label: line.slice(4), items: [] };
+              section.groups.push(group);
+              item = null;
+            } else if (/^- \[[ x]\] /i.test(line) && section) {
+              if (!group) { group = { label: null, items: [] }; section.groups.push(group); }
+              const done = line[3].toLowerCase() === 'x';
+              const rest = line.slice(6);
+              const m = rest.match(/^\*\*([^*]+)\*\*\s*(?:—\s*)?(.*)$/);
+              const title = m ? m[1] : rest.split(' — ')[0];
+              const desc = m ? m[2].trim() : rest.split(' — ').slice(1).join(' — ').trim();
+              item = { done, title, desc };
+              group.items.push(item);
+            } else if (item && line.trim() && !/^[#-]/.test(line)) {
+              item.desc += (item.desc ? ' ' : "") + stripBold(line.trim());
+            }
+          }
+          return sections.filter(s => s.groups.some(g => g.items.length > 0));
+        }
 
-          const body = el('div', 'goals-body' + (startOpen ? "" : ' hidden'));
-          body.appendChild(renderMarkdown(text));
-          panel.appendChild(body);
+        function parseIdeas(text) {
+          const items = [];
+          let item = null;
+          for (const raw of text.split('\n')) {
+            const line = raw.trimEnd();
+            const m = line.match(/^(\d+)\.\s+(.+)/);
+            if (m) {
+              item = { num: m[1], title: m[2], desc: "" };
+              items.push(item);
+            } else if (item && line.trim()) {
+              item.desc += (item.desc ? ' ' : "") + line.trim();
+            }
+          }
+          return items;
+        }
 
-          toggle.addEventListener('click', () => {
-            const open = !body.classList.contains('hidden');
-            body.classList.toggle('hidden', open);
-            toggle.classList.toggle('collapsed', open);
+        function makeToggle(cls, label, startOpen) {
+          const btn = document.createElement('button');
+          btn.className = cls;
+          btn.appendChild(el('span', null, label));
+          btn.appendChild(el('span', 'gi-arrow', '\u25b6'));
+          if (startOpen) btn.classList.add('open');
+          return btn;
+        }
+
+        function wireToggle(btn, body) {
+          btn.addEventListener('click', () => {
+            const open = btn.classList.toggle('open');
+            body.classList.toggle('hidden', !open);
           });
+        }
+
+        function buildAccordionItem(title, desc, done, prefix) {
+          const item = el('div', 'gi-item');
+          const toggle = document.createElement('button');
+          toggle.className = 'gi-item-toggle' + (done ? ' done' : "");
+          if (prefix !== undefined) {
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = done;
+            toggle.appendChild(cb);
+          } else {
+            toggle.appendChild(el('span', 'gi-num', prefix));
+          }
+          toggle.appendChild(document.createTextNode(title));
+          toggle.appendChild(el('span', 'gi-arrow', '\u25b6'));
+          item.appendChild(toggle);
+          const body = el('div', 'gi-item-body hidden', desc || 'No description.');
+          item.appendChild(body);
+          wireToggle(toggle, body);
+          return item;
+        }
+
+        function buildGIPanel() {
+          const panel = document.getElementById('gi-panel');
+
+          const panelToggle = makeToggle('gi-panel-toggle', 'Goals & Ideas', true);
+          panel.appendChild(panelToggle);
+          const panelBody = el('div', 'gi-panel-body');
+          panel.appendChild(panelBody);
+          wireToggle(panelToggle, panelBody);
+
+          // ── Homeserver Roadmap (from goals.md) ──
+          const goalSections = parseGoals(goalsText);
+          const roadmapSection = el('div', 'gi-section');
+          const roadmapToggle = makeToggle('gi-section-toggle', 'Homeserver Roadmap', true);
+          roadmapSection.appendChild(roadmapToggle);
+          const roadmapBody = el('div', 'gi-section-body');
+          roadmapSection.appendChild(roadmapBody);
+          wireToggle(roadmapToggle, roadmapBody);
+
+          for (const sec of goalSections) {
+            for (const group of sec.groups) {
+              if (group.label) roadmapBody.appendChild(el('div', 'gi-group-label', group.label));
+              for (const it of group.items) {
+                roadmapBody.appendChild(buildAccordionItem(it.title, it.desc, it.done, undefined));
+              }
+            }
+          }
+          panelBody.appendChild(roadmapSection);
+
+          // ── Ideas (from ideas.md) ──
+          const ideas = parseIdeas(ideasText);
+          const ideasSection = el('div', 'gi-section');
+          const ideasToggle = makeToggle('gi-section-toggle', 'Ideas', false);
+          ideasSection.appendChild(ideasToggle);
+          const ideasBody = el('div', 'gi-section-body hidden');
+          ideasSection.appendChild(ideasBody);
+          wireToggle(ideasToggle, ideasBody);
+
+          for (const it of ideas) {
+            ideasBody.appendChild(buildAccordionItem(it.title, it.desc, false, it.num + '.'));
+          }
+          panelBody.appendChild(ideasSection);
         }
 
         // ── Render ────────────────────────────────────────────────────────
@@ -468,8 +587,7 @@ let
         const grid = document.getElementById('grid');
         for (const h of hosts) grid.appendChild(buildCard(h));
 
-        buildGoalsPanel('goals-panel', 'Roadmap & Goals', goalsText, true);
-        buildGoalsPanel('ideas-panel', 'Ideas & Backlog', ideasText, false);
+        buildGIPanel();
 
         document.getElementById('footer').textContent =
           'Hosts: ' + hosts.length + ' \u2022 Built from flake.nix \u2022 ' + hosts.map(h => h.name).join(', ');
