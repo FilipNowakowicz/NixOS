@@ -3,7 +3,6 @@
   inputs,
   lib,
   pkgs,
-  hostRegistry,
   ...
 }:
 {
@@ -113,10 +112,10 @@
   };
 
   # ── Profiles ────────────────────────────────────────────────────────────────
-  profiles.observability-client = {
-    enable = true;
-    remoteEndpoint.host = hostRegistry.homeserver.tailnetFQDN;
-  };
+  # profiles.observability-client = {
+  #   enable = true;
+  #   remoteEndpoint.host = hostRegistry.homeserver.tailnetFQDN;
+  # };
 
   # ── Services ────────────────────────────────────────────────────────────────
   services = {
@@ -157,16 +156,16 @@
     # Bluetooth management (GUI)
     blueman.enable = true;
 
-    prometheus.globalConfig.external_labels = {
-      host = "main";
-    };
+    # prometheus.globalConfig.external_labels = {
+    #   host = "main";
+    # };
 
     # ── Systemd Failure Notifications ────────────────────────────────────────
     systemd-failure-notify = {
       enable = true;
       services = [
-        "prometheus"
-        "opentelemetry-collector"
+        # "prometheus"
+        # "opentelemetry-collector"
         "restic-backups-local"
         "thermald"
         "power-profiles-daemon"
@@ -277,13 +276,13 @@
     greetd.fprintAuth = true;
   };
 
-  systemd.services = {
-    prometheus.serviceConfig = {
-      TimeoutStopSec = "20s";
-      SupplementaryGroups = [ "telemetry-ingest" ];
-    };
-    "opentelemetry-collector".serviceConfig.SupplementaryGroups = lib.mkAfter [ "telemetry-ingest" ];
-  };
+  # systemd.services = {
+  #   prometheus.serviceConfig = {
+  #     TimeoutStopSec = "20s";
+  #     SupplementaryGroups = [ "telemetry-ingest" ];
+  #   };
+  #   "opentelemetry-collector".serviceConfig.SupplementaryGroups = lib.mkAfter [ "telemetry-ingest" ];
+  # };
 
   # NetworkManager manages networking; disable wait-online to avoid timeout
   systemd.services."systemd-networkd-wait-online".enable = lib.mkForce false;

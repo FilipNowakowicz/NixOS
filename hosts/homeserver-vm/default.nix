@@ -70,21 +70,21 @@ in
     ];
   };
 
-  profiles.observability = {
-    enable = true;
-    # vm hosts the full stack for testing
-    grafana.enable = true;
-    grafana.secretKeyFile = config.sops.secrets.grafana_secret_key.path;
-    loki.enable = true;
-    tempo.enable = true;
-    mimir.enable = true;
-    collectors = {
-      metrics.enable = true;
-      logs.enable = true;
-      traces.enable = true;
-    };
-    dashboards.fleet.enable = true;
-  };
+  # profiles.observability = {
+  #   enable = true;
+  #   # vm hosts the full stack for testing
+  #   grafana.enable = true;
+  #   grafana.secretKeyFile = config.sops.secrets.grafana_secret_key.path;
+  #   loki.enable = true;
+  #   tempo.enable = true;
+  #   mimir.enable = true;
+  #   collectors = {
+  #     metrics.enable = true;
+  #     logs.enable = true;
+  #     traces.enable = true;
+  #   };
+  #   dashboards.fleet.enable = true;
+  # };
 
   services = {
     vaultwarden = {
@@ -198,9 +198,9 @@ in
     secrets = {
       user_password.neededForUsers = true;
       restic_password = { };
-      grafana_secret_key = {
-        owner = "grafana";
-      };
+      # grafana_secret_key = {
+      #   owner = "grafana";
+      # };
     };
   };
 
