@@ -196,9 +196,9 @@ in
       Description = "hypridle";
       After = [ "nixos-fake-graphical-session.target" ];
       PartOf = [ "nixos-fake-graphical-session.target" ];
-      ConditionEnvironment = "WAYLAND_DISPLAY";
     };
     Service = {
+      Type = "simple";
       ExecStart = "${pkgs.hypridle}/bin/hypridle -c %h/.config/hypr/hypridle.conf";
       Restart = "on-failure";
       RestartSec = 10;

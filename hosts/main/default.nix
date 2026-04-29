@@ -63,6 +63,7 @@
     kernelParams = [
       "intel_iommu=on"
       "iommu=force"
+      "mem_sleep_default=deep"
     ];
 
     initrd = {
