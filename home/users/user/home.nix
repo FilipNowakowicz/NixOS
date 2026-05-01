@@ -45,6 +45,66 @@ in
     })
 
     (writeShellApplication {
+      name = "power-profile";
+      runtimeInputs = with pkgs; [ power-profiles-daemon ];
+      text = ''
+        current=$(powerprofilesctl get)
+        case "$current" in
+          power-saver) next=balanced ;;
+          balanced)    next=performance ;;
+          performance) next=power-saver ;;
+          *)           next=balanced ;;
+        esac
+        powerprofilesctl set "$next"
+      '';
+    })
+
+    (writeShellApplication {
+      name = "battery-status";
+      runtimeInputs = with pkgs; [ power-profiles-daemon ];
+      text = ''
+        get_bat_icon() {
+          local pct=$1
+          local icons=("󰁺" "󰁻" "󰁼" "󰁽" "󰁾" "󰁿" "󰂀" "󰂁" "󰂂" "󰁹")
+          local idx=$(( pct / 10 ))
+          (( idx > 9 )) && idx=9
+          echo "''${icons[$idx]}"
+        }
+
+        profile=$(powerprofilesctl get 2>/dev/null || echo "balanced")
+        case "$profile" in
+          performance) profile_icon="󰓅" ;;
+          power-saver) profile_icon="󰌪" ;;
+          *)           profile_icon="󰾅" ;;
+        esac
+
+        bat_dir=$(find /sys/class/power_supply -maxdepth 1 -name 'BAT*' 2>/dev/null | head -1)
+        if [[ -z "$bat_dir" ]]; then
+          printf '{"text":"%s","tooltip":"%s","class":"%s"}\n' "$profile_icon" "$profile" "$profile"
+          exit 0
+        fi
+
+        capacity=$(cat "$bat_dir/capacity")
+        status=$(cat "$bat_dir/status")
+
+        case "$status" in
+          Charging) bat_icon="󰂄" ;;
+          Full)     bat_icon="" ;;
+          *)        bat_icon=$(get_bat_icon "$capacity") ;;
+        esac
+
+        classes="$profile"
+        (( capacity <= 15 )) && classes="$classes critical"
+        (( capacity > 15 && capacity <= 30 )) && classes="$classes warning"
+
+        tooltip="$profile · ''${capacity}% · ''${status}"
+        text="''${profile_icon}  ''${bat_icon}  ''${capacity}%"
+
+        printf '{"text":"%s","tooltip":"%s","class":"%s"}\n' "$text" "$tooltip" "$classes"
+      '';
+    })
+
+    (writeShellApplication {
       name = "firefox-private";
       runtimeInputs = [ pkgs.firefox ];
       text = ''

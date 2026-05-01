@@ -64,8 +64,21 @@ window#waybar {
 #network,
 #bluetooth,
 #pulseaudio,
-#battery {
+#custom-battery-status {
   padding: 0 12px;
+}
+
+#custom-battery-status.performance {
+  color: @amber;
+}
+
+#custom-battery-status.warning {
+  color: @orange;
+}
+
+#custom-battery-status.critical {
+  color: @amber;
+  font-weight: bold;
 }
 
 #custom-chevron {

@@ -47,6 +47,13 @@
 
   time.timeZone = lib.mkForce "Europe/London";
 
+  nix.settings = {
+    extra-substituters = [ "https://filipnowakowicz.cachix.org" ];
+    extra-trusted-public-keys = [
+      "filipnowakowicz.cachix.org-1:QLgU0QAdYs9DoRBgVLuJjPT5etR10sqv75+s/B68jCA="
+    ];
+  };
+
   environment.systemPackages = with pkgs; [ sbctl ];
 
   boot = {
@@ -217,6 +224,7 @@
       relaxBase = [
         "PrivateDevices"
         "SystemCallFilter"
+        "ProtectKernelTunables" # needs /sys writes for energy_perf_bias (performance profile)
       ];
       extraConfig = {
         ProtectProc = "invisible";
