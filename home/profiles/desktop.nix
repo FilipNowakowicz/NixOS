@@ -13,6 +13,7 @@
     hyprlock
     brightnessctl
     cliphist
+    swayosd
 
     # ── Desktop UX ───────────────────────────────────────────────────────────
     pavucontrol
