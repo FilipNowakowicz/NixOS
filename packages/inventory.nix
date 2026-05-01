@@ -5,6 +5,9 @@
   allNixosConfigs,
 }:
 let
+  repoBaseUrl = "https://github.com/FilipNowakowicz/NixOS";
+  docsBaseUrl = "${repoBaseUrl}/blob/main";
+
   extractHost =
     name: cfg:
     let
@@ -46,9 +49,20 @@ let
       };
     };
 
+  goalsData = map (goal: goal // {
+    docs = map (path: {
+      inherit path;
+      url = "${docsBaseUrl}/${path}";
+    }) (goal.docs or [ ]);
+  }) (import ../lib/goals.nix);
+
   hostsData = lib.mapAttrsToList extractHost allNixosConfigs;
 
-  dataJson = builtins.toJSON hostsData;
+  dataJson = builtins.toJSON {
+    hosts = hostsData;
+    goals = goalsData;
+    repository = repoBaseUrl;
+  };
 
   html = ''
     <!DOCTYPE html>
@@ -61,6 +75,7 @@ let
         :root {
           --bg: #0d1117;
           --surface: #161b22;
+          --surface-2: #11161d;
           --border: #30363d;
           --text: #e6edf3;
           --muted: #7d8590;
@@ -73,7 +88,10 @@ let
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-          background: var(--bg);
+          background:
+            radial-gradient(circle at top left, rgba(88, 166, 255, 0.12), transparent 28%),
+            radial-gradient(circle at top right, rgba(188, 140, 255, 0.10), transparent 24%),
+            var(--bg);
           color: var(--text);
           font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
           font-size: 13px;
@@ -83,29 +101,57 @@ let
         h1 { font-size: 1.4rem; color: var(--blue); margin-bottom: 0.25rem; }
         .subtitle { color: var(--muted); font-size: 0.85rem; margin-bottom: 1.25rem; }
 
-        /* ── Summary strip ── */
+        /* Summary strip */
         .summary {
           display: flex;
           flex-wrap: wrap;
           gap: 1.5rem;
-          background: var(--surface);
+          background: linear-gradient(180deg, rgba(22, 27, 34, 0.92), rgba(17, 22, 29, 0.96));
           border: 1px solid var(--border);
-          border-radius: 6px;
+          border-radius: 10px;
           padding: 0.75rem 1.25rem;
           margin-bottom: 1.25rem;
           font-size: 0.8rem;
+          box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
         }
         .stat { display: flex; flex-direction: column; }
         .stat-value { font-size: 1.3rem; font-weight: 600; color: var(--text); line-height: 1.2; }
         .stat-label { color: var(--muted); font-size: 0.72rem; }
         .stat-warn .stat-value { color: var(--yellow); }
 
-        /* ── Filter bar ── */
+        /* Panels */
+        .operator-row {
+          display: grid;
+          grid-template-columns: minmax(0, 1.8fr) minmax(320px, 0.95fr);
+          gap: 1rem;
+          margin-bottom: 1.25rem;
+          align-items: start;
+        }
+        .panel {
+          background: linear-gradient(180deg, rgba(22, 27, 34, 0.95), rgba(17, 22, 29, 0.98));
+          border: 1px solid var(--border);
+          border-radius: 10px;
+          padding: 1rem 1.1rem 1.1rem;
+          box-shadow: 0 18px 40px rgba(0, 0, 0, 0.16);
+        }
+        .panel-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          gap: 0.75rem;
+          margin-bottom: 0.9rem;
+          padding-bottom: 0.7rem;
+          border-bottom: 1px solid rgba(125, 133, 144, 0.2);
+        }
+        .panel-title { font-size: 0.95rem; color: var(--text); font-weight: 700; }
+        .panel-subtitle { color: var(--muted); font-size: 0.74rem; max-width: 50ch; }
+
+        /* Filter bar */
         .filters {
           display: flex;
           flex-wrap: wrap;
           gap: 0.4rem;
-          margin-bottom: 1.25rem;
+          margin-bottom: 1rem;
           align-items: center;
         }
         .filter-label { color: var(--muted); font-size: 0.75rem; margin-right: 0.25rem; }
@@ -122,13 +168,159 @@ let
         }
         .filter-btn:hover { color: var(--text); border-color: var(--muted); }
         .filter-btn.active { color: var(--blue); border-color: var(--blue); background: #1c2d4a; }
+        .filter-group-label {
+          color: var(--muted);
+          font-size: 0.68rem;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          margin-left: 0.5rem;
+        }
 
-        /* ── Grid ── */
+        /* Goals board */
+        .goal-board {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 0.8rem;
+        }
+        .goal-column {
+          background: rgba(12, 17, 23, 0.46);
+          border: 1px solid rgba(125, 133, 144, 0.18);
+          border-radius: 8px;
+          padding: 0.8rem;
+          min-height: 280px;
+        }
+        .goal-column-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.5rem;
+          margin-bottom: 0.75rem;
+        }
+        .goal-column-title {
+          font-size: 0.78rem;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: var(--muted);
+        }
+        .goal-column-count {
+          color: var(--blue);
+          font-size: 0.75rem;
+        }
+        .goal-list {
+          display: flex;
+          flex-direction: column;
+          gap: 0.65rem;
+        }
+        .goal-empty {
+          color: var(--muted);
+          font-size: 0.78rem;
+          border: 1px dashed rgba(125, 133, 144, 0.3);
+          border-radius: 8px;
+          padding: 0.75rem;
+        }
+        .goal-card {
+          background: linear-gradient(180deg, rgba(28, 33, 40, 0.92), rgba(17, 22, 29, 0.96));
+          border: 1px solid rgba(125, 133, 144, 0.2);
+          border-left: 3px solid var(--muted);
+          border-radius: 8px;
+          padding: 0.8rem;
+        }
+        .goal-card.priority-p1 { border-left-color: var(--yellow); }
+        .goal-card.priority-p2 { border-left-color: var(--blue); }
+        .goal-card.priority-p3 { border-left-color: var(--purple); }
+        .goal-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.35rem;
+          margin-bottom: 0.45rem;
+        }
+        .goal-title {
+          font-size: 0.82rem;
+          color: var(--text);
+          font-weight: 700;
+          margin-bottom: 0.35rem;
+        }
+        .goal-summary {
+          color: var(--text);
+          opacity: 0.9;
+          font-size: 0.75rem;
+          margin-bottom: 0.55rem;
+        }
+        .goal-section {
+          margin-top: 0.55rem;
+        }
+        .goal-section-label {
+          color: var(--muted);
+          font-size: 0.67rem;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          margin-bottom: 0.25rem;
+        }
+        .chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.3rem;
+        }
+        .chip {
+          font-size: 0.7rem;
+          padding: 2px 7px;
+          border-radius: 999px;
+          border: 1px solid var(--border);
+          background: rgba(13, 17, 23, 0.62);
+        }
+        .chip-area { color: var(--blue); border-color: rgba(88, 166, 255, 0.45); }
+        .chip-priority { color: var(--yellow); border-color: rgba(210, 153, 34, 0.5); }
+        .chip-host { color: var(--purple); border-color: rgba(188, 140, 255, 0.35); }
+        .chip-block { color: var(--orange); border-color: rgba(240, 136, 62, 0.45); }
+        .chip-unlock { color: var(--green); border-color: rgba(63, 185, 80, 0.45); }
+        .goal-docs {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.45rem;
+          margin-top: 0.25rem;
+        }
+        .goal-doc-link {
+          color: var(--blue);
+          text-decoration: none;
+          font-size: 0.72rem;
+        }
+        .goal-doc-link:hover { text-decoration: underline; }
+
+        /* Attention */
+        .attention-list {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+        .attention-item {
+          background: rgba(12, 17, 23, 0.5);
+          border: 1px solid rgba(125, 133, 144, 0.18);
+          border-radius: 8px;
+          padding: 0.8rem;
+        }
+        .attention-item.severity-warn { border-left: 3px solid var(--yellow); }
+        .attention-item.severity-note { border-left: 3px solid var(--blue); }
+        .attention-head {
+          display: flex;
+          justify-content: space-between;
+          gap: 0.5rem;
+          margin-bottom: 0.35rem;
+        }
+        .attention-title { font-weight: 700; font-size: 0.8rem; }
+        .attention-host { color: var(--muted); font-size: 0.72rem; }
+        .attention-detail { color: var(--text); font-size: 0.74rem; opacity: 0.92; }
+        .attention-empty {
+          color: var(--muted);
+          font-size: 0.8rem;
+          padding: 0.6rem 0;
+        }
+
+        /* Host inventory */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1rem; }
         .card {
-          background: var(--surface);
+          background: linear-gradient(180deg, rgba(22, 27, 34, 0.95), rgba(17, 22, 29, 0.98));
           border: 1px solid var(--border);
-          border-radius: 6px;
+          border-radius: 10px;
           padding: 1rem 1.25rem;
         }
         .card.hidden { display: none; }
@@ -178,6 +370,30 @@ let
         .tag-port { color: var(--orange); border-color: #6e3a1e; }
         .tag-gap { color: var(--orange); border-color: #6e3a1e; }
         footer { margin-top: 2rem; color: var(--muted); font-size: 0.8rem; }
+
+        @media (max-width: 1180px) {
+          .operator-row {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 980px) {
+          .goal-board {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+
+        @media (max-width: 720px) {
+          body { padding: 1rem; }
+          .goal-board {
+            grid-template-columns: 1fr;
+          }
+          .summary,
+          .panel,
+          .card {
+            border-radius: 8px;
+          }
+        }
       </style>
     </head>
     <body>
@@ -185,12 +401,61 @@ let
       <p class="subtitle">Generated from flake evaluation &bull; nix build '.#inventory'</p>
 
       <div class="summary" id="summary"></div>
+      <div class="operator-row">
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title">Goals Board</div>
+              <div class="panel-subtitle">Manual roadmap items, grouped by status and filtered by area.</div>
+            </div>
+          </div>
+          <div class="filters" id="goalFilters"></div>
+          <div class="goal-board" id="goalBoard"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title">Attention Needed</div>
+              <div class="panel-subtitle">Computed findings from live host configuration. This is separate from the roadmap.</div>
+            </div>
+          </div>
+          <div class="attention-list" id="attentionList"></div>
+        </section>
+      </div>
       <div class="filters" id="filters"></div>
       <div class="grid" id="grid"></div>
       <footer id="footer"></footer>
 
       <script>
-        const hosts = ${dataJson};
+        const data = ${dataJson};
+        const hosts = data.hosts;
+        const goals = data.goals;
+        const goalById = Object.fromEntries(goals.map(goal => [goal.id, goal]));
+        const goalStatusOrder = ['now', 'blocked', 'next', 'later'];
+        const goalStatusLabels = {
+          now: 'Now',
+          blocked: 'Blocked',
+          next: 'Next',
+          later: 'Later',
+        };
+        const goalAreaLabels = {
+          platform: 'Platform',
+          homeserver: 'Homeserver',
+          deploy: 'Deploy',
+          backup: 'Backup',
+          observability: 'Observability',
+          security: 'Security',
+        };
+        const goalPriorityLabels = {
+          p1: 'P1',
+          p2: 'P2',
+          p3: 'P3',
+        };
+        const goalPriorityOrder = {
+          p1: 0,
+          p2: 1,
+          p3: 2,
+        };
 
         const svcLabels = {
           openssh: 'SSH', tailscale: 'Tailscale', firewall: 'Firewall',
@@ -213,11 +478,207 @@ let
           return gaps;
         }
 
+        function computeAttentionItems() {
+          const items = [];
+
+          for (const h of hosts) {
+            for (const gap of securityGaps(h)) {
+              items.push({
+                host: h.name,
+                severity: 'warn',
+                title: 'Security gap',
+                detail: gap,
+              });
+            }
+
+            if (h.backupClass === 'critical' && !h.services.observabilityStack && !h.services.observabilityClient) {
+              items.push({
+                host: h.name,
+                severity: 'note',
+                title: 'Backup-critical without observability signal',
+                detail: 'This host is marked backup-critical but has no LGTM stack or OTel client enabled.',
+              });
+            }
+          }
+
+          return items;
+        }
+
+        const attentionItems = computeAttentionItems();
+
         function el(tag, cls, text) {
           const e = document.createElement(tag);
           if (cls) e.className = cls;
           if (text !== undefined) e.textContent = text;
           return e;
+        }
+
+        function compareGoals(a, b) {
+          const priority = (goalPriorityOrder[a.priority] ?? 99) - (goalPriorityOrder[b.priority] ?? 99);
+          if (priority !== 0) return priority;
+          return a.title.localeCompare(b.title);
+        }
+
+        function goalRefTitle(goalId) {
+          return goalById[goalId]?.title ?? goalId;
+        }
+
+        function buildGoalCard(goal) {
+          const card = el('article', 'goal-card priority-' + goal.priority);
+
+          const meta = el('div', 'goal-meta');
+          meta.appendChild(el('span', 'chip chip-area', goalAreaLabels[goal.area] ?? goal.area));
+          meta.appendChild(el('span', 'chip chip-priority', goalPriorityLabels[goal.priority] ?? goal.priority));
+          card.appendChild(meta);
+
+          card.appendChild(el('div', 'goal-title', goal.title));
+          card.appendChild(el('div', 'goal-summary', goal.summary));
+
+          if (goal.hosts.length) {
+            const section = el('div', 'goal-section');
+            section.appendChild(el('div', 'goal-section-label', 'Hosts'));
+            const chips = el('div', 'chips');
+            for (const host of goal.hosts) chips.appendChild(el('span', 'chip chip-host', host));
+            section.appendChild(chips);
+            card.appendChild(section);
+          }
+
+          if (goal.blockedBy.length) {
+            const section = el('div', 'goal-section');
+            section.appendChild(el('div', 'goal-section-label', 'Blocked By'));
+            const chips = el('div', 'chips');
+            for (const blocker of goal.blockedBy) chips.appendChild(el('span', 'chip chip-block', goalRefTitle(blocker)));
+            section.appendChild(chips);
+            card.appendChild(section);
+          }
+
+          if (goal.unlocks.length) {
+            const section = el('div', 'goal-section');
+            section.appendChild(el('div', 'goal-section-label', 'Unlocks'));
+            const chips = el('div', 'chips');
+            for (const unlock of goal.unlocks) chips.appendChild(el('span', 'chip chip-unlock', goalRefTitle(unlock)));
+            section.appendChild(chips);
+            card.appendChild(section);
+          }
+
+          if (goal.docs.length) {
+            const section = el('div', 'goal-section');
+            section.appendChild(el('div', 'goal-section-label', 'Docs'));
+            const links = el('div', 'goal-docs');
+            for (const doc of goal.docs) {
+              const link = el('a', 'goal-doc-link', doc.path);
+              link.href = doc.url;
+              link.target = '_blank';
+              link.rel = 'noreferrer';
+              links.appendChild(link);
+            }
+            section.appendChild(links);
+            card.appendChild(section);
+          }
+
+          return card;
+        }
+
+        let activeGoalStatus = null;
+        let activeGoalArea = null;
+
+        function filteredGoals() {
+          return goals.filter(goal => {
+            const statusMatch = !activeGoalStatus || goal.status === activeGoalStatus;
+            const areaMatch = !activeGoalArea || goal.area === activeGoalArea;
+            return statusMatch && areaMatch;
+          });
+        }
+
+        function buildGoalBoard() {
+          const filtered = filteredGoals();
+          const board = document.getElementById('goalBoard');
+          board.innerHTML = "";
+
+          for (const status of goalStatusOrder) {
+            const columnGoals = filtered
+              .filter(goal => goal.status === status)
+              .sort(compareGoals);
+
+            const column = el('section', 'goal-column');
+            const header = el('div', 'goal-column-header');
+            header.appendChild(el('div', 'goal-column-title', goalStatusLabels[status]));
+            header.appendChild(el('div', 'goal-column-count', String(columnGoals.length)));
+            column.appendChild(header);
+
+            if (!columnGoals.length) {
+              column.appendChild(el('div', 'goal-empty', 'No matching goals.'));
+            } else {
+              const list = el('div', 'goal-list');
+              for (const goal of columnGoals) list.appendChild(buildGoalCard(goal));
+              column.appendChild(list);
+            }
+
+            board.appendChild(column);
+          }
+        }
+
+        function buildGoalFilters() {
+          const bar = document.getElementById('goalFilters');
+          bar.innerHTML = "";
+          bar.appendChild(el('span', 'filter-label', 'Filter goals:'));
+
+          const mkButton = (label, kind, value, isActive, onClick) => {
+            const btn = el('button', 'filter-btn' + (isActive ? ' active' : ""), label);
+            btn.dataset.kind = kind;
+            btn.dataset.value = value ?? "";
+            btn.addEventListener('click', onClick);
+            return btn;
+          };
+
+          bar.appendChild(mkButton('All', 'status', "", activeGoalStatus === null, () => {
+            activeGoalStatus = null;
+            buildGoalFilters();
+            buildGoalBoard();
+          }));
+
+          for (const status of goalStatusOrder) {
+            bar.appendChild(mkButton(goalStatusLabels[status], 'status', status, activeGoalStatus === status, () => {
+              activeGoalStatus = activeGoalStatus === status ? null : status;
+              buildGoalFilters();
+              buildGoalBoard();
+            }));
+          }
+
+          bar.appendChild(el('span', 'filter-group-label', 'Area'));
+          bar.appendChild(mkButton('All areas', 'area', "", activeGoalArea === null, () => {
+            activeGoalArea = null;
+            buildGoalFilters();
+            buildGoalBoard();
+          }));
+
+          for (const area of Object.keys(goalAreaLabels)) {
+            bar.appendChild(mkButton(goalAreaLabels[area], 'area', area, activeGoalArea === area, () => {
+              activeGoalArea = activeGoalArea === area ? null : area;
+              buildGoalFilters();
+              buildGoalBoard();
+            }));
+          }
+        }
+
+        function buildAttentionPanel() {
+          const container = document.getElementById('attentionList');
+          container.innerHTML = "";
+
+          if (!attentionItems.length) {
+            container.appendChild(el('div', 'attention-empty', 'No computed attention items.'));
+            return;
+          }
+
+          for (const item of attentionItems) {
+            const card = el('article', 'attention-item severity-' + item.severity);
+            const head = el('div', 'attention-head');
+            head.appendChild(el('div', 'attention-title', item.title));
+            head.appendChild(el('div', 'attention-host', item.host));
+            card.appendChild(head);
+            card.appendChild(el('div', 'attention-detail', item.detail));
+            container.appendChild(card);
+          }
         }
 
         function buildCard(h) {
@@ -292,13 +753,14 @@ let
           return card;
         }
 
-        // ── Summary strip ──────────────────────────────────────────────────
         function buildSummary() {
           const deployCount = hosts.filter(h => h.deployable).length;
           const critBackup  = hosts.filter(h => h.backupClass === 'critical').length;
           const tsCount     = hosts.filter(h => h.services.tailscale).length;
           const gapCount    = hosts.filter(h => securityGaps(h).length > 0).length;
           const imperfCount = hosts.filter(h => h.impermanence).length;
+          const nowGoals    = goals.filter(g => g.status === 'now').length;
+          const blockedGoals = goals.filter(g => g.status === 'blocked').length;
 
           const stats = [
             { value: hosts.length,  label: 'hosts' },
@@ -307,6 +769,10 @@ let
             { value: critBackup,    label: 'backup:critical' },
             { value: imperfCount,   label: 'impermanence' },
             { value: gapCount,      label: 'security gaps', warn: gapCount > 0 },
+            { value: goals.length,  label: 'tracked goals' },
+            { value: nowGoals,      label: 'goals:now' },
+            { value: blockedGoals,  label: 'goals:blocked', warn: blockedGoals > 0 },
+            { value: attentionItems.length, label: 'attention items', warn: attentionItems.length > 0 },
           ];
 
           const summary = document.getElementById('summary');
@@ -318,7 +784,6 @@ let
           }
         }
 
-        // ── Filter bar ────────────────────────────────────────────────────
         let activeFilter = null;
 
         function applyFilter() {
@@ -333,7 +798,8 @@ let
 
         function buildFilters() {
           const bar = document.getElementById('filters');
-          bar.appendChild(el('span', 'filter-label', 'Filter:'));
+          bar.innerHTML = "";
+          bar.appendChild(el('span', 'filter-label', 'Filter hosts:'));
 
           const filters = [
             { label: 'All',             fn: null },
@@ -358,15 +824,17 @@ let
           }
         }
 
-        // ── Render ────────────────────────────────────────────────────────
         buildSummary();
+        buildGoalFilters();
+        buildGoalBoard();
+        buildAttentionPanel();
         buildFilters();
 
         const grid = document.getElementById('grid');
         for (const h of hosts) grid.appendChild(buildCard(h));
 
         document.getElementById('footer').textContent =
-          'Hosts: ' + hosts.length + ' \u2022 Built from flake.nix \u2022 ' + hosts.map(h => h.name).join(', ');
+          'Hosts: ' + hosts.length + ' \u2022 Goals: ' + goals.length + ' \u2022 Built from flake.nix \u2022 ' + hosts.map(h => h.name).join(', ') + ' \u2022 ' + data.repository;
       </script>
     </body>
     </html>
