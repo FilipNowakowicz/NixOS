@@ -2,6 +2,7 @@
   pkgs,
   config,
   skipHeavyPackages ? false,
+  enableSpotify ? true,
   ...
 }:
 {
@@ -32,7 +33,7 @@
       mpv
       wasistlos
     ]
-    ++ (if skipHeavyPackages then [ ] else [ spotify ])
+    ++ (if skipHeavyPackages || !enableSpotify then [ ] else [ spotify ])
     ++ [
       # ── Visuals / Toys ─────────────────────────────────────────────────────
       cava

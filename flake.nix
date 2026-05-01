@@ -168,6 +168,7 @@
             {
               home-manager.extraSpecialArgs = {
                 skipHeavyPackages = false;
+                enableSpotify = hostMeta.homeManager.enableSpotify or true;
               }
               // homeManagerExtraArgs;
             }
