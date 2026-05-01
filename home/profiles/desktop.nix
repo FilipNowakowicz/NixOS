@@ -1,38 +1,47 @@
-{ pkgs, config, ... }:
 {
-  home.packages = with pkgs; [
-    # ── Terminal ──────────────────────────────────────────────────────────────
-    kitty
+  pkgs,
+  config,
+  skipHeavyPackages ? false,
+  ...
+}:
+{
+  home.packages =
+    with pkgs;
+    [
+      # ── Terminal ────────────────────────────────────────────────────────────
+      kitty
 
-    # ── Wayland utilities ────────────────────────────────────────────────────
-    wl-clipboard
-    grim # screenshot
-    slurp # region select (used with grim)
-    waybar
-    swaybg
-    hyprlock
-    brightnessctl
-    cliphist
+      # ── Wayland utilities ──────────────────────────────────────────────────
+      wl-clipboard
+      grim # screenshot
+      slurp # region select (used with grim)
+      waybar
+      swaybg
+      hyprlock
+      brightnessctl
+      cliphist
+      swayosd
 
-    # ── Desktop UX ───────────────────────────────────────────────────────────
-    pavucontrol
-    blueman
+      # ── Desktop UX ─────────────────────────────────────────────────────────
+      pavucontrol
+      blueman
 
-    # ── Browsers / Apps ──────────────────────────────────────────────────────
-    discord
-    keepassxc
-    mpv
-    wasistlos
-    spotify
-
-    # ── Visuals / Toys ───────────────────────────────────────────────────────
-    cava
-    fastfetch
-    pipes-rs
-    tty-clock
-    cbonsai
-    cmatrix
-  ];
+      # ── Browsers / Apps ────────────────────────────────────────────────────
+      discord
+      keepassxc
+      mpv
+      wasistlos
+    ]
+    ++ (if skipHeavyPackages then [ ] else [ spotify ])
+    ++ [
+      # ── Visuals / Toys ─────────────────────────────────────────────────────
+      cava
+      fastfetch
+      pipes-rs
+      tty-clock
+      cbonsai
+      cmatrix
+    ];
 
   # Firefox with VA-API hardware video decoding (Intel iGPU on Wayland)
   programs.firefox = {

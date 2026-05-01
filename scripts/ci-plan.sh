@@ -212,7 +212,7 @@ if [[ $main_ci == "true" ]]; then
   sep=","
 fi
 if [[ $vm == "true" ]]; then
-  hosts_matrix+="${sep}"'{"name":"vm"}'
+  hosts_matrix+="${sep}"'{"name":"vm-ci"}'
   sep=","
 fi
 if [[ $homeserver == "true" ]]; then

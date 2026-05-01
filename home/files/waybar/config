@@ -9,7 +9,7 @@
 
     "modules-left":   ["hyprland/workspaces"],
     "modules-center": ["clock"],
-    "modules-right":  ["group/tray-group", "bluetooth", "network", "pulseaudio", "battery"],
+    "modules-right":  ["group/tray-group", "bluetooth", "network", "pulseaudio", "custom/battery-status"],
 
     "hyprland/workspaces": {
         "format": "{icon}",
@@ -51,15 +51,12 @@
         "spacing":   6
     },
 
-    "battery": {
-        "format":          "{icon}  {capacity}%",
-        "format-charging": "󰂄  {capacity}%",
-        "format-full":     "",
-        "format-icons":    ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
-        "states": {
-            "warning":  30,
-            "critical": 15
-        }
+    "custom/battery-status": {
+        "exec":        "battery-status",
+        "return-type": "json",
+        "interval":    5,
+        "on-click":    "power-profile",
+        "tooltip":     true
     },
 
     "pulseaudio": {

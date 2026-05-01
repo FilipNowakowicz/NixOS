@@ -4,6 +4,9 @@
   programs.hyprland.enable = true;
   programs.dconf.enable = true;
 
+  # swayosd-server needs /dev/input access for its libinput backend
+  users.users.user.extraGroups = [ "input" ];
+
   services = {
     # ── Input ──────────────────────────────────────────────────────────────
     libinput.enable = true;
