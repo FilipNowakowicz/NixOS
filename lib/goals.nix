@@ -192,7 +192,7 @@
   {
     id = "config-dashboard-wave-3";
     title = "Config dashboard wave 3";
-    status = "later";
+    status = "done";
     priority = "p3";
     area = "platform";
     summary = "Add closure-size, invariant, and validation-health signals so the dashboard can show drift and cost as well as structure.";

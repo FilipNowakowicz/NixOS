@@ -7,16 +7,159 @@
 let
   repoBaseUrl = "https://github.com/FilipNowakowicz/NixOS";
   docsBaseUrl = "${repoBaseUrl}/blob/main";
+  invariants = import ../lib/invariants.nix { inherit lib pkgs; };
+
+  hostHealth =
+    name: cfg:
+    let
+      commonAssertions = [
+        {
+          name = "has stateVersion";
+          check = c: c.system.stateVersion != null;
+        }
+        {
+          name = "SSH hosts enforce hardened fail2ban";
+          check =
+            c:
+            let
+              violations = lib.filter (msg: msg != "") [
+                (lib.optionalString (!c.services.fail2ban.enable) "services.fail2ban.enable must be true")
+                (lib.optionalString (c.services.fail2ban.maxretry > 3) "services.fail2ban.maxretry must be <= 3")
+                (lib.optionalString (c.services.fail2ban.bantime != "30m") "services.fail2ban.bantime must be \"30m\"")
+                (lib.optionalString (!c.services.fail2ban."bantime-increment".enable) "services.fail2ban.bantime-increment.enable must be true")
+                (lib.optionalString (c.services.fail2ban."bantime-increment".maxtime == null) "services.fail2ban.bantime-increment.maxtime must be set")
+              ];
+            in
+            if !c.services.openssh.enable then
+              true
+            else
+              violations == [ ];
+        }
+        {
+          name = "observability client uses canonical ingest username";
+          check =
+            c:
+            let
+              clientProfile = c.profiles.observability-client or { };
+              obsProfile = c.profiles.observability or { };
+              ingestAuth = obsProfile.ingestAuth or { };
+              clientEnabled = clientProfile.enable or false;
+              username = ingestAuth.username or "telemetry";
+            in
+            !clientEnabled || username == "telemetry";
+        }
+      ];
+
+      hostSpecificAssertions =
+        if name == "main" then
+          [
+            {
+              name = "main SSH stays tailnet-only";
+              check =
+                c:
+                c.services.openssh.enable
+                && !c.services.openssh.openFirewall
+                && c.services.tailscale.enable
+                && c.services.tailscale.openFirewall;
+            }
+            {
+              name = "main USBGuard stays deny-default";
+              check =
+                c:
+                let
+                  rules = c.services.usbguard.rules or "";
+                in
+                c.services.usbguard.enable && lib.hasInfix "allow id " rules && lib.hasInfix "reject" rules;
+            }
+            {
+              name = "main local backup covers critical paths";
+              check =
+                c:
+                let
+                  backup = c.services.restic.backups.local or null;
+                in
+                backup != null
+                && (backup.paths or [ ]) == [
+                  "/home/user/.ssh"
+                  "/home/user/.gnupg"
+                  "/home/user/nix"
+                ]
+                && (backup.passwordFile or "") != ""
+                && lib.hasPrefix "/run/secrets/" (backup.passwordFile or "")
+                && backup.initialize
+                && (backup.timerConfig.OnCalendar or null) == "daily";
+            }
+          ]
+        else if name == "vm" then
+          [
+            {
+              name = "passwordless sudo enabled";
+              check = c: !c.security.sudo.wheelNeedsPassword;
+            }
+          ]
+        else if name == "homeserver-vm" then
+          [
+            {
+              name = "firewall enabled";
+              check = c: c.networking.firewall.enable;
+            }
+            {
+              name = "passwordless sudo enabled";
+              check = c: !c.security.sudo.wheelNeedsPassword;
+            }
+          ]
+        else if name == "homeserver" then
+          [
+            {
+              name = "no passwordless sudo";
+              check = c: c.security.sudo.wheelNeedsPassword;
+            }
+            {
+              name = "firewall enabled";
+              check = c: c.networking.firewall.enable;
+            }
+            {
+              name = "SSH and HTTPS are not globally open";
+              check = c: !(lib.any (port: builtins.elem port (c.networking.firewall.allowedTCPPorts or [ ])) [ 22 443 ]);
+            }
+            {
+              name = "SSH and HTTPS stay Tailscale-only";
+              check =
+                c:
+                let
+                  interfaces = c.networking.firewall.interfaces or { };
+                  tailscaleNetwork = interfaces.tailscale0.allowedTCPPorts or [ ];
+                in
+                builtins.all (port: builtins.elem port tailscaleNetwork) [
+                  22
+                  443
+                ];
+            }
+          ]
+        else
+          [ ];
+
+      results = invariants.evaluateAssertions (commonAssertions ++ hostSpecificAssertions ++ invariants.mkRegistryAssertions name hostRegistry.${name}) cfg.config;
+      failed = lib.filter (result: !result.passed) results;
+    in
+    {
+      invariantResults = results;
+      invariantPassed = builtins.length results - builtins.length failed;
+      invariantFailed = builtins.length failed;
+      invariantStatus = if failed == [ ] then "pass" else "warn";
+    };
 
   extractHost =
     name: cfg:
     let
       meta = hostRegistry.${name};
       c = cfg.config;
+      health = hostHealth name cfg;
     in
     {
       inherit name;
       inherit (meta) system;
+      closurePath = builtins.unsafeDiscardStringContext (toString c.system.build.toplevel);
       inherit (c.system) stateVersion;
       tailscaleTag = meta.tailscale.tag or null;
       tailnetFQDN = meta.tailnetFQDN or null;
@@ -47,6 +190,7 @@ let
         usbguard = c.services.usbguard.enable or false;
         lanzaboote = c.boot.lanzaboote.enable or false;
       };
+      inherit health;
     };
 
   goalsData = map (
@@ -61,6 +205,10 @@ let
   ) (import ../lib/goals.nix);
 
   hostsData = lib.mapAttrsToList extractHost allNixosConfigs;
+
+  hostSpec = builtins.concatStringsSep "\n" (
+    map (host: "${host.name}\t${host.closurePath}") hostsData
+  );
 
   dataJson = builtins.toJSON {
     hosts = hostsData;
@@ -273,6 +421,10 @@ let
         .goal-card.priority-p1 { border-left-color: var(--yellow); }
         .goal-card.priority-p2 { border-left-color: var(--blue); }
         .goal-card.priority-p3 { border-left-color: var(--purple); }
+        .goal-card.goal-done {
+          border-left-color: var(--green);
+          opacity: 0.86;
+        }
         .goal-meta {
           display: flex;
           flex-wrap: wrap;
@@ -377,6 +529,87 @@ let
           color: var(--muted);
           font-size: 0.8rem;
           padding: 0.6rem 0;
+        }
+
+        /* Health */
+        .health-panel {
+          margin-bottom: 1.25rem;
+        }
+        .health-summary {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.45rem;
+          margin-bottom: 0.75rem;
+        }
+        .health-chip {
+          font-size: 0.72rem;
+          padding: 2px 8px;
+          border-radius: 999px;
+          border: 1px solid var(--border);
+          background: rgba(13, 17, 23, 0.62);
+          color: var(--muted);
+        }
+        .health-chip strong { color: var(--text); }
+        .health-chip.good { color: var(--green); border-color: rgba(63, 185, 80, 0.45); }
+        .health-chip.warn { color: var(--yellow); border-color: rgba(210, 153, 34, 0.45); }
+        .health-chip.bad { color: var(--red); border-color: rgba(248, 81, 73, 0.45); }
+        .health-list {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+          gap: 0.75rem;
+        }
+        .health-row {
+          background: rgba(12, 17, 23, 0.5);
+          border: 1px solid rgba(125, 133, 144, 0.18);
+          border-radius: 8px;
+          padding: 0.8rem;
+          min-width: 0;
+        }
+        .health-row-top {
+          display: flex;
+          justify-content: space-between;
+          gap: 0.5rem;
+          align-items: baseline;
+          margin-bottom: 0.4rem;
+        }
+        .health-host {
+          font-size: 0.82rem;
+          font-weight: 700;
+          color: var(--blue);
+        }
+        .health-status {
+          font-size: 0.68rem;
+          padding: 1px 7px;
+          border-radius: 999px;
+          border: 1px solid;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+        .health-status.pass {
+          color: var(--green);
+          border-color: rgba(63, 185, 80, 0.45);
+        }
+        .health-status.warn {
+          color: var(--yellow);
+          border-color: rgba(210, 153, 34, 0.45);
+        }
+        .health-row-meta {
+          color: var(--muted);
+          font-size: 0.74rem;
+          margin-bottom: 0.55rem;
+        }
+        .health-failures {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.3rem;
+        }
+        .health-failure {
+          color: var(--orange);
+          border-color: rgba(240, 136, 62, 0.45);
+          background: rgba(13, 17, 23, 0.6);
+          font-size: 0.68rem;
+          padding: 2px 7px;
+          border-radius: 999px;
         }
 
         .command-list {
@@ -521,22 +754,35 @@ let
           <div class="attention-list" id="attentionList"></div>
         </section>
       </div>
+      <section class="panel health-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Health Signals</div>
+            <div class="panel-subtitle">Closure cost and invariant status derived from the current flake evaluation.</div>
+          </div>
+        </div>
+        <div class="health-summary" id="healthSummary"></div>
+        <div class="health-list" id="healthList"></div>
+      </section>
       <div class="filters" id="filters"></div>
       <div class="grid" id="grid"></div>
       <footer id="footer"></footer>
 
+      <script src="wave3-data.js"></script>
       <script>
         const data = ${dataJson};
         const hosts = data.hosts;
         const goals = data.goals;
+        const wave3Data = window.__WAVE3_DATA__ || { hosts: { } };
         const hostByName = Object.fromEntries(hosts.map(host => [host.name, host]));
         const goalById = Object.fromEntries(goals.map(goal => [goal.id, goal]));
-        const goalStatusOrder = ['now', 'blocked', 'next', 'later'];
+        const goalStatusOrder = ['now', 'blocked', 'next', 'later', 'done'];
         const goalStatusLabels = {
           now: 'Now',
           blocked: 'Blocked',
           next: 'Next',
           later: 'Later',
+          done: 'Done',
         };
         const goalAreaLabels = {
           platform: 'Platform',
@@ -600,6 +846,40 @@ let
           desktop: 'Desktop', security: 'Security',
           observability: 'LGTM stack', observabilityClient: 'OTel client',
         };
+
+        function humanBytes(bytes) {
+          if (bytes == null) return 'unknown';
+          if (bytes < 1024) return String(bytes) + ' B';
+          const units = ['KiB', 'MiB', 'GiB', 'TiB'];
+          let value = bytes / 1024;
+          let unit = 'KiB';
+          for (const next of units.slice(1)) {
+            if (value < 1024) break;
+            value /= 1024;
+            unit = next;
+          }
+          return value.toFixed(value >= 10 ? 0 : 1) + ' ' + unit;
+        }
+
+        function wave3For(hostName) {
+          return wave3Data.hosts?.[hostName] ?? null;
+        }
+
+        function healthResults(host) {
+          return host.health?.invariantResults ?? [];
+        }
+
+        function healthCounts(host) {
+          const results = healthResults(host);
+          const failed = results.filter(result => !result.passed);
+          return {
+            total: results.length,
+            passed: results.length - failed.length,
+            failed: failed.length,
+            failedResults: failed,
+            status: failed.length === 0 ? 'pass' : 'warn',
+          };
+        }
 
         function securityGaps(h) {
           const gaps = [];
@@ -703,7 +983,7 @@ let
         }
 
         function buildGoalCard(goal) {
-          const card = el('article', 'goal-card priority-' + goal.priority);
+          const card = el('article', 'goal-card priority-' + goal.priority + (goal.status === 'done' ? ' goal-done' : ""));
           const blockedBy = goal.blockedBy ?? [];
           const unlocks = goal.unlocks ?? [];
           const docs = goal.docs ?? [];
@@ -994,6 +1274,25 @@ let
             card.appendChild(row);
           }
 
+          const wave3 = wave3For(h.name);
+          if (wave3?.closureSizeBytes != null) {
+            const row = el('div', 'meta-row');
+            row.appendChild(el('span', 'meta-label', 'closure'));
+            row.appendChild(el('span', 'meta-value', humanBytes(wave3.closureSizeBytes)));
+            card.appendChild(row);
+          }
+
+          const health = healthCounts(h);
+          if (health.total > 0) {
+            const row = el('div', 'meta-row');
+            row.appendChild(el('span', 'meta-label', 'invariants'));
+            const value = el('span', 'meta-value');
+            const badge = el('span', 'health-status ' + health.status, health.passed + '/' + health.total + ' pass');
+            value.appendChild(badge);
+            row.appendChild(value);
+            card.appendChild(row);
+          }
+
           const commands = hostCommands(h);
           if (commands.length) {
             card.appendChild(el('div', 'section-title', 'Validate'));
@@ -1042,6 +1341,84 @@ let
           return card;
         }
 
+        function buildHealthPanel() {
+          const baseline = wave3For('main')?.closureSizeBytes ?? null;
+          const rows = hosts
+            .map(host => ({
+              host,
+              wave3: wave3For(host.name),
+              health: healthCounts(host),
+            }))
+            .sort((a, b) => (b.wave3?.closureSizeBytes ?? 0) - (a.wave3?.closureSizeBytes ?? 0));
+
+          const list = document.getElementById('healthList');
+          list.innerHTML = "";
+
+          for (const rowData of rows) {
+            const { host, wave3, health } = rowData;
+            const row = el('article', 'health-row');
+            const top = el('div', 'health-row-top');
+            top.appendChild(el('span', 'health-host', host.name));
+            top.appendChild(
+              el(
+                'span',
+                'health-status ' + health.status,
+                health.failed ? health.failed + ' fail' : health.passed + '/' + health.total + ' pass'
+              )
+            );
+            row.appendChild(top);
+
+            const metrics = [];
+            if (wave3?.closureSizeBytes != null) {
+              metrics.push('closure ' + humanBytes(wave3.closureSizeBytes));
+              if (baseline != null && host.name !== 'main') {
+                const delta = wave3.closureSizeBytes - baseline;
+                const sign = delta >= 0 ? '+' : '-';
+                metrics.push(sign + humanBytes(Math.abs(delta)) + ' vs main');
+              }
+            }
+            if (health.total > 0) {
+              metrics.push(health.passed + '/' + health.total + ' invariants pass');
+            }
+
+            row.appendChild(el('div', 'health-row-meta', metrics.join(' • ')));
+
+            if (health.failedResults.length) {
+              const failures = el('div', 'health-failures');
+              for (const result of health.failedResults) {
+                failures.appendChild(el('span', 'health-failure', result.name));
+              }
+              row.appendChild(failures);
+            }
+
+            list.appendChild(row);
+          }
+
+          const summary = document.getElementById('healthSummary');
+          const totalClosure = rows.reduce((sum, row) => sum + (row.wave3?.closureSizeBytes ?? 0), 0);
+          const largest = rows[0] || null;
+          const failingHosts = rows.filter(row => row.health.failed > 0);
+          const failingChecks = rows.reduce((sum, row) => sum + row.health.failed, 0);
+          const chips = [
+            ['closure total', humanBytes(totalClosure), 'good'],
+            [
+              'largest host',
+              largest ? largest.host.name + ' (' + humanBytes(largest.wave3?.closureSizeBytes ?? 0) + ')' : 'n/a',
+              'good',
+            ],
+            ['failing hosts', String(failingHosts.length), failingHosts.length > 0 ? 'warn' : 'good'],
+            ['failing checks', String(failingChecks), failingChecks > 0 ? 'bad' : 'good'],
+          ];
+
+          summary.innerHTML = "";
+          for (const [label, value, tone] of chips) {
+            const chip = el('span', 'health-chip ' + tone);
+            chip.appendChild(el('strong', null, label + ': '));
+            chip.appendChild(document.createTextNode(value));
+            summary.appendChild(chip);
+          }
+        }
+
         function buildSummary() {
           const deployCount = hosts.filter(h => h.deployable).length;
           const critBackup  = hosts.filter(h => h.backupClass === 'critical').length;
@@ -1050,6 +1427,12 @@ let
           const imperfCount = hosts.filter(h => h.impermanence).length;
           const nowGoals    = goals.filter(g => g.status === 'now').length;
           const blockedGoals = goals.filter(g => g.status === 'blocked').length;
+          const wave3Rows = hosts.map(h => wave3For(h.name)).filter(Boolean);
+          const totalClosure = wave3Rows.reduce((sum, entry) => sum + (entry.closureSizeBytes ?? 0), 0);
+          const largest = hosts
+            .map(h => ({ host: h, wave3: wave3For(h.name) }))
+            .sort((a, b) => (b.wave3?.closureSizeBytes ?? 0) - (a.wave3?.closureSizeBytes ?? 0))[0];
+          const failingHosts = hosts.filter(h => healthCounts(h).failed > 0).length;
 
           const stats = [
             { value: hosts.length,  label: 'hosts' },
@@ -1062,9 +1445,13 @@ let
             { value: nowGoals,      label: 'goals:now' },
             { value: blockedGoals,  label: 'goals:blocked', warn: blockedGoals > 0 },
             { value: attentionItems.length, label: 'attention items', warn: attentionItems.length > 0 },
+            { value: humanBytes(totalClosure), label: 'closure total' },
+            { value: largest ? humanBytes(largest.wave3?.closureSizeBytes ?? 0) : 'n/a', label: 'largest closure' },
+            { value: failingHosts, label: 'hosts w/ failed invariants', warn: failingHosts > 0 },
           ];
 
           const summary = document.getElementById('summary');
+          summary.innerHTML = "";
           for (const s of stats) {
             const stat = el('div', 'stat' + (s.warn ? ' stat-warn' : ""));
             stat.appendChild(el('span', 'stat-value', String(s.value)));
@@ -1114,6 +1501,7 @@ let
         }
 
         buildSummary();
+        buildHealthPanel();
         buildGoalFilters();
         buildGoalBoard();
         buildAttentionPanel();
@@ -1136,10 +1524,28 @@ let
 in
 pkgs.runCommand "inventory"
   {
-    passAsFile = [ "html" ];
+    nativeBuildInputs = [ pkgs.nix ];
+    passAsFile = [
+      "html"
+      "hostSpec"
+    ];
     inherit html;
+    inherit hostSpec;
   }
   ''
     mkdir -p $out
+    {
+      echo 'window.__WAVE3_DATA__ = { hosts: {'
+      while IFS=$'\t' read -r hostName closurePath || [ -n "$hostName" ]; do
+        [ -n "$hostName" ] || continue
+        if closureInfo="$(nix path-info -S "$closurePath" 2>/dev/null)"; then
+          closureBytes="$(printf '%s\n' "$closureInfo" | awk '{print $2}')"
+          echo "  \"''${hostName}\": { \"closureSizeBytes\": ''${closureBytes} },"
+        else
+          echo "  \"''${hostName}\": { \"closureSizeBytes\": null },"
+        fi
+      done < "$hostSpecPath"
+      echo '} };'
+    } > "$out/wave3-data.js"
     cp "$htmlPath" "$out/index.html"
   ''

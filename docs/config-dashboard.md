@@ -195,7 +195,8 @@ each active goal.
 
 ## Wave 3
 
-Wave 3 should add cost, drift, and proof-of-health signals.
+Wave 3 is implemented in the dashboard: closure-size, invariant, and
+validation-health signals now surface cost, drift, and proof-of-health.
 
 ### Scope
 

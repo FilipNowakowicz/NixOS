@@ -50,7 +50,7 @@ roadmap items from computed config findings.
 - [x] **Config dashboard wave 2** (medium) -- add validation commands,
   dependency context, and goal-to-host/service relationships so the dashboard
   shows not just what matters, but how to act on it.
-- [ ] **Config dashboard wave 3** (medium) -- add closure-size, invariant, and
+- [x] **Config dashboard wave 3** (medium) -- add closure-size, invariant, and
   validation-health signals so the dashboard exposes cost, drift, and proof of
   health alongside inventory and roadmap state.
 

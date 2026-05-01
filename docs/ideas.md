@@ -2,7 +2,6 @@
    Add a proper “safe upgrade” flow for main: build, show closure diff, switch, record generation metadata, and provide a friendly rollback command. This is different from security patching
    because it changes how you operate the workstation.
 
-
 5. NixOS config dashboard
    Generate a local static HTML or terminal report from your flake: hosts, enabled profiles, packages, closure sizes, state versions, open TODOs, validation commands, and profile membership.
    This gives you “system inventory” without needing to inspect Nix files manually.
