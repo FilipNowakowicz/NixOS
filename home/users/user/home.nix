@@ -121,6 +121,7 @@ in
 
   imports = [
     ./common.nix
+    ../../profiles/workflow-packs
     ../../theme/module.nix
   ];
 

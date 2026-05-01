@@ -96,9 +96,16 @@
         hostMeta:
         let
           hm = hostMeta.homeManager;
+          enabledPacks = hm.packs or [ ];
+          workflowPackModule = {
+            config = lib.mkMerge (
+              map (pack: lib.setAttrByPath [ "workflowPacks" pack "enable" ] true) enabledPacks
+            );
+          };
         in
         [ homeManagerRoleModules.${hm.role} ]
-        ++ map (profile: homeManagerProfileModules.${profile}) (hm.profiles or [ ]);
+        ++ map (profile: homeManagerProfileModules.${profile}) (hm.profiles or [ ])
+        ++ lib.optional (enabledPacks != [ ]) workflowPackModule;
 
       invariants = import ./lib/invariants.nix { inherit lib pkgs; };
 
@@ -725,6 +732,7 @@
         homeModules = {
           profiles-base = import ./home/profiles/base.nix;
           profiles-desktop = import ./home/profiles/desktop.nix;
+          profiles-workflow-packs = import ./home/profiles/workflow-packs;
           profiles-workstation = import ./home/profiles/workstation.nix;
         };
       };
