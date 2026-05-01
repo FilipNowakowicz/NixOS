@@ -341,6 +341,7 @@ The flake provides several `devShells` and `apps` for development and maintenanc
 | `app`      | `vm`                   | Archived QEMU VM management: `nix run '.#vm' -- <action> <name>`                        |
 | `app`      | `reinstall-homeserver` | Runs `nixos-anywhere` for fresh homeserver install on real hardware.                    |
 | `package`  | `installer-iso`        | Minimal NixOS ISO: `nix build '.#installer-iso'`                                        |
+| `template` | `python`               | Python dev shell with `uv`, `ruff`, `basedpyright`: `nix flake init -t ~/nix#python`    |
 
 ---
 

@@ -720,6 +720,12 @@
           };
         };
 
+        # ── Templates ───────────────────────────────────────────────────────
+        templates.python = {
+          path = ./templates/python;
+          description = "Python dev shell with uv, ruff, and basedpyright";
+        };
+
         # ── Modules ─────────────────────────────────────────────────────────
         nixosModules = {
           profiles-base = import ./modules/nixos/profiles/base.nix;

@@ -114,6 +114,7 @@ nix run '.#vm' -- ssh <name>      # SSH into VM
     To commit a new default: `git update-index --no-skip-worktree home/theme/active.nix`, commit, re-apply.
 - `home/files/` — dotfiles and standalone scripts (NIX_REPO injected)
 - `home/users/user/` — user home-manager entry points (`home.nix`, `server.nix`, `wsl.nix`)
+- `templates/python/` — reusable Python dev shell template (`nix flake init -t ~/nix#python`); provides python3, uv, ruff, basedpyright; sets `UV_PYTHON_DOWNLOADS=never` and `UV_PYTHON` to pin Python to nixpkgs
 
 ---
 
