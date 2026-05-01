@@ -12,7 +12,7 @@ Turn `main` into a more intentional workstation layer. Tackled incrementally —
 
 #### Ready to implement
 
-- [ ] **Volume/brightness OSD** — `swayosd` shows a floating Windows-style popup when media keys fire. Hooks into existing `brightnessctl`/`wpctl` binds in `hyprland.conf`, no design work needed.
+- [x] **Volume/brightness OSD** — `swayosd` shows a floating Windows-style popup when media keys fire. Hooks into existing `brightnessctl`/`wpctl` binds in `hyprland.conf`, no design work needed.
 - [ ] **Performance modes** — `power-profiles-daemon` exposes balanced/performance/power-saver. Battery icon in Waybar gets a click action to cycle modes and an icon reflecting the active mode.
 - [ ] **Wallpaper transitions** — swap `swaybg` for `swww` so theme switches and wallpaper changes animate with a crossfade instead of a hard cut.
 - [ ] **Bluetooth menu** — replace Blueman (half-screen app) with a `bluetoothctl`-driven `fuzzel` popup: lists paired devices, click to connect/disconnect.
