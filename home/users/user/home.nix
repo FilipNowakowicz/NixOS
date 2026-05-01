@@ -72,24 +72,23 @@ in
         }
 
         profile=$(powerprofilesctl get 2>/dev/null || echo "balanced")
-        case "$profile" in
-          performance) profile_icon="󰓅" ;;
-          power-saver) profile_icon="󰌪" ;;
-          *)           profile_icon="󰾅" ;;
-        esac
 
         bat_dir=$(find /sys/class/power_supply -maxdepth 1 -name 'BAT*' 2>/dev/null | head -1)
         if [[ -z "$bat_dir" ]]; then
-          printf '{"text":"%s","tooltip":"%s","class":"%s"}\n' "$profile_icon" "$profile" "$profile"
+          printf '{"text":"%s","tooltip":"%s","class":"%s"}\n' "?" "$profile" "$profile"
           exit 0
         fi
 
         capacity=$(cat "$bat_dir/capacity")
         status=$(cat "$bat_dir/status")
 
+        if [[ "$status" == "Full" ]]; then
+          printf '{"text":"","tooltip":"%s","class":"full"}\n' "$profile"
+          exit 0
+        fi
+
         case "$status" in
           Charging) bat_icon="󰂄" ;;
-          Full)     bat_icon="" ;;
           *)        bat_icon=$(get_bat_icon "$capacity") ;;
         esac
 
@@ -98,7 +97,7 @@ in
         (( capacity > 15 && capacity <= 30 )) && classes="$classes warning"
 
         tooltip="$profile · ''${capacity}% · ''${status}"
-        text="''${profile_icon}  ''${bat_icon}  ''${capacity}%"
+        text="''${bat_icon}  ''${capacity}%"
 
         printf '{"text":"%s","tooltip":"%s","class":"%s"}\n' "$text" "$tooltip" "$classes"
       '';
