@@ -149,6 +149,24 @@ let
         }
         .panel-title { font-size: 0.95rem; color: var(--text); font-weight: 700; }
         .panel-subtitle { color: var(--muted); font-size: 0.74rem; max-width: 50ch; }
+        .panel-actions {
+          display: flex;
+          gap: 0.4rem;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+        .panel-action {
+          font-family: inherit;
+          font-size: 0.72rem;
+          padding: 3px 10px;
+          border-radius: 10px;
+          border: 1px solid var(--border);
+          background: var(--surface);
+          color: var(--muted);
+          cursor: pointer;
+        }
+        .panel-action:hover { color: var(--text); border-color: var(--muted); }
+        .panel-action.active { color: var(--blue); border-color: var(--blue); background: #1c2d4a; }
 
         /* Filter bar */
         .filters {
@@ -157,6 +175,7 @@ let
           gap: 0.4rem;
           margin-bottom: 1rem;
           align-items: center;
+          min-width: 0;
         }
         .filter-label { color: var(--muted); font-size: 0.75rem; margin-right: 0.25rem; }
         .filter-btn {
@@ -179,6 +198,26 @@ let
           text-transform: uppercase;
           margin-left: 0.5rem;
         }
+        .filter-details {
+          width: 100%;
+          border: 1px solid rgba(125, 133, 144, 0.18);
+          border-radius: 8px;
+          background: rgba(12, 17, 23, 0.3);
+          padding: 0.35rem 0.55rem;
+        }
+        .filter-summary {
+          cursor: pointer;
+          color: var(--muted);
+          font-size: 0.72rem;
+          list-style: none;
+        }
+        .filter-summary::-webkit-details-marker { display: none; }
+        .filter-details-body {
+          padding-top: 0.55rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
 
         /* Goals board */
         .goal-board {
@@ -192,6 +231,7 @@ let
           border-radius: 8px;
           padding: 0.8rem;
           min-height: 280px;
+          min-width: 0;
         }
         .goal-column-header {
           display: flex;
@@ -228,6 +268,7 @@ let
           border-left: 3px solid var(--muted);
           border-radius: 8px;
           padding: 0.8rem;
+          min-width: 0;
         }
         .goal-card.priority-p1 { border-left-color: var(--yellow); }
         .goal-card.priority-p2 { border-left-color: var(--blue); }
@@ -271,6 +312,9 @@ let
           border-radius: 999px;
           border: 1px solid var(--border);
           background: rgba(13, 17, 23, 0.62);
+          max-width: 100%;
+          white-space: normal;
+          overflow-wrap: anywhere;
         }
         .chip-area { color: var(--blue); border-color: rgba(88, 166, 255, 0.45); }
         .chip-priority { color: var(--yellow); border-color: rgba(210, 153, 34, 0.5); }
@@ -296,6 +340,7 @@ let
           flex-wrap: wrap;
           gap: 0.45rem;
           margin-top: 0.25rem;
+          min-width: 0;
         }
         .goal-doc-link {
           color: var(--blue);
@@ -315,6 +360,7 @@ let
           border: 1px solid rgba(125, 133, 144, 0.18);
           border-radius: 8px;
           padding: 0.8rem;
+          min-width: 0;
         }
         .attention-item.severity-warn { border-left: 3px solid var(--yellow); }
         .attention-item.severity-note { border-left: 3px solid var(--blue); }
@@ -337,6 +383,7 @@ let
           display: flex;
           flex-direction: column;
           gap: 0.35rem;
+          min-width: 0;
         }
         .command-chip {
           display: block;
@@ -347,8 +394,9 @@ let
           border: 1px solid rgba(125, 133, 144, 0.2);
           border-radius: 6px;
           padding: 0.35rem 0.45rem;
-          overflow-x: auto;
-          white-space: nowrap;
+          white-space: normal;
+          overflow-wrap: anywhere;
+          line-height: 1.35;
         }
         .command-chip code {
           font-family: inherit;
@@ -361,6 +409,7 @@ let
           border: 1px solid var(--border);
           border-radius: 10px;
           padding: 1rem 1.25rem;
+          min-width: 0;
         }
         .card.hidden { display: none; }
         .card.has-gaps { border-color: #6e3a1e; }
@@ -453,9 +502,14 @@ let
               <div class="panel-title">Goals Board</div>
               <div class="panel-subtitle">Manual roadmap items, grouped by status and filtered by area.</div>
             </div>
+            <div class="panel-actions">
+              <button class="panel-action" id="toggleGoalsBtn" type="button">Collapse goals</button>
+            </div>
           </div>
-          <div class="filters" id="goalFilters"></div>
-          <div class="goal-board" id="goalBoard"></div>
+          <div id="goalSectionBody">
+            <div class="filters" id="goalFilters"></div>
+            <div class="goal-board" id="goalBoard"></div>
+          </div>
         </section>
         <section class="panel">
           <div class="panel-header">
@@ -552,7 +606,7 @@ let
           if (h.services.openssh && !h.services.fail2ban) gaps.push('SSH w/o fail2ban');
           if (h.services.openssh && !h.services.firewall) gaps.push('SSH w/o firewall');
           if (h.services.tailscale && !h.services.firewall) gaps.push('Tailscale w/o firewall');
-          if (h.profiles.desktop && !h.services.usbguard) gaps.push('Desktop w/o USBGuard');
+          if (h.name !== 'vm' && h.profiles.desktop && !h.services.usbguard) gaps.push('Desktop w/o USBGuard');
           return gaps;
         }
 
@@ -755,6 +809,7 @@ let
         let activeGoalArea = null;
         let activeGoalHost = null;
         let activeGoalService = null;
+        let goalsCollapsed = false;
 
         function filteredGoals() {
           return goals.filter(goal => {
@@ -836,8 +891,14 @@ let
             }));
           }
 
-          bar.appendChild(el('span', 'filter-group-label', 'Hosts'));
-          bar.appendChild(mkButton('All hosts', 'host', "", activeGoalHost === null, () => {
+          const moreFilters = el('details', 'filter-details');
+          moreFilters.open = activeGoalHost !== null || activeGoalService !== null;
+          const summary = el('summary', 'filter-summary', 'More filters');
+          moreFilters.appendChild(summary);
+          const body = el('div', 'filter-details-body');
+
+          body.appendChild(el('span', 'filter-group-label', 'Hosts'));
+          body.appendChild(mkButton('All hosts', 'host', "", activeGoalHost === null, () => {
             activeGoalHost = null;
             buildGoalFilters();
             buildGoalBoard();
@@ -845,15 +906,15 @@ let
 
           for (const host of goalHostOrder) {
             if (!goals.some(goal => goalHosts(goal).includes(host))) continue;
-            bar.appendChild(mkButton(goalHostLabels[host] ?? host, 'host', host, activeGoalHost === host, () => {
+            body.appendChild(mkButton(goalHostLabels[host] ?? host, 'host', host, activeGoalHost === host, () => {
               activeGoalHost = activeGoalHost === host ? null : host;
               buildGoalFilters();
               buildGoalBoard();
             }));
           }
 
-          bar.appendChild(el('span', 'filter-group-label', 'Services'));
-          bar.appendChild(mkButton('All services', 'service', "", activeGoalService === null, () => {
+          body.appendChild(el('span', 'filter-group-label', 'Services'));
+          body.appendChild(mkButton('All services', 'service', "", activeGoalService === null, () => {
             activeGoalService = null;
             buildGoalFilters();
             buildGoalBoard();
@@ -861,12 +922,15 @@ let
 
           for (const service of goalServiceOrder) {
             if (!goals.some(goal => goalServices(goal).includes(service))) continue;
-            bar.appendChild(mkButton(goalServiceLabels[service] ?? service, 'service', service, activeGoalService === service, () => {
+            body.appendChild(mkButton(goalServiceLabels[service] ?? service, 'service', service, activeGoalService === service, () => {
               activeGoalService = activeGoalService === service ? null : service;
               buildGoalFilters();
               buildGoalBoard();
             }));
           }
+
+          moreFilters.appendChild(body);
+          bar.appendChild(moreFilters);
         }
 
         function buildAttentionPanel() {
@@ -887,6 +951,15 @@ let
             card.appendChild(el('div', 'attention-detail', item.detail));
             container.appendChild(card);
           }
+        }
+
+        function setGoalsCollapsed(collapsed) {
+          goalsCollapsed = collapsed;
+          const body = document.getElementById('goalSectionBody');
+          const button = document.getElementById('toggleGoalsBtn');
+          body.hidden = goalsCollapsed;
+          button.textContent = goalsCollapsed ? 'Expand goals' : 'Collapse goals';
+          button.classList.toggle('active', goalsCollapsed);
         }
 
         function buildCard(h) {
@@ -1045,6 +1118,11 @@ let
         buildGoalBoard();
         buildAttentionPanel();
         buildFilters();
+        setGoalsCollapsed(false);
+
+        document.getElementById('toggleGoalsBtn').addEventListener('click', () => {
+          setGoalsCollapsed(!goalsCollapsed);
+        });
 
         const grid = document.getElementById('grid');
         for (const h of hosts) grid.appendChild(buildCard(h));
