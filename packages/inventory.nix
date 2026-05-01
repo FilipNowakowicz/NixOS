@@ -369,6 +369,7 @@ let
         .tag-profile { color: var(--purple); border-color: #7a5af855; }
         .tag-port { color: var(--orange); border-color: #6e3a1e; }
         .tag-gap { color: var(--orange); border-color: #6e3a1e; }
+
         footer { margin-top: 2rem; color: var(--muted); font-size: 0.8rem; }
 
         @media (max-width: 1180px) {

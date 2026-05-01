@@ -28,7 +28,7 @@ Usage: $0 <command>
 Commands:
   flake-eval         Run flake evaluation only (no builds)
   light              Build lightweight blocking checks
-  host <name>        Build one host closure: main-ci, vm, homeserver, homeserver-vm
+  host <name>        Build one host closure: main-ci, vm-ci, homeserver, homeserver-vm
   hosts              Build all host system closures used in CI
   profile-test <name>
                      Build one profile test: profile-security, profile-observability, profile-hardening
@@ -48,8 +48,8 @@ build_host() {
   main-ci)
     build_attrs ".#nixosConfigurations.main-ci.config.system.build.toplevel"
     ;;
-  vm)
-    build_attrs ".#nixosConfigurations.vm.config.system.build.toplevel"
+  vm-ci)
+    build_attrs ".#nixosConfigurations.vm-ci.config.system.build.toplevel"
     ;;
   homeserver)
     build_attrs ".#nixosConfigurations.homeserver.config.system.build.toplevel"
@@ -110,7 +110,7 @@ host)
 hosts)
   build_attrs \
     ".#nixosConfigurations.main-ci.config.system.build.toplevel" \
-    ".#nixosConfigurations.vm.config.system.build.toplevel" \
+    ".#nixosConfigurations.vm-ci.config.system.build.toplevel" \
     ".#nixosConfigurations.homeserver.config.system.build.toplevel" \
     ".#nixosConfigurations.homeserver-vm.config.system.build.toplevel"
   ;;

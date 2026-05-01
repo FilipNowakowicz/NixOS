@@ -39,6 +39,13 @@ let
     "workstation"
   ];
 
+  knownHomeManagerPacks = [
+    "browsing"
+    "coding"
+    "latex"
+    "learning"
+  ];
+
   ok = cond: msg: if cond then true else throw msg;
 
   validateHost =
@@ -101,9 +108,17 @@ let
                   && builtins.all (profile: builtins.elem profile knownHomeManagerProfiles) cfg.homeManager.profiles
                 )
               )
+              && (
+                !cfg.homeManager ? packs
+                || (
+                  builtins.isList cfg.homeManager.packs
+                  && builtins.all builtins.isString cfg.homeManager.packs
+                  && builtins.all (pack: builtins.elem pack knownHomeManagerPacks) cfg.homeManager.packs
+                )
+              )
             )
           )
-          "${name}.homeManager: expected role in ${builtins.toJSON knownHomeManagerRoles} and profiles from ${builtins.toJSON knownHomeManagerProfiles}"
+          "${name}.homeManager: expected role in ${builtins.toJSON knownHomeManagerRoles}, profiles from ${builtins.toJSON knownHomeManagerProfiles}, and packs from ${builtins.toJSON knownHomeManagerPacks}"
         )
         (ok
           (
@@ -134,9 +149,12 @@ let
       system = "x86_64-linux";
       homeManager = {
         role = "desktop";
-        profiles = [
-          "desktop"
-          "workstation"
+        profiles = [ "desktop" ];
+        packs = [
+          "browsing"
+          "coding"
+          "latex"
+          "learning"
         ];
       };
       tailscale.tag = "workstation";
@@ -162,10 +180,8 @@ let
       system = "x86_64-linux";
       homeManager = {
         role = "desktop";
-        profiles = [
-          "desktop"
-          "workstation"
-        ];
+        profiles = [ "desktop" ];
+        packs = [ "coding" ];
       };
       sshPort = 2222;
       diskSize = "40G";

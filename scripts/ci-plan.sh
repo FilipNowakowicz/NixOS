@@ -27,7 +27,7 @@ module_microvm_guest='^modules/nixos/profiles/microvm-guest\.nix'
 module_microvm_host='^modules/nixos/microvms/homeserver-vm\.nix'
 
 home_all_hosts='^home/(profiles/base\.nix|users/user/common\.nix|files/nvim/)'
-home_desktop_hosts='^home/(profiles/(desktop|workstation)\.nix|users/user/home\.nix|theme/|files/(firefox|hypr|kitty|waybar|scripts/(theme-switch|waybar-weather|clipboard-pick)\.sh))'
+home_desktop_hosts='^home/(profiles/(desktop|workstation)\.nix|profiles/workflow-packs/|users/user/home\.nix|theme/|files/(firefox|hypr|kitty|waybar|scripts/(theme-switch|waybar-weather|clipboard-pick)\.sh))'
 home_server_hosts='^home/users/user/server\.nix'
 home_wsl='^home/users/user/wsl\.nix'
 
@@ -212,7 +212,7 @@ if [[ $main_ci == "true" ]]; then
   sep=","
 fi
 if [[ $vm == "true" ]]; then
-  hosts_matrix+="${sep}"'{"name":"vm"}'
+  hosts_matrix+="${sep}"'{"name":"vm-ci"}'
   sep=","
 fi
 if [[ $homeserver == "true" ]]; then

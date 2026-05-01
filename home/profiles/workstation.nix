@@ -1,28 +1,14 @@
 {
-  pkgs,
-  skipHeavyPackages ? false,
+  lib,
   ...
 }:
 {
-  home.packages =
-    with pkgs;
-    (
-      if skipHeavyPackages then
-        [ ]
-      else
-        [
-          # ── Browsers ──────────────────────────────────────────────────────────────
-          chromium
-          vscode
+  imports = [ ./workflow-packs ];
 
-          # ── PDF / TeX ────────────────────────────────────────────────────────────
-          zathura
-          texlive.combined.scheme-medium
-          texlab
-          ltex-ls-plus
-
-          # ── Learning ─────────────────────────────────────────────────────────────
-          anki
-        ]
-    );
+  workflowPacks = {
+    browsing.enable = lib.mkDefault true;
+    coding.enable = lib.mkDefault true;
+    latex.enable = lib.mkDefault true;
+    learning.enable = lib.mkDefault true;
+  };
 }

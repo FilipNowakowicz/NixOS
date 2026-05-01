@@ -22,6 +22,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      actions: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -46,6 +47,10 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Render PR body
+        run: |
+          node .github/scripts/render-flake-update-pr-body.js > "$RUNNER_TEMP/flake-update-pr-body.md"
+
       - name: Create Pull Request
         id: create-pr
         uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6
@@ -53,7 +58,7 @@ jobs:
           token: ${{ secrets.FLAKE_UPDATE_TOKEN }}
           commit-message: "chore: update flake.lock (weekly)"
           title: "[bot] weekly flake update"
-          body: "Automated weekly update of flake.lock. This PR auto-merges if the required merge gate passes."
+          body-path: ${{ runner.temp }}/flake-update-pr-body.md
           branch: automated/flake-update
           base: main
           delete-branch: true

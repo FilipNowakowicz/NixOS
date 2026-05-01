@@ -342,6 +342,7 @@ The flake provides several `devShells` and `apps` for development and maintenanc
 | `app`      | `vm`                   | Archived QEMU VM management: `nix run '.#vm' -- <action> <name>`                        |
 | `app`      | `reinstall-homeserver` | Runs `nixos-anywhere` for fresh homeserver install on real hardware.                    |
 | `package`  | `installer-iso`        | Minimal NixOS ISO: `nix build '.#installer-iso'`                                        |
+| `template` | `python`               | Python dev shell with `uv`, `ruff`, `basedpyright`: `nix flake init -t ~/nix#python`    |
 
 ---
 
@@ -478,6 +479,6 @@ Examples:
 - `flake.lock` and shared library changes run every host closure, smoke test, profile test, and closure diff.
 - Docs-only and WSL-only changes skip expensive host and VM jobs; the always-on eval, lint, and light checks still run.
 
-The workflow configures **Cachix** (`filipnowakowicz`) to accelerate builds. When `CACHIX_AUTH_TOKEN` is available, successful CI builds can seed the cache for local machines and later CI jobs.
+The workflow uses **magic-nix-cache** (DeterminateSystems) to accelerate builds via GitHub Actions cache. No secrets or external services required — cache is scoped to the repo automatically.
 
 <!-- > **KVM Requirement**: NixOS integration tests require KVM virtualization. While GitHub-hosted `ubuntu-latest` runners provide `/dev/kvm` for public repositories, private or self-hosted runners must have KVM support enabled to prevent silent job timeouts. -->
