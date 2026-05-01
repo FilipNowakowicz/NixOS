@@ -1,19 +1,7 @@
 name: Setup Nix
-description: Install Nix and optionally configure Cachix.
+description: Install Nix with magic-nix-cache for build caching.
 
 inputs:
-  cachix-name:
-    description: Cachix cache name. Leave empty to skip Cachix.
-    required: false
-    default: ""
-  cachix-auth-token:
-    description: Cachix auth token.
-    required: false
-    default: ""
-  cachix-push-filter:
-    description: Cachix push filter.
-    required: false
-    default: "(-source$|nixpkgs\\.tar\\.gz$)"
   extra-nix-config:
     description: Extra nix.conf lines.
     required: false
@@ -30,18 +18,5 @@ runs:
         nix_path: nixpkgs=channel:nixos-unstable
         extra_nix_config: ${{ inputs.extra-nix-config }}
 
-    - name: Cachix
-      id: cachix
-      if: inputs.cachix-name != ''
-      continue-on-error: true
-      uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
-      with:
-        name: ${{ inputs.cachix-name }}
-        authToken: ${{ inputs.cachix-auth-token }}
-        useDaemon: true
-        pushFilter: ${{ inputs.cachix-push-filter }}
-
-    - name: Warn if Cachix is unavailable
-      if: inputs.cachix-name != '' && steps.cachix.outcome == 'failure'
-      shell: bash
-      run: echo "::warning::Cachix setup failed; continuing without binary cache acceleration."
+    - name: Magic Nix Cache
+      uses: DeterminateSystems/magic-nix-cache-action@87b14cf437d03d37989d87f0fa5ce4f5dc1a330b # v8

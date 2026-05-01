@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 concurrency:
   group: nix-${{ github.event.pull_request.number || github.ref }}
@@ -16,8 +17,6 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  CACHIX_NAME: filipnowakowicz
-  CACHIX_PUSH_FILTER: "(-source$|nixpkgs\\.tar\\.gz$)"
 
 jobs:
   changes:
@@ -46,10 +45,6 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - uses: ./.github/actions/setup-nix
-        with:
-          cachix-name: ${{ env.CACHIX_NAME }}
-          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          cachix-push-filter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: Flake evaluation
         run: bash scripts/validate.sh flake-eval
@@ -61,10 +56,6 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - uses: ./.github/actions/setup-nix
-        with:
-          cachix-name: ${{ env.CACHIX_NAME }}
-          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          cachix-push-filter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: Build lightweight blocking checks
         run: bash scripts/validate.sh light
@@ -76,10 +67,6 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - uses: ./.github/actions/setup-nix
-        with:
-          cachix-name: ${{ env.CACHIX_NAME }}
-          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          cachix-push-filter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: Lint (statix)
         run: nix run nixpkgs#statix -- check .
@@ -109,10 +96,6 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - uses: ./.github/actions/setup-nix
-        with:
-          cachix-name: ${{ env.CACHIX_NAME }}
-          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          cachix-push-filter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: Build ${{ matrix.name }}
         run: bash scripts/validate.sh host "${{ matrix.name }}"
@@ -133,9 +116,6 @@ jobs:
 
       - uses: ./.github/actions/setup-nix
         with:
-          cachix-name: ${{ env.CACHIX_NAME }}
-          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          cachix-push-filter: ${{ env.CACHIX_PUSH_FILTER }}
           extra-nix-config: |
             experimental-features = nix-command flakes
             system-features = nixos-test benchmark big-parallel kvm
@@ -150,6 +130,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: write
       issues: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -157,10 +138,6 @@ jobs:
           fetch-depth: 0
 
       - uses: ./.github/actions/setup-nix
-        with:
-          cachix-name: ${{ env.CACHIX_NAME }}
-          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          cachix-push-filter: ${{ env.CACHIX_PUSH_FILTER }}
 
       - name: Compute closure diffs
         id: diff
