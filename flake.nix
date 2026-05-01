@@ -108,9 +108,11 @@
       vmRegistry = lib.filterAttrs (_: cfg: cfg ? sshPort && cfg ? diskSize) hostRegistry;
 
       mkNixos =
-        host: hmArgs:
+        host: variantArgs:
         let
           hostMeta = hostRegistry.${host};
+          extraModules = variantArgs.extraModules or [ ];
+          homeManagerExtraArgs = builtins.removeAttrs variantArgs [ "extraModules" ];
         in
         nixpkgs.lib.nixosSystem {
           inherit (hostMeta) system;
@@ -138,26 +140,56 @@
               home-manager.extraSpecialArgs = {
                 skipHeavyPackages = false;
               }
-              // hmArgs;
+              // homeManagerExtraArgs;
             }
-          ];
+          ]
+          ++ extraModules;
         };
 
       # ── Host-derived infrastructure ──────────────────────────────────────
       allNixosConfigs = lib.mapAttrs (name: _: mkNixos name { }) hostRegistry;
 
+      ciNixosConfigs = allNixosConfigs // {
+        main-ci = mkNixos "main" {
+          skipHeavyPackages = true;
+          extraModules = [
+            (
+              { lib, ... }:
+              {
+                services.fprintd.enable = lib.mkForce false;
+              }
+            )
+          ];
+        };
+
+        vm-ci = mkNixos "vm" {
+          skipHeavyPackages = true;
+        };
+      };
+
       deployableHosts = lib.filterAttrs (_: cfg: cfg ? deploy) hostRegistry;
 
-      allDeployNodes = lib.mapAttrs (name: cfg: {
-        hostname = name;
-        inherit (cfg.deploy) sshUser;
-        magicRollback = true;
-        autoRollback = true;
-        profiles.system = {
-          user = "root";
-          path = deploy-rs.lib.${cfg.system}.activate.nixos self.nixosConfigurations.${name};
-        };
-      }) deployableHosts;
+      mkDeployNodes =
+        nixosConfigs:
+        lib.mapAttrs (name: cfg: {
+          hostname = name;
+          inherit (cfg.deploy) sshUser;
+          magicRollback = true;
+          autoRollback = true;
+          profiles.system = {
+            user = "root";
+            path = deploy-rs.lib.${cfg.system}.activate.nixos nixosConfigs.${name};
+          };
+        }) deployableHosts;
+
+      allDeployNodes = mkDeployNodes ciNixosConfigs;
+
+      ciDeployNodes = mkDeployNodes (
+        ciNixosConfigs
+        // {
+          vm = ciNixosConfigs.vm-ci;
+        }
+      );
 
       # ── Configuration Invariant Checks ──────────────────────────────────
       invariantChecks =
@@ -626,7 +658,7 @@
           };
 
           checks =
-            deploy-rs.lib.${system}.deployChecks self.deploy
+            deploy-rs.lib.${system}.deployChecks { nodes = ciDeployNodes; }
             // invariantChecks
             // {
               lib-generators = import ./tests/lib/generators.nix {
@@ -650,9 +682,7 @@
 
       flake = {
         # ── NixOS Configurations ────────────────────────────────────────────
-        nixosConfigurations = allNixosConfigs // {
-          main-ci = mkNixos "main" { skipHeavyPackages = true; };
-        };
+        nixosConfigurations = ciNixosConfigs;
 
         # ── Deploy-RS ───────────────────────────────────────────────────────
         deploy.nodes = allDeployNodes;
