@@ -12,6 +12,7 @@
       "homeserver-vm"
       "vm"
     ];
+    services = [ "inventory" ];
     blockedBy = [ ];
     unlocks = [
       "config-dashboard-wave-2"
@@ -30,6 +31,7 @@
     area = "homeserver";
     summary = "Boot the existing homeserver configuration on GCE to unblock downstream homeserver work without waiting on physical hardware.";
     hosts = [ "homeserver" ];
+    services = [ "tailscale" "vaultwarden" "syncthing" ];
     blockedBy = [ ];
     unlocks = [
       "deploy-pipeline"
@@ -50,6 +52,7 @@
     area = "homeserver";
     summary = "Provision the real homeserver target, add its age identity, deploy it, and complete first-boot service bootstrap.";
     hosts = [ "homeserver" ];
+    services = [ "tailscale" "vaultwarden" "syncthing" "sops" "age" ];
     blockedBy = [ "hardware-access" ];
     unlocks = [
       "deploy-pipeline"
@@ -73,6 +76,7 @@
       "homeserver"
       "main"
     ];
+    services = [ "deploy-rs" "github-actions" "smoke-tests" ];
     blockedBy = [
       "gcp-homeserver"
       "real-hardware-homeserver"
@@ -91,6 +95,7 @@
       "homeserver"
       "main"
     ];
+    services = [ "restic" "b2" ];
     blockedBy = [
       "gcp-homeserver"
       "real-hardware-homeserver"
@@ -106,6 +111,7 @@
     area = "homeserver";
     summary = "Deploy AdGuard Home behind the homeserver and connect it to Tailscale MagicDNS for network-wide filtering.";
     hosts = [ "homeserver" ];
+    services = [ "adguard" "tailscale" ];
     blockedBy = [
       "gcp-homeserver"
       "real-hardware-homeserver"
@@ -125,6 +131,7 @@
       "homeserver"
       "homeserver-vm"
     ];
+    services = [ "lgtm" "grafana" "loki" "prometheus" ];
     blockedBy = [
       "gcp-homeserver"
       "real-hardware-homeserver"
@@ -145,6 +152,7 @@
       "homeserver-vm"
       "vm"
     ];
+    services = [ "inventory" "deploy-rs" "smoke-tests" ];
     blockedBy = [ "config-dashboard-wave-1" ];
     unlocks = [ ];
     docs = [
@@ -165,6 +173,7 @@
       "homeserver-vm"
       "vm"
     ];
+    services = [ "inventory" "checks" ];
     blockedBy = [ "config-dashboard-wave-1" ];
     unlocks = [ ];
     docs = [
@@ -183,6 +192,7 @@
       "main"
       "homeserver"
     ];
+    services = [ "lgtm" "auditd" "osquery" ];
     blockedBy = [ "lgtm-tuning" ];
     unlocks = [ ];
     docs = [ "docs/goals.md" ];
@@ -198,6 +208,7 @@
       "homeserver"
       "homeserver-vm"
     ];
+    services = [ "sandboxing" "restic" "lgtm" ];
     blockedBy = [ ];
     unlocks = [ ];
     docs = [ "docs/goals.md" ];
@@ -214,6 +225,7 @@
       "homeserver"
       "homeserver-vm"
     ];
+    services = [ "alloy" "grafana" "nginx" ];
     blockedBy = [ ];
     unlocks = [ ];
     docs = [ "docs/goals.md" ];
@@ -230,6 +242,7 @@
       "homeserver"
       "homeserver-vm"
     ];
+    services = [ "sops" "age" ];
     blockedBy = [ "deploy-pipeline" ];
     unlocks = [ ];
     docs = [ "docs/goals.md" ];

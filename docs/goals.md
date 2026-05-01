@@ -47,7 +47,7 @@ roadmap items from computed config findings.
   around a structured goals board plus a separate computed attention panel. Add
   machine-readable goals data, goal status groupings, and links back to
   canonical docs. Detailed plan: `docs/config-dashboard.md`.
-- [ ] **Config dashboard wave 2** (medium) -- add validation commands,
+- [x] **Config dashboard wave 2** (medium) -- add validation commands,
   dependency context, and goal-to-host/service relationships so the dashboard
   shows not just what matters, but how to act on it.
 - [ ] **Config dashboard wave 3** (medium) -- add closure-size, invariant, and

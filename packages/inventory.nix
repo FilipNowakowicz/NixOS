@@ -49,12 +49,16 @@ let
       };
     };
 
-  goalsData = map (goal: goal // {
-    docs = map (path: {
-      inherit path;
-      url = "${docsBaseUrl}/${path}";
-    }) (goal.docs or [ ]);
-  }) (import ../lib/goals.nix);
+  goalsData = map (
+    goal:
+    goal
+    // {
+      docs = map (path: {
+        inherit path;
+        url = "${docsBaseUrl}/${path}";
+      }) (goal.docs or [ ]);
+    }
+  ) (import ../lib/goals.nix);
 
   hostsData = lib.mapAttrsToList extractHost allNixosConfigs;
 
@@ -271,8 +275,22 @@ let
         .chip-area { color: var(--blue); border-color: rgba(88, 166, 255, 0.45); }
         .chip-priority { color: var(--yellow); border-color: rgba(210, 153, 34, 0.5); }
         .chip-host { color: var(--purple); border-color: rgba(188, 140, 255, 0.35); }
+        .chip-service { color: var(--blue); border-color: rgba(88, 166, 255, 0.35); }
         .chip-block { color: var(--orange); border-color: rgba(240, 136, 62, 0.45); }
         .chip-unlock { color: var(--green); border-color: rgba(63, 185, 80, 0.45); }
+        .chip-clickable {
+          cursor: pointer;
+          font: inherit;
+          appearance: none;
+        }
+        .chip-clickable:hover {
+          border-color: var(--blue);
+          color: var(--blue);
+        }
+        .goal-context {
+          display: grid;
+          gap: 0.5rem;
+        }
         .goal-docs {
           display: flex;
           flex-wrap: wrap;
@@ -313,6 +331,27 @@ let
           color: var(--muted);
           font-size: 0.8rem;
           padding: 0.6rem 0;
+        }
+
+        .command-list {
+          display: flex;
+          flex-direction: column;
+          gap: 0.35rem;
+        }
+        .command-chip {
+          display: block;
+          font-family: inherit;
+          font-size: 0.7rem;
+          color: var(--text);
+          background: rgba(13, 17, 23, 0.76);
+          border: 1px solid rgba(125, 133, 144, 0.2);
+          border-radius: 6px;
+          padding: 0.35rem 0.45rem;
+          overflow-x: auto;
+          white-space: nowrap;
+        }
+        .command-chip code {
+          font-family: inherit;
         }
 
         /* Host inventory */
@@ -369,6 +408,11 @@ let
         .tag-profile { color: var(--purple); border-color: #7a5af855; }
         .tag-port { color: var(--orange); border-color: #6e3a1e; }
         .tag-gap { color: var(--orange); border-color: #6e3a1e; }
+        .tag-command {
+          color: var(--blue);
+          border-color: rgba(88, 166, 255, 0.4);
+          background: rgba(13, 17, 23, 0.76);
+        }
 
         footer { margin-top: 2rem; color: var(--muted); font-size: 0.8rem; }
 
@@ -431,6 +475,7 @@ let
         const data = ${dataJson};
         const hosts = data.hosts;
         const goals = data.goals;
+        const hostByName = Object.fromEntries(hosts.map(host => [host.name, host]));
         const goalById = Object.fromEntries(goals.map(goal => [goal.id, goal]));
         const goalStatusOrder = ['now', 'blocked', 'next', 'later'];
         const goalStatusLabels = {
@@ -457,6 +502,38 @@ let
           p2: 1,
           p3: 2,
         };
+        const goalHostOrder = ['main', 'homeserver', 'homeserver-vm', 'vm'];
+        const goalHostLabels = {
+          main: 'main',
+          homeserver: 'homeserver',
+          'homeserver-vm': 'homeserver-vm',
+          vm: 'vm',
+        };
+        const goalServiceLabels = {
+          inventory: 'Inventory',
+          'deploy-rs': 'deploy-rs',
+          'github-actions': 'GitHub Actions',
+          'smoke-tests': 'Smoke tests',
+          restic: 'restic',
+          b2: 'Backblaze B2',
+          adguard: 'AdGuard Home',
+          tailscale: 'Tailscale',
+          lgtm: 'LGTM',
+          grafana: 'Grafana',
+          loki: 'Loki',
+          prometheus: 'Prometheus',
+          vaultwarden: 'Vaultwarden',
+          syncthing: 'Syncthing',
+          sops: 'SOPS',
+          age: 'age',
+          auditd: 'auditd',
+          osquery: 'osquery',
+          alloy: 'Alloy',
+          nginx: 'Nginx',
+          sandboxing: 'Sandboxing',
+          checks: 'Checks',
+        };
+        const goalServiceOrder = Object.keys(goalServiceLabels);
 
         const svcLabels = {
           openssh: 'SSH', tailscale: 'Tailscale', firewall: 'Firewall',
@@ -520,12 +597,62 @@ let
           return a.title.localeCompare(b.title);
         }
 
+        function goalHosts(goal) {
+          return goal.hosts ?? [];
+        }
+
+        function goalServices(goal) {
+          return goal.services ?? [];
+        }
+
+        function goalCommands(goal) {
+          const commands = [];
+          const seen = new Set();
+          const add = command => {
+            if (!seen.has(command)) {
+              seen.add(command);
+              commands.push(command);
+            }
+          };
+
+          for (const command of (goal.validate ?? [])) add(command);
+
+          for (const hostName of goalHosts(goal)) {
+            const host = hostByName[hostName];
+            if (!host) continue;
+
+            add(`nix build '.#nixosConfigurations.''${hostName}.config.system.build.toplevel'`);
+            if (hostName === 'main') {
+              add(`nh os switch --hostname main .`);
+            } else if (hostName === 'homeserver-vm') {
+              add(`nh os switch --hostname main .`);
+            } else if (host.deployable) {
+              add(`deploy '.#''${hostName}'`);
+            }
+          }
+
+          return commands;
+        }
+
+        function hostCommands(host) {
+          const commands = [`nix build '.#nixosConfigurations.''${host.name}.config.system.build.toplevel'`];
+          if (host.name === 'main' || host.name === 'homeserver-vm') {
+            commands.push(`nh os switch --hostname main .`);
+          } else if (host.deployable) {
+            commands.push(`deploy '.#''${host.name}'`);
+          }
+          return commands;
+        }
+
         function goalRefTitle(goalId) {
           return goalById[goalId]?.title ?? goalId;
         }
 
         function buildGoalCard(goal) {
           const card = el('article', 'goal-card priority-' + goal.priority);
+          const blockedBy = goal.blockedBy ?? [];
+          const unlocks = goal.unlocks ?? [];
+          const docs = goal.docs ?? [];
 
           const meta = el('div', 'goal-meta');
           meta.appendChild(el('span', 'chip chip-area', goalAreaLabels[goal.area] ?? goal.area));
@@ -535,38 +662,80 @@ let
           card.appendChild(el('div', 'goal-title', goal.title));
           card.appendChild(el('div', 'goal-summary', goal.summary));
 
-          if (goal.hosts.length) {
+          const context = el('div', 'goal-context');
+
+          const hosts = goalHosts(goal);
+          if (hosts.length) {
             const section = el('div', 'goal-section');
-            section.appendChild(el('div', 'goal-section-label', 'Hosts'));
+            section.appendChild(el('div', 'goal-section-label', 'Related Hosts'));
             const chips = el('div', 'chips');
-            for (const host of goal.hosts) chips.appendChild(el('span', 'chip chip-host', host));
+            for (const host of hosts) {
+              const btn = el('button', 'chip chip-host chip-clickable', goalHostLabels[host] ?? host);
+              btn.addEventListener('click', () => {
+                activeGoalHost = activeGoalHost === host ? null : host;
+                buildGoalFilters();
+                buildGoalBoard();
+              });
+              chips.appendChild(btn);
+            }
             section.appendChild(chips);
-            card.appendChild(section);
+            context.appendChild(section);
           }
 
-          if (goal.blockedBy.length) {
+          const services = goalServices(goal);
+          if (services.length) {
             const section = el('div', 'goal-section');
-            section.appendChild(el('div', 'goal-section-label', 'Blocked By'));
+            section.appendChild(el('div', 'goal-section-label', 'Related Services'));
             const chips = el('div', 'chips');
-            for (const blocker of goal.blockedBy) chips.appendChild(el('span', 'chip chip-block', goalRefTitle(blocker)));
+            for (const service of services) {
+              const btn = el('button', 'chip chip-service chip-clickable', goalServiceLabels[service] ?? service);
+              btn.addEventListener('click', () => {
+                activeGoalService = activeGoalService === service ? null : service;
+                buildGoalFilters();
+                buildGoalBoard();
+              });
+              chips.appendChild(btn);
+            }
             section.appendChild(chips);
-            card.appendChild(section);
+            context.appendChild(section);
           }
 
-          if (goal.unlocks.length) {
+          if (blockedBy.length) {
+            const section = el('div', 'goal-section');
+            section.appendChild(el('div', 'goal-section-label', 'Depends On'));
+            const chips = el('div', 'chips');
+            for (const blocker of blockedBy) chips.appendChild(el('span', 'chip chip-block', goalRefTitle(blocker)));
+            section.appendChild(chips);
+            context.appendChild(section);
+          }
+
+          if (unlocks.length) {
             const section = el('div', 'goal-section');
             section.appendChild(el('div', 'goal-section-label', 'Unlocks'));
             const chips = el('div', 'chips');
-            for (const unlock of goal.unlocks) chips.appendChild(el('span', 'chip chip-unlock', goalRefTitle(unlock)));
+            for (const unlock of unlocks) chips.appendChild(el('span', 'chip chip-unlock', goalRefTitle(unlock)));
             section.appendChild(chips);
-            card.appendChild(section);
+            context.appendChild(section);
           }
 
-          if (goal.docs.length) {
+          const commands = goalCommands(goal);
+          if (commands.length) {
+            const section = el('div', 'goal-section');
+            section.appendChild(el('div', 'goal-section-label', 'Validate'));
+            const list = el('div', 'command-list');
+            for (const command of commands) {
+              const cmd = el('div', 'command-chip', command);
+              list.appendChild(cmd);
+            }
+            section.appendChild(list);
+            context.appendChild(section);
+          }
+
+          if (docs.length) {
             const section = el('div', 'goal-section');
             section.appendChild(el('div', 'goal-section-label', 'Docs'));
             const links = el('div', 'goal-docs');
-            for (const doc of goal.docs) {
+            for (const doc of docs) {
               const link = el('a', 'goal-doc-link', doc.path);
               link.href = doc.url;
               link.target = '_blank';
@@ -574,20 +743,26 @@ let
               links.appendChild(link);
             }
             section.appendChild(links);
-            card.appendChild(section);
+            context.appendChild(section);
           }
+
+          card.appendChild(context);
 
           return card;
         }
 
         let activeGoalStatus = null;
         let activeGoalArea = null;
+        let activeGoalHost = null;
+        let activeGoalService = null;
 
         function filteredGoals() {
           return goals.filter(goal => {
             const statusMatch = !activeGoalStatus || goal.status === activeGoalStatus;
             const areaMatch = !activeGoalArea || goal.area === activeGoalArea;
-            return statusMatch && areaMatch;
+            const hostMatch = !activeGoalHost || goalHosts(goal).includes(activeGoalHost);
+            const serviceMatch = !activeGoalService || goalServices(goal).includes(activeGoalService);
+            return statusMatch && areaMatch && hostMatch && serviceMatch;
           });
         }
 
@@ -660,6 +835,38 @@ let
               buildGoalBoard();
             }));
           }
+
+          bar.appendChild(el('span', 'filter-group-label', 'Hosts'));
+          bar.appendChild(mkButton('All hosts', 'host', "", activeGoalHost === null, () => {
+            activeGoalHost = null;
+            buildGoalFilters();
+            buildGoalBoard();
+          }));
+
+          for (const host of goalHostOrder) {
+            if (!goals.some(goal => goalHosts(goal).includes(host))) continue;
+            bar.appendChild(mkButton(goalHostLabels[host] ?? host, 'host', host, activeGoalHost === host, () => {
+              activeGoalHost = activeGoalHost === host ? null : host;
+              buildGoalFilters();
+              buildGoalBoard();
+            }));
+          }
+
+          bar.appendChild(el('span', 'filter-group-label', 'Services'));
+          bar.appendChild(mkButton('All services', 'service', "", activeGoalService === null, () => {
+            activeGoalService = null;
+            buildGoalFilters();
+            buildGoalBoard();
+          }));
+
+          for (const service of goalServiceOrder) {
+            if (!goals.some(goal => goalServices(goal).includes(service))) continue;
+            bar.appendChild(mkButton(goalServiceLabels[service] ?? service, 'service', service, activeGoalService === service, () => {
+              activeGoalService = activeGoalService === service ? null : service;
+              buildGoalFilters();
+              buildGoalBoard();
+            }));
+          }
         }
 
         function buildAttentionPanel() {
@@ -712,6 +919,14 @@ let
             row.appendChild(el('span', 'meta-label', label));
             row.appendChild(el('span', 'meta-value', value));
             card.appendChild(row);
+          }
+
+          const commands = hostCommands(h);
+          if (commands.length) {
+            card.appendChild(el('div', 'section-title', 'Validate'));
+            const validateList = el('div', 'command-list');
+            for (const command of commands) validateList.appendChild(el('div', 'command-chip', command));
+            card.appendChild(validateList);
           }
 
           // Profiles

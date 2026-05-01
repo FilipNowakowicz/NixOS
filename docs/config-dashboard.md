@@ -169,6 +169,9 @@ than every eventual feature.
 Wave 2 should deepen operator usefulness without changing the basic dashboard
 model.
 
+Status: implemented in the dashboard as validation commands, related host and
+service chips, dependency context, and host/service filters.
+
 ### Scope
 
 - validation commands per host or goal
