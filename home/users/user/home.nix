@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }:
@@ -126,6 +127,11 @@ in
   ];
 
   themes.active = (import ../../theme/active.nix).name;
+
+  my.neovim.languages.tex = {
+    enable = lib.mkDefault config.workflowPacks.latex.enable;
+    grammar = lib.mkDefault config.workflowPacks.latex.enable;
+  };
 
   gtk.gtk4.theme = null;
 

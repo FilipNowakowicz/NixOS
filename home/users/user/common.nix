@@ -1,6 +1,13 @@
-{ config, ... }:
 {
-  imports = [ ../../profiles/base.nix ];
+  config,
+  lib,
+  ...
+}:
+{
+  imports = [
+    ../../profiles/base.nix
+    ../../neovim/module.nix
+  ];
 
   home = {
     username = "user";
@@ -77,7 +84,7 @@
     '';
   };
 
-  # Raw Lua via xdg.configFile intentionally: programs.neovim plugin packaging lags upstream and conflicts with treesitter grammars.
-  xdg.configFile."nvim".source = ../../files/nvim;
+  my.neovim.enable = lib.mkDefault true;
+
   xdg.userDirs.setSessionVariables = false;
 }

@@ -13,8 +13,6 @@ in
     home.packages = with pkgs; [
       zathura
       texlive.combined.scheme-medium
-      texlab
-      ltex-ls-plus
     ];
   };
 }
