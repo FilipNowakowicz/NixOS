@@ -48,9 +48,9 @@
   time.timeZone = lib.mkForce "Europe/London";
 
   nix.settings = {
-    extra-substituters = [ "https://filipnowakowicz.cachix.org" ];
+    extra-substituters = [ "https://pub-706604c9179043ac98604d6de4c65c2c.r2.dev" ];
     extra-trusted-public-keys = [
-      "filipnowakowicz.cachix.org-1:QLgU0QAdYs9DoRBgVLuJjPT5etR10sqv75+s/B68jCA="
+      "nix-cache-1:iXMQfhVxQ0A/q0kBj7cXFDjih82lFzVkPw30qYs0m5Y="
     ];
   };
 
@@ -326,13 +326,6 @@
 
   sops = {
     defaultSopsFile = ./secrets/secrets.yaml;
-    templates."cachix-netrc" = {
-      content = ''
-        machine filipnowakowicz.cachix.org
-        password ${config.sops.placeholder.cachix_auth_token}
-      '';
-      mode = "0400";
-    };
     secrets = {
       user_password.neededForUsers = true;
       observability_ingest_password = {
@@ -341,11 +334,8 @@
       };
       restic_password = { };
       initrd_ssh_host_ed25519_key = { };
-      cachix_auth_token = { };
     };
   };
-
-  nix.settings.netrc-file = config.sops.templates."cachix-netrc".path;
 
   users.groups.telemetry-ingest = { };
 

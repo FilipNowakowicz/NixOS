@@ -1,13 +1,11 @@
 name: Setup Nix
-description: Install Nix with magic-nix-cache for build caching.
+description: Install Nix with R2 binary cache.
 
 inputs:
   extra-nix-config:
-    description: Extra nix.conf lines.
+    description: Additional nix.conf lines (e.g. system-features for KVM tests).
     required: false
-    default: |
-      experimental-features = nix-command flakes
-      max-jobs = auto
+    default: ""
 
 runs:
   using: composite
@@ -16,7 +14,9 @@ runs:
       uses: cachix/install-nix-action@e4f4bde15728394ded896ef07491a85f2eb24956 # v31
       with:
         nix_path: nixpkgs=channel:nixos-unstable
-        extra_nix_config: ${{ inputs.extra-nix-config }}
-
-    - name: Magic Nix Cache
-      uses: DeterminateSystems/magic-nix-cache-action@87b14cf437d03d37989d87f0fa5ce4f5dc1a330b # v8
+        extra_nix_config: |
+          experimental-features = nix-command flakes
+          max-jobs = auto
+          substituters = https://cache.nixos.org https://pub-706604c9179043ac98604d6de4c65c2c.r2.dev
+          trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-cache-1:iXMQfhVxQ0A/q0kBj7cXFDjih82lFzVkPw30qYs0m5Y=
+          ${{ inputs.extra-nix-config }}

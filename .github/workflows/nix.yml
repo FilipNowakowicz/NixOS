@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: read
-  actions: write
 
 concurrency:
   group: nix-${{ github.event.pull_request.number || github.ref }}
@@ -60,6 +59,15 @@ jobs:
       - name: Build lightweight blocking checks
         run: bash scripts/validate.sh light
 
+      - name: Push to cache
+        if: success()
+        continue-on-error: true
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          CACHE_SIGNING_KEY: ${{ secrets.CACHE_SIGNING_KEY }}
+        run: bash scripts/push-to-r2.sh light
+
   lint:
     needs: eval
     runs-on: ubuntu-latest
@@ -98,7 +106,19 @@ jobs:
       - uses: ./.github/actions/setup-nix
 
       - name: Build ${{ matrix.name }}
-        run: bash scripts/validate.sh host "${{ matrix.name }}"
+        env:
+          HOST: ${{ matrix.name }}
+        run: bash scripts/validate.sh host "$HOST"
+
+      - name: Push ${{ matrix.name }} to cache
+        if: success()
+        continue-on-error: true
+        env:
+          HOST: ${{ matrix.name }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          CACHE_SIGNING_KEY: ${{ secrets.CACHE_SIGNING_KEY }}
+        run: bash scripts/push-to-r2.sh host "$HOST"
 
   tests:
     needs: [changes, eval, hosts]
@@ -117,20 +137,31 @@ jobs:
       - uses: ./.github/actions/setup-nix
         with:
           extra-nix-config: |
-            experimental-features = nix-command flakes
             system-features = nixos-test benchmark big-parallel kvm
-            max-jobs = auto
 
       - name: Build ${{ matrix.name }}
-        run: bash scripts/validate.sh "${{ matrix.command }}" "${{ matrix.target }}"
+        env:
+          CMD: ${{ matrix.command }}
+          TARGET: ${{ matrix.target }}
+        run: bash scripts/validate.sh "$CMD" "$TARGET"
+
+      - name: Push ${{ matrix.name }} to cache
+        if: success()
+        continue-on-error: true
+        env:
+          CMD: ${{ matrix.command }}
+          TARGET: ${{ matrix.target }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          CACHE_SIGNING_KEY: ${{ secrets.CACHE_SIGNING_KEY }}
+        run: bash scripts/push-to-r2.sh "$CMD" "$TARGET"
 
   closure-diff:
     if: github.event_name == 'pull_request' && needs.changes.outputs.closure == 'true'
-    needs: changes
+    needs: [changes, hosts]
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      actions: write
       issues: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -144,8 +175,8 @@ jobs:
         env:
           DIFF_MAIN: ${{ needs.changes.outputs.closure_main }}
           DIFF_HOMESERVER: ${{ needs.changes.outputs.closure_homeserver }}
+          BASE_REF: origin/${{ github.base_ref }}
         run: |
-          BASE_REF="origin/${{ github.base_ref }}"
           TARGET_REF="HEAD"
 
           {
