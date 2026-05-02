@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Push the outputs of a validate.sh command to the R2 binary cache.
-# Usage: push-to-r2.sh <validate.sh args...>
+# Push build outputs to the R2 binary cache.
+# Usage: push-to-r2.sh [<validate.sh args...>]
 # Env: R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, CACHE_SIGNING_KEY
 set -euo pipefail
 
@@ -19,7 +19,15 @@ export AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
 
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 
-mapfile -t paths < <(PRINT_PATHS=1 bash "$script_dir/validate.sh" "$@")
+if [[ -n ${PATHS_FILE:-} ]]; then
+  if [[ ! -f ${PATHS_FILE} ]]; then
+    echo "PATHS_FILE does not exist: ${PATHS_FILE}" >&2
+    exit 1
+  fi
+  mapfile -t paths <"$PATHS_FILE"
+else
+  mapfile -t paths < <(PRINT_PATHS=1 bash "$script_dir/validate.sh" "$@")
+fi
 
 if [[ ${#paths[@]} -eq 0 ]]; then
   echo "No paths to push." >&2

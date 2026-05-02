@@ -13,6 +13,8 @@ ci_core_change='^(\.github/workflows/nix\.yml|\.github/actions/setup-nix/|script
 flake_or_lib_change='^(flake\.nix|flake\.lock|lib/)'
 closure_script_change='^(scripts/closure-diff\.sh|\.github/scripts/upsert-closure-comment\.js)'
 tests_change='^tests/nixos/'
+docs_change='^(README\.md|docs/|.*\.md$|.*/CLAUDE\.md$|AGENTS\.md$)'
+package_change='^packages/'
 main_change='^hosts/main/'
 vm_change='^hosts/vm/'
 homeserver_change='^hosts/homeserver/'
@@ -26,11 +28,16 @@ module_vm_host='^modules/nixos/profiles/vm\.nix'
 module_microvm_guest='^modules/nixos/profiles/microvm-guest\.nix'
 module_microvm_host='^modules/nixos/microvms/homeserver-vm\.nix'
 
-home_all_hosts='^home/(profiles/base\.nix|users/user/common\.nix|files/nvim/)'
-home_desktop_hosts='^home/(profiles/(desktop|workstation)\.nix|profiles/workflow-packs/|users/user/home\.nix|theme/|files/(firefox|hypr|kitty|waybar|scripts/(theme-switch|waybar-weather|clipboard-pick)\.sh))'
+home_all_hosts='^home/(profiles/base\.nix|users/user/common\.nix)'
+home_desktop_hosts='^home/(neovim/|profiles/(desktop|workstation)\.nix|profiles/workflow-packs/|users/user/home\.nix|theme/|files/(nvim/|firefox|hypr|kitty|waybar|scripts/(theme-switch|waybar-weather|clipboard-pick)\.sh))'
 home_server_hosts='^home/users/user/server\.nix'
 home_wsl='^home/users/user/wsl\.nix'
 
+docs_only=false
+run_eval=false
+run_lint=false
+run_light=false
+run_packages=false
 main_ci=false
 vm=false
 homeserver=false
@@ -70,6 +77,7 @@ select_server_hosts() {
 
 changed_files="${CI_CHANGED_FILES:-}"
 if [[ $event_name == "pull_request" ]]; then
+  docs_only=true
   if [[ -z $changed_files ]]; then
     if [[ -z $base_sha ]] || ! git cat-file -e "$base_sha^{commit}" 2>/dev/null; then
       base_sha="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
@@ -77,6 +85,11 @@ if [[ $event_name == "pull_request" ]]; then
     changed_files="$(git diff --name-only "$base_sha" HEAD)"
   fi
 else
+  docs_only=false
+  run_eval=true
+  run_lint=true
+  run_light=true
+  run_packages=true
   select_all_hosts
   select_all_tests
 fi
@@ -86,6 +99,15 @@ if [[ -n $changed_files ]]; then
   unknown_home_changed=false
 
   while IFS= read -r path; do
+    [[ -z $path ]] && continue
+
+    if ! grep -qE "${docs_change}" <<<"$path"; then
+      docs_only=false
+      run_eval=true
+      run_lint=true
+      run_light=true
+    fi
+
     if
       [[ $path =~ ^modules/nixos/ ]] &&
         ! grep -qE "${module_all_hosts}|${module_desktop_hosts}|${module_server_hosts}|${module_machine_hosts}|${module_vm_host}|${module_microvm_guest}|${module_microvm_host}" <<<"$path"
@@ -102,8 +124,13 @@ if [[ -n $changed_files ]]; then
   done <<<"$changed_files"
 
   if grep -qE "${ci_core_change}|${flake_or_lib_change}" <<<"$changed_files"; then
+    run_packages=true
     select_all_hosts
     select_all_tests
+  fi
+
+  if grep -qE "${package_change}" <<<"$changed_files"; then
+    run_packages=true
   fi
 
   if grep -qE "${tests_change}" <<<"$changed_files"; then
@@ -178,6 +205,7 @@ if [[ -n $changed_files ]]; then
   fi
 
   if [[ $unknown_module_changed == "true" ]]; then
+    run_packages=true
     select_all_hosts
     select_all_tests
   fi
@@ -195,6 +223,7 @@ if [[ -n $changed_files ]]; then
   fi
 
   if [[ $unknown_home_changed == "true" ]]; then
+    run_packages=true
     select_all_hosts
   fi
 fi
@@ -204,6 +233,13 @@ emit_bool() {
   local value=$2
   echo "$name=$value" >>"$GITHUB_OUTPUT"
 }
+
+if [[ $docs_only == "true" ]]; then
+  run_eval=false
+  run_lint=false
+  run_light=false
+  run_packages=false
+fi
 
 hosts_matrix='{"include":['
 sep=""
@@ -260,6 +296,11 @@ else
   emit_bool closure false
 fi
 
+emit_bool docs_only "$docs_only"
+emit_bool run_eval "$run_eval"
+emit_bool run_lint "$run_lint"
+emit_bool run_light "$run_light"
+emit_bool run_packages "$run_packages"
 emit_bool closure_main "$closure_main"
 emit_bool closure_homeserver "$closure_homeserver"
 
@@ -274,4 +315,5 @@ emit_bool closure_homeserver "$closure_homeserver"
 
 echo "Selected hosts: $hosts_matrix"
 echo "Selected tests: $tests_matrix"
+echo "Job selectors: docs_only=$docs_only eval=$run_eval lint=$run_lint light=$run_light packages=$run_packages"
 echo "Closure selectors: main=$closure_main homeserver=$closure_homeserver"

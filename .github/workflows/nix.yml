@@ -3,8 +3,6 @@ name: Nix flake check
 on:
   pull_request:
   merge_group:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -21,6 +19,11 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
+      docs_only: ${{ steps.plan.outputs.docs_only }}
+      run_eval: ${{ steps.plan.outputs.run_eval }}
+      run_lint: ${{ steps.plan.outputs.run_lint }}
+      run_light: ${{ steps.plan.outputs.run_light }}
+      run_packages: ${{ steps.plan.outputs.run_packages }}
       hosts: ${{ steps.plan.outputs.hosts }}
       hosts_matrix: ${{ steps.plan.outputs.hosts_matrix }}
       tests: ${{ steps.plan.outputs.tests }}
@@ -38,7 +41,15 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: bash scripts/ci-plan.sh
 
+      - name: Validate planner coverage
+        run: bash scripts/test-ci-plan.sh
+
+      - name: Validate cache config consistency
+        run: bash scripts/check-cache-config.sh
+
   eval:
+    needs: changes
+    if: needs.changes.outputs.run_eval == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -49,38 +60,37 @@ jobs:
         run: bash scripts/validate.sh flake-eval
 
   checks-light:
-    needs: eval
+    needs: [changes, eval]
+    if: |
+      needs.changes.outputs.run_light == 'true'
+      && (needs.eval.result == 'success' || needs.eval.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Free disk space
-        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
-        with:
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: false
-
       - uses: ./.github/actions/setup-nix
 
       - name: Build lightweight blocking checks
-        run: bash scripts/validate.sh light
+        env:
+          PATHS_FILE: ${{ runner.temp }}/checks-light-paths.txt
+        run: |
+          rm -f "$PATHS_FILE"
+          PRINT_PATHS=1 bash scripts/validate.sh light | tee "$PATHS_FILE" >/dev/null
 
       - name: Push to cache
         if: success()
         continue-on-error: true
         env:
+          PATHS_FILE: ${{ runner.temp }}/checks-light-paths.txt
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           CACHE_SIGNING_KEY: ${{ secrets.CACHE_SIGNING_KEY }}
-        run: bash scripts/push-to-r2.sh light
+        run: bash scripts/push-to-r2.sh
 
   lint:
-    needs: eval
+    needs: changes
+    if: needs.changes.outputs.run_lint == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -104,9 +114,39 @@ jobs:
           fi
           nix run nixpkgs#shellcheck -- "${shell_scripts[@]}"
 
+  packages:
+    needs: [changes, eval]
+    if: |
+      needs.changes.outputs.run_packages == 'true'
+      && needs.eval.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: ./.github/actions/setup-nix
+
+      - name: Build inventory package
+        env:
+          PATHS_FILE: ${{ runner.temp }}/inventory-paths.txt
+        run: |
+          rm -f "$PATHS_FILE"
+          PRINT_PATHS=1 bash scripts/validate.sh package inventory | tee "$PATHS_FILE" >/dev/null
+
+      - name: Push inventory package to cache
+        if: success()
+        continue-on-error: true
+        env:
+          PATHS_FILE: ${{ runner.temp }}/inventory-paths.txt
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          CACHE_SIGNING_KEY: ${{ secrets.CACHE_SIGNING_KEY }}
+        run: bash scripts/push-to-r2.sh
+
   hosts:
     needs: [changes, eval]
-    if: needs.changes.outputs.hosts == 'true'
+    if: |
+      needs.changes.outputs.hosts == 'true'
+      && needs.eval.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
@@ -115,32 +155,26 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Free disk space
-        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
-        with:
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: false
-
       - uses: ./.github/actions/setup-nix
 
       - name: Build ${{ matrix.name }}
         env:
           HOST: ${{ matrix.name }}
-        run: bash scripts/validate.sh host "$HOST"
+          PATHS_FILE: ${{ runner.temp }}/${{ matrix.name }}-paths.txt
+        run: |
+          rm -f "$PATHS_FILE"
+          PRINT_PATHS=1 bash scripts/validate.sh host "$HOST" | tee "$PATHS_FILE" >/dev/null
 
       - name: Push ${{ matrix.name }} to cache
         if: success()
         continue-on-error: true
         env:
           HOST: ${{ matrix.name }}
+          PATHS_FILE: ${{ runner.temp }}/${{ matrix.name }}-paths.txt
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           CACHE_SIGNING_KEY: ${{ secrets.CACHE_SIGNING_KEY }}
-        run: bash scripts/push-to-r2.sh host "$HOST"
+        run: bash scripts/push-to-r2.sh
 
   tests:
     needs: [changes, eval, hosts]
@@ -157,15 +191,10 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Free disk space
-        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
-        with:
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: false
+      - name: Reclaim runner disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          docker system prune -af || true
 
       - uses: ./.github/actions/setup-nix
         with:
@@ -176,7 +205,10 @@ jobs:
         env:
           CMD: ${{ matrix.command }}
           TARGET: ${{ matrix.target }}
-        run: bash scripts/validate.sh "$CMD" "$TARGET"
+          PATHS_FILE: ${{ runner.temp }}/${{ matrix.name }}-paths.txt
+        run: |
+          rm -f "$PATHS_FILE"
+          PRINT_PATHS=1 bash scripts/validate.sh "$CMD" "$TARGET" | tee "$PATHS_FILE" >/dev/null
 
       - name: Push ${{ matrix.name }} to cache
         if: success()
@@ -184,13 +216,17 @@ jobs:
         env:
           CMD: ${{ matrix.command }}
           TARGET: ${{ matrix.target }}
+          PATHS_FILE: ${{ runner.temp }}/${{ matrix.name }}-paths.txt
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           CACHE_SIGNING_KEY: ${{ secrets.CACHE_SIGNING_KEY }}
-        run: bash scripts/push-to-r2.sh "$CMD" "$TARGET"
+        run: bash scripts/push-to-r2.sh
 
   closure-diff:
-    if: github.event_name == 'pull_request' && needs.changes.outputs.closure == 'true'
+    if: |
+      github.event_name == 'pull_request'
+      && needs.changes.outputs.closure == 'true'
+      && (needs.hosts.result == 'success' || needs.hosts.result == 'skipped')
     needs: [changes, hosts]
     runs-on: ubuntu-latest
     permissions:
@@ -251,40 +287,67 @@ jobs:
 
   merge-gate:
     needs:
+      - changes
       - eval
       - checks-light
       - lint
+      - packages
       - hosts
       - tests
-      - closure-diff
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Verify all required checks passed
         env:
+          RESULT_CHANGES: ${{ needs.changes.result }}
           RESULT_EVAL: ${{ needs.eval.result }}
           RESULT_CHECKS_LIGHT: ${{ needs.checks-light.result }}
           RESULT_LINT: ${{ needs.lint.result }}
+          RESULT_PACKAGES: ${{ needs.packages.result }}
           RESULT_HOSTS: ${{ needs.hosts.result }}
           RESULT_TESTS: ${{ needs.tests.result }}
-          RESULT_CLOSURE: ${{ needs.closure-diff.result }}
+          PLAN_DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}
+          PLAN_EVAL: ${{ needs.changes.outputs.run_eval }}
+          PLAN_LINT: ${{ needs.changes.outputs.run_lint }}
+          PLAN_LIGHT: ${{ needs.changes.outputs.run_light }}
+          PLAN_PACKAGES: ${{ needs.changes.outputs.run_packages }}
+          PLAN_HOSTS: ${{ needs.changes.outputs.hosts }}
+          PLAN_TESTS: ${{ needs.changes.outputs.tests }}
         run: |
+          require_when_planned() {
+            local name=$1
+            local planned=$2
+            local result=$3
+
+            if [[ "$planned" == "true" ]]; then
+              [[ "$result" == "success" ]] || { echo "FAIL: $name ($result)"; fail=1; }
+            else
+              [[ "$result" == "skipped" ]] || { echo "FAIL: $name should have been skipped ($result)"; fail=1; }
+            fi
+          }
+
+          echo "changes:       $RESULT_CHANGES"
           echo "eval:          $RESULT_EVAL"
           echo "checks-light:  $RESULT_CHECKS_LIGHT"
           echo "lint:          $RESULT_LINT"
+          echo "packages:      $RESULT_PACKAGES"
           echo "hosts:         $RESULT_HOSTS"
           echo "tests:         $RESULT_TESTS"
-          echo "closure-diff:  $RESULT_CLOSURE"
+          echo "docs-only:     $PLAN_DOCS_ONLY"
+          echo "plan eval:     $PLAN_EVAL"
+          echo "plan lint:     $PLAN_LINT"
+          echo "plan light:    $PLAN_LIGHT"
+          echo "plan packages: $PLAN_PACKAGES"
+          echo "plan hosts:    $PLAN_HOSTS"
+          echo "plan tests:    $PLAN_TESTS"
 
           fail=0
-          [[ "$RESULT_EVAL" == "success" ]] || { echo "FAIL: eval ($RESULT_EVAL)"; fail=1; }
-          [[ "$RESULT_CHECKS_LIGHT" == "success" ]] || { echo "FAIL: checks-light ($RESULT_CHECKS_LIGHT)"; fail=1; }
-          [[ "$RESULT_LINT" == "success" ]] || { echo "FAIL: lint ($RESULT_LINT)"; fail=1; }
-          [[ "$RESULT_HOSTS" == "success" || "$RESULT_HOSTS" == "skipped" ]] \
-            || { echo "FAIL: hosts ($RESULT_HOSTS)"; fail=1; }
-          [[ "$RESULT_TESTS" == "success" || "$RESULT_TESTS" == "skipped" ]] \
-            || { echo "FAIL: tests ($RESULT_TESTS)"; fail=1; }
-          [[ "$RESULT_CLOSURE" == "success" || "$RESULT_CLOSURE" == "skipped" ]] \
-            || { echo "FAIL: closure-diff ($RESULT_CLOSURE)"; fail=1; }
+          [[ "$RESULT_CHANGES" == "success" ]] || { echo "FAIL: changes ($RESULT_CHANGES)"; fail=1; }
+          require_when_planned "eval" "$PLAN_EVAL" "$RESULT_EVAL"
+          require_when_planned "checks-light" "$PLAN_LIGHT" "$RESULT_CHECKS_LIGHT"
+          require_when_planned "lint" "$PLAN_LINT" "$RESULT_LINT"
+          require_when_planned "packages" "$PLAN_PACKAGES" "$RESULT_PACKAGES"
+          require_when_planned "hosts" "$PLAN_HOSTS" "$RESULT_HOSTS"
+          require_when_planned "tests" "$PLAN_TESTS" "$RESULT_TESTS"
 
           exit $fail

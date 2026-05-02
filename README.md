@@ -460,6 +460,7 @@ The repository uses GitHub Actions (`.github/workflows/nix.yml` and `flake-updat
 | **Flake Evaluation** | Runs `bash scripts/validate.sh flake-eval`, which keeps `nix flake check --no-build` as a fast evaluation gate for flake outputs and configs. |
 | **Light Checks**     | Runs `bash scripts/validate.sh light` for deploy checks, invariants, SOPS bootstrap validation, and lightweight library tests.                |
 | **Linting**          | Runs `statix` (Nix), `deadnix` (dead code), `treefmt` (formatting), and `shellcheck` (shell scripts).                                         |
+| **Package Builds**   | Builds repo-native package outputs used in CI, currently `nix build '.#packages.x86_64-linux.inventory'`.                                     |
 | **Host Builds**      | Matrix-builds each host closure via `bash scripts/validate.sh host <name>`.                                                                   |
 | **Smoke Tests**      | Runs `bash scripts/validate.sh smoke-vm` and `smoke-homeserver` in full NixOS environments when relevant paths change.                        |
 | **Profile Tests**    | Matrix-builds each profile test via `bash scripts/validate.sh profile-test <name>`.                                                           |
@@ -477,8 +478,9 @@ Examples:
 - Server Home Manager changes build `homeserver` and `homeserver-vm`, but skip desktop closures.
 - VM host changes run the `vm` closure and desktop VM smoke test.
 - `flake.lock` and shared library changes run every host closure, smoke test, profile test, and closure diff.
-- Docs-only and WSL-only changes skip expensive host and VM jobs; the always-on eval, lint, and light checks still run.
+- Docs-only changes now stop at the planner and merge gate.
+- WSL-only changes skip expensive host and VM jobs; eval, lint, and light checks still run.
 
-The workflow uses **magic-nix-cache** (DeterminateSystems) to accelerate builds via GitHub Actions cache. No secrets or external services required — cache is scoped to the repo automatically.
+The workflow uses a signed Cloudflare R2 binary cache. CI builds capture store paths during each job and push them to R2 after a successful build so later jobs can substitute them instead of rebuilding.
 
 <!-- > **KVM Requirement**: NixOS integration tests require KVM virtualization. While GitHub-hosted `ubuntu-latest` runners provide `/dev/kvm` for public repositories, private or self-hosted runners must have KVM support enabled to prevent silent job timeouts. -->

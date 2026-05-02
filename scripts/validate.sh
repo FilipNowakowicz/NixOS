@@ -34,6 +34,7 @@ Commands:
   light              Build lightweight blocking checks
   host <name>        Build one host closure: main-ci, vm-ci, homeserver, homeserver-vm
   hosts              Build all host system closures used in CI
+  package <name>     Build one package output used in CI
   profile-test <name>
                      Build one profile test: profile-security, profile-observability, profile-hardening
   smoke-vm           Build the desktop VM smoke test
@@ -86,6 +87,18 @@ build_profile_test() {
   esac
 }
 
+build_package() {
+  case "$1" in
+  inventory)
+    build_attrs ".#packages.${system}.inventory"
+    ;;
+  *)
+    echo "Unknown package target: $1" >&2
+    exit 1
+    ;;
+  esac
+}
+
 case "$command" in
 flake-eval)
   nix flake check --no-build --show-trace
@@ -109,6 +122,10 @@ light)
 
 host)
   build_host "${target:?Usage: $0 host <name>}"
+  ;;
+
+package)
+  build_package "${target:?Usage: $0 package <name>}"
   ;;
 
 hosts)

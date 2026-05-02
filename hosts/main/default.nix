@@ -50,7 +50,8 @@
   nix.settings = {
     extra-substituters = [ "https://pub-706604c9179043ac98604d6de4c65c2c.r2.dev" ];
     extra-trusted-public-keys = [
-      "nix-cache-1:iXMQfhVxQ0A/q0kBj7cXFDjih82lFzVkPw30qYs0m5Y="
+      # Keep this in sync with the CI signing key used for the R2 binary cache.
+      "nix-cache-1:eEcFiWPHQpJmlcnNeGoPg6xxOp3itNZiWwFaE+NebIk="
     ];
   };
 
