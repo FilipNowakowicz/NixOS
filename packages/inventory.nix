@@ -25,15 +25,18 @@ let
               violations = lib.filter (msg: msg != "") [
                 (lib.optionalString (!c.services.fail2ban.enable) "services.fail2ban.enable must be true")
                 (lib.optionalString (c.services.fail2ban.maxretry > 3) "services.fail2ban.maxretry must be <= 3")
-                (lib.optionalString (c.services.fail2ban.bantime != "30m") "services.fail2ban.bantime must be \"30m\"")
-                (lib.optionalString (!c.services.fail2ban."bantime-increment".enable) "services.fail2ban.bantime-increment.enable must be true")
-                (lib.optionalString (c.services.fail2ban."bantime-increment".maxtime == null) "services.fail2ban.bantime-increment.maxtime must be set")
+                (lib.optionalString (
+                  c.services.fail2ban.bantime != "30m"
+                ) "services.fail2ban.bantime must be \"30m\"")
+                (lib.optionalString (
+                  !c.services.fail2ban."bantime-increment".enable
+                ) "services.fail2ban.bantime-increment.enable must be true")
+                (lib.optionalString (
+                  c.services.fail2ban."bantime-increment".maxtime == null
+                ) "services.fail2ban.bantime-increment.maxtime must be set")
               ];
             in
-            if !c.services.openssh.enable then
-              true
-            else
-              violations == [ ];
+            if !c.services.openssh.enable then true else violations == [ ];
         }
         {
           name = "observability client uses canonical ingest username";
@@ -79,11 +82,12 @@ let
                   backup = c.services.restic.backups.local or null;
                 in
                 backup != null
-                && (backup.paths or [ ]) == [
-                  "/home/user/.ssh"
-                  "/home/user/.gnupg"
-                  "/home/user/nix"
-                ]
+                &&
+                  (backup.paths or [ ]) == [
+                    "/home/user/.ssh"
+                    "/home/user/.gnupg"
+                    "/home/user/nix"
+                  ]
                 && (backup.passwordFile or "") != ""
                 && lib.hasPrefix "/run/secrets/" (backup.passwordFile or "")
                 && backup.initialize
@@ -120,7 +124,12 @@ let
             }
             {
               name = "SSH and HTTPS are not globally open";
-              check = c: !(lib.any (port: builtins.elem port (c.networking.firewall.allowedTCPPorts or [ ])) [ 22 443 ]);
+              check =
+                c:
+                !(lib.any (port: builtins.elem port (c.networking.firewall.allowedTCPPorts or [ ])) [
+                  22
+                  443
+                ]);
             }
             {
               name = "SSH and HTTPS stay Tailscale-only";
@@ -139,7 +148,11 @@ let
         else
           [ ];
 
-      results = invariants.evaluateAssertions (commonAssertions ++ hostSpecificAssertions ++ invariants.mkRegistryAssertions name hostRegistry.${name}) cfg.config;
+      results = invariants.evaluateAssertions (
+        commonAssertions
+        ++ hostSpecificAssertions
+        ++ invariants.mkRegistryAssertions name hostRegistry.${name}
+      ) cfg.config;
       failed = lib.filter (result: !result.passed) results;
     in
     {

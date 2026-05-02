@@ -44,15 +44,15 @@ next step is to turn it into a better operator surface by separating manual
 roadmap items from computed config findings.
 
 - [x] **Config dashboard wave 1** (medium) -- redesign `nix build '.#inventory'`
-  around a structured goals board plus a separate computed attention panel. Add
-  machine-readable goals data, goal status groupings, and links back to
-  canonical docs. Detailed plan: `docs/config-dashboard.md`.
+      around a structured goals board plus a separate computed attention panel. Add
+      machine-readable goals data, goal status groupings, and links back to
+      canonical docs. Detailed plan: `docs/config-dashboard.md`.
 - [x] **Config dashboard wave 2** (medium) -- add validation commands,
-  dependency context, and goal-to-host/service relationships so the dashboard
-  shows not just what matters, but how to act on it.
+      dependency context, and goal-to-host/service relationships so the dashboard
+      shows not just what matters, but how to act on it.
 - [x] **Config dashboard wave 3** (medium) -- add closure-size, invariant, and
-  validation-health signals so the dashboard exposes cost, drift, and proof of
-  health alongside inventory and roadmap state.
+      validation-health signals so the dashboard exposes cost, drift, and proof of
+      health alongside inventory and roadmap state.
 
 ### Homeserver
 
