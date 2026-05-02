@@ -19,4 +19,5 @@ runs:
           max-jobs = auto
           substituters = https://cache.nixos.org https://pub-706604c9179043ac98604d6de4c65c2c.r2.dev
           trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-cache-1:eEcFiWPHQpJmlcnNeGoPg6xxOp3itNZiWwFaE+NebIk=
+          http-connections = 10
           ${{ inputs.extra-nix-config }}
