@@ -26,6 +26,8 @@
       # ── Desktop UX ─────────────────────────────────────────────────────────
       pavucontrol
       blueman
+      thunar
+      tumbler
 
       # ── Browsers / Apps ────────────────────────────────────────────────────
       discord
@@ -43,6 +45,12 @@
       cbonsai
       cmatrix
     ];
+
+  programs.yazi = {
+    enable = true;
+    shellWrapperName = "y";
+    enableZshIntegration = true;
+  };
 
   # Firefox with VA-API hardware video decoding (Intel iGPU on Wayland)
   programs.firefox = {

@@ -201,6 +201,15 @@ in
         "text/html" = "firefox.desktop";
         "x-scheme-handler/http" = "firefox.desktop";
         "x-scheme-handler/https" = "firefox.desktop";
+        "image/jpeg" = "firefox.desktop";
+        "image/png" = "firefox.desktop";
+        "image/gif" = "firefox.desktop";
+        "image/webp" = "firefox.desktop";
+        "image/avif" = "firefox.desktop";
+        "image/svg+xml" = "firefox.desktop";
+        "image/bmp" = "firefox.desktop";
+        "image/tiff" = "firefox.desktop";
+        "application/pdf" = "firefox.desktop";
       };
     };
 
