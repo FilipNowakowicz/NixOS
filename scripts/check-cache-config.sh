@@ -6,8 +6,19 @@ repo_root="$(
 )"
 cd "$repo_root"
 
-setup_cache_url="$(rg -o 'https://[^[:space:]]+r2\.dev' .github/actions/setup-nix/action.yml | head -n 1)"
-main_cache_url="$(rg -o 'https://[^"]+r2\.dev' hosts/main/default.nix | head -n 1)"
+extract_first_match() {
+  local pattern=$1
+  local file=$2
+
+  if command -v rg >/dev/null 2>&1; then
+    rg -o "$pattern" "$file" | head -n 1
+  else
+    grep -Eo "$pattern" "$file" | head -n 1
+  fi
+}
+
+setup_cache_url="$(extract_first_match 'https://[^[:space:]]+r2\.dev' .github/actions/setup-nix/action.yml)"
+main_cache_url="$(extract_first_match 'https://[^"]+r2\.dev' hosts/main/default.nix)"
 
 setup_cache_key="$(
   sed -n 's/.*trusted-public-keys = .* \(nix-cache-1:[^[:space:]]*\).*/\1/p' \
