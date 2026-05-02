@@ -10,7 +10,11 @@ repo_root="$(
 cd "$repo_root"
 
 build_attrs() {
-  nix build "$@" --no-link --show-trace
+  if [[ ${PRINT_PATHS:-} == "1" ]]; then
+    nix build "$@" --no-link --print-out-paths --show-trace
+  else
+    nix build "$@" --no-link --show-trace
+  fi
 }
 
 show_report_attrs() {

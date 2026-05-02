@@ -13,6 +13,7 @@
 #   homeManager — primary-user Home Manager mapping for this host
 #     .role     — entrypoint module under home/users/user
 #     .profiles — extra profile modules under home/profiles
+#     .enableSpotify — whether to include the proprietary Spotify package
 #   backup      — drives modules/nixos/profiles/backup.nix retention policy
 #     .class    — "critical" (14d/8w/6m/2y) | "standard" (7d/4w/3m); absent = no backup module
 #   ip          — static IP (e.g. microvm guest); consumed by host network config via hostMeta
@@ -108,6 +109,7 @@ let
                   && builtins.all (profile: builtins.elem profile knownHomeManagerProfiles) cfg.homeManager.profiles
                 )
               )
+              && (!cfg.homeManager ? enableSpotify || builtins.isBool cfg.homeManager.enableSpotify)
               && (
                 !cfg.homeManager ? packs
                 || (
@@ -150,6 +152,7 @@ let
       homeManager = {
         role = "desktop";
         profiles = [ "desktop" ];
+        enableSpotify = false;
         packs = [
           "browsing"
           "coding"
@@ -181,6 +184,7 @@ let
       homeManager = {
         role = "desktop";
         profiles = [ "desktop" ];
+        enableSpotify = false;
         packs = [ "coding" ];
       };
       sshPort = 2222;

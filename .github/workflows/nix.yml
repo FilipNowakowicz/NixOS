@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: read
-  actions: write
 
 concurrency:
   group: nix-${{ github.event.pull_request.number || github.ref }}
@@ -52,13 +51,33 @@ jobs:
   checks-light:
     needs: eval
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
+        with:
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: false
 
       - uses: ./.github/actions/setup-nix
 
       - name: Build lightweight blocking checks
         run: bash scripts/validate.sh light
+
+      - name: Push to cache
+        if: success()
+        continue-on-error: true
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          CACHE_SIGNING_KEY: ${{ secrets.CACHE_SIGNING_KEY }}
+        run: bash scripts/push-to-r2.sh light
 
   lint:
     needs: eval
@@ -89,16 +108,39 @@ jobs:
     needs: [changes, eval]
     if: needs.changes.outputs.hosts == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.changes.outputs.hosts_matrix) }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
+        with:
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: false
+
       - uses: ./.github/actions/setup-nix
 
       - name: Build ${{ matrix.name }}
-        run: bash scripts/validate.sh host "${{ matrix.name }}"
+        env:
+          HOST: ${{ matrix.name }}
+        run: bash scripts/validate.sh host "$HOST"
+
+      - name: Push ${{ matrix.name }} to cache
+        if: success()
+        continue-on-error: true
+        env:
+          HOST: ${{ matrix.name }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          CACHE_SIGNING_KEY: ${{ secrets.CACHE_SIGNING_KEY }}
+        run: bash scripts/push-to-r2.sh host "$HOST"
 
   tests:
     needs: [changes, eval, hosts]
@@ -108,29 +150,51 @@ jobs:
       && needs.eval.result == 'success'
       && (needs.hosts.result == 'success' || needs.hosts.result == 'skipped')
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.changes.outputs.tests_matrix) }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
+        with:
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: false
+
       - uses: ./.github/actions/setup-nix
         with:
           extra-nix-config: |
-            experimental-features = nix-command flakes
             system-features = nixos-test benchmark big-parallel kvm
-            max-jobs = auto
 
       - name: Build ${{ matrix.name }}
-        run: bash scripts/validate.sh "${{ matrix.command }}" "${{ matrix.target }}"
+        env:
+          CMD: ${{ matrix.command }}
+          TARGET: ${{ matrix.target }}
+        run: bash scripts/validate.sh "$CMD" "$TARGET"
+
+      - name: Push ${{ matrix.name }} to cache
+        if: success()
+        continue-on-error: true
+        env:
+          CMD: ${{ matrix.command }}
+          TARGET: ${{ matrix.target }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          CACHE_SIGNING_KEY: ${{ secrets.CACHE_SIGNING_KEY }}
+        run: bash scripts/push-to-r2.sh "$CMD" "$TARGET"
 
   closure-diff:
     if: github.event_name == 'pull_request' && needs.changes.outputs.closure == 'true'
-    needs: changes
+    needs: [changes, hosts]
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      actions: write
       issues: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -138,14 +202,18 @@ jobs:
           fetch-depth: 0
 
       - uses: ./.github/actions/setup-nix
+        with:
+          extra-nix-config: |
+            substituters = https://cache.nixos.org
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
 
       - name: Compute closure diffs
         id: diff
         env:
           DIFF_MAIN: ${{ needs.changes.outputs.closure_main }}
           DIFF_HOMESERVER: ${{ needs.changes.outputs.closure_homeserver }}
+          BASE_REF: origin/${{ github.base_ref }}
         run: |
-          BASE_REF="origin/${{ github.base_ref }}"
           TARGET_REF="HEAD"
 
           {

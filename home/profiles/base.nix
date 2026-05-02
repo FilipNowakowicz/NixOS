@@ -15,23 +15,12 @@
     which
     zip
 
-    # Editor / Dev
-    neovim-unwrapped
-    lazygit
+    # Dev
     nodejs
     python3
     clang-tools
     gnumake
     gcc
-    tree-sitter
-    nixd
-    basedpyright
-    ruff
-    stylua
-    nixfmt
-
-    # Neovim helpers
-    glow # :Glow markdown preview
 
     # Utilities
     yazi
