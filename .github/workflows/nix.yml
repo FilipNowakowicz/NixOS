@@ -202,6 +202,10 @@ jobs:
           fetch-depth: 0
 
       - uses: ./.github/actions/setup-nix
+        with:
+          extra-nix-config: |
+            substituters = https://cache.nixos.org
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
 
       - name: Compute closure diffs
         id: diff
