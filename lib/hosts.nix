@@ -2,6 +2,7 @@
 # To add a new host: add an entry here, create hosts/<name>/default.nix.
 # Fields:
 #   system      — nixpkgs system string for this host (used for nixosSystem/deploy activation)
+#   status      — support lifecycle: "active", "inactive", or "legacy-supported"
 #   deploy      — presence generates a deploy-rs node; absence = local-only (main)
 #   sshPort     — VM-only; used to filter hosts for the VM script
 #   diskSize    — VM-only; used by nixos-anywhere and qemu-img
@@ -20,6 +21,7 @@
 let
   knownFields = [
     "system"
+    "status"
     "deploy"
     "sshPort"
     "diskSize"
@@ -33,6 +35,12 @@ let
   knownHomeManagerRoles = [
     "desktop"
     "server"
+  ];
+
+  knownStatuses = [
+    "active"
+    "inactive"
+    "legacy-supported"
   ];
 
   knownHomeManagerProfiles = [
@@ -64,6 +72,12 @@ let
         (ok (builtins.isString cfg.system) "${name}.system: must be a string, got ${
           builtins.typeOf (cfg.system or null)
         }")
+        (ok (p "status") "${name}: missing required field 'status'")
+        (ok (builtins.elem (cfg.status or null) knownStatuses)
+          "${name}.status: expected one of ${builtins.toJSON knownStatuses}, got ${
+            builtins.toJSON (cfg.status or null)
+          }"
+        )
         (ok (
           !p "deploy"
           || (builtins.isAttrs cfg.deploy && cfg.deploy ? sshUser && builtins.isString cfg.deploy.sshUser)
@@ -149,6 +163,7 @@ let
   raw = {
     main = {
       system = "x86_64-linux";
+      status = "active";
       homeManager = {
         role = "desktop";
         profiles = [ "desktop" ];
@@ -166,6 +181,7 @@ let
 
     homeserver = {
       system = "x86_64-linux";
+      status = "inactive";
       homeManager.role = "server";
       tailnetFQDN = "homeserver.filip-nowakowicz.ts.net";
       tailscale = {
@@ -181,6 +197,7 @@ let
 
     vm = {
       system = "x86_64-linux";
+      status = "legacy-supported";
       homeManager = {
         role = "desktop";
         profiles = [ "desktop" ];
@@ -194,6 +211,7 @@ let
 
     homeserver-vm = {
       system = "x86_64-linux";
+      status = "inactive";
       homeManager.role = "server";
       ip = "10.0.100.2";
       backup.class = "critical";

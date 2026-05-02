@@ -172,6 +172,7 @@ let
     {
       inherit name;
       inherit (meta) system;
+      inherit (meta) status;
       closurePath = builtins.unsafeDiscardStringContext (toString c.system.build.toplevel);
       inherit (c.system) stateVersion;
       tailscaleTag = meta.tailscale.tag or null;
@@ -676,6 +677,9 @@ let
           border: 1px solid;
         }
         .badge-deploy { color: var(--green); border-color: var(--green); }
+        .badge-status-active { color: var(--green); border-color: rgba(63, 185, 80, 0.55); }
+        .badge-status-inactive { color: var(--muted); border-color: rgba(125, 133, 144, 0.55); }
+        .badge-status-legacy-supported { color: var(--orange); border-color: rgba(240, 136, 62, 0.55); }
         .badge-backup-critical { color: var(--yellow); border-color: var(--yellow); }
         .badge-backup-standard { color: var(--muted); border-color: var(--muted); }
         .badge-gap { color: var(--orange); border-color: var(--orange); }
@@ -1263,6 +1267,7 @@ let
           // Header
           const header = el('div', 'card-header');
           header.appendChild(el('span', 'hostname', h.name));
+          header.appendChild(el('span', 'badge badge-status-' + h.status, h.status));
           if (h.deployable) header.appendChild(el('span', 'badge badge-deploy', 'deploy-rs'));
           if (h.backupClass === 'critical') header.appendChild(el('span', 'badge badge-backup-critical', 'backup:critical'));
           if (h.backupClass === 'standard') header.appendChild(el('span', 'badge badge-backup-standard', 'backup:standard'));
@@ -1273,6 +1278,7 @@ let
           // Meta rows
           const metaRows = [
             ['system', h.system],
+            ['status', h.status],
             ['stateVersion', h.stateVersion],
             h.tailscaleTag ? ['tailscale tag', h.tailscaleTag] : null,
             h.tailnetFQDN  ? ['tailnet FQDN', h.tailnetFQDN] : null,
@@ -1434,6 +1440,8 @@ let
 
         function buildSummary() {
           const deployCount = hosts.filter(h => h.deployable).length;
+          const activeCount = hosts.filter(h => h.status === 'active').length;
+          const inactiveCount = hosts.filter(h => h.status === 'inactive').length;
           const critBackup  = hosts.filter(h => h.backupClass === 'critical').length;
           const tsCount     = hosts.filter(h => h.services.tailscale).length;
           const gapCount    = hosts.filter(h => securityGaps(h).length > 0).length;
@@ -1449,6 +1457,8 @@ let
 
           const stats = [
             { value: hosts.length,  label: 'hosts' },
+            { value: activeCount,   label: 'active hosts' },
+            { value: inactiveCount, label: 'inactive hosts', warn: inactiveCount > 0 },
             { value: deployCount,   label: 'deploy-rs' },
             { value: tsCount,       label: 'on Tailscale' },
             { value: critBackup,    label: 'backup:critical' },
@@ -1492,6 +1502,9 @@ let
 
           const filters = [
             { label: 'All',             fn: null },
+            { label: 'Active',          fn: h => h.status === 'active' },
+            { label: 'Inactive',        fn: h => h.status === 'inactive' },
+            { label: 'Legacy',          fn: h => h.status === 'legacy-supported' },
             { label: 'deploy-rs',       fn: h => h.deployable },
             { label: 'Tailscale',       fn: h => h.services.tailscale },
             { label: 'backup:critical', fn: h => h.backupClass === 'critical' },

@@ -8,24 +8,26 @@ README high-level; put command-heavy procedures here.
 - `README.md` - project overview, host inventory, feature map.
 - `CLAUDE.md` - agent/operator preferences and validation shortcuts.
 - `docs/architecture.md` - structural rules and module boundaries.
-- `docs/config-dashboard.md` - local inventory/dashboard evolution plan.
 - `docs/security.md` - secrets, network exposure, and hardening model.
 
 ## Deployment Matrix
 
-| Target          | Command                                  | Notes                                                                       |
-| :-------------- | :--------------------------------------- | :-------------------------------------------------------------------------- |
-| `main`          | `nh os switch --hostname main .`         | Primary workstation; also owns the `homeserver-vm` microvm service.         |
-| `homeserver`    | `deploy '.#homeserver'`                  | Use after the real hardware has been bootstrapped.                          |
-| `vm`            | `deploy '.#vm'`                          | Requires a QEMU VM created with `nix run '.#vm' -- create vm`.              |
-| `homeserver-vm` | `nh os switch --hostname main .`         | Rebuilds the host-side microvm declaration on `main`; control with systemd. |
-| `user@wsl`      | `home-manager switch --flake .#user@wsl` | Portable Home Manager profile for WSL.                                      |
+| Target          | Status           | Command                                  | Notes                                                          |
+| :-------------- | :--------------- | :--------------------------------------- | :------------------------------------------------------------- |
+| `main`          | Active           | `nh os switch --hostname main .`         | Primary workstation.                                           |
+| `homeserver`    | Inactive         | `deploy '.#homeserver'`                  | Use only after explicit real-hardware bootstrap.               |
+| `vm`            | Legacy Supported | `deploy '.#vm'`                          | Requires a QEMU VM created with `nix run '.#vm' -- create vm`. |
+| `homeserver-vm` | Inactive         | `nh os switch --hostname main .`         | Only works after enabling the microvm host import in `main`.   |
+| `user@wsl`      | Active           | `home-manager switch --flake .#user@wsl` | Portable Home Manager profile for WSL.                         |
 
 ## homeserver-vm
 
-`homeserver-vm` is the primary homeserver development target. It is a
-`microvm.nix` guest declared by `modules/nixos/microvms/homeserver-vm.nix` and
-run by systemd on `main`.
+`homeserver-vm` is an inactive homeserver development target. It remains a
+buildable `nixosConfiguration`, but the host-side microvm integration is
+disabled in `hosts/main/default.nix`.
+
+Do not treat the commands below as active workflow commands unless the microvm
+import has been deliberately re-enabled on `main`.
 
 ```bash
 nh os switch --hostname main .
@@ -51,11 +53,19 @@ Important boundaries:
 - Guest `/persist` is `/var/lib/microvms/homeserver-vm/persist.img` on `main`.
 - Guest sops key material is exposed by `main` through a virtiofs share mounted at `/run/age-keys`.
 
+Reactivation checklist:
+
+1. Confirm `lib/hosts.nix` still marks `homeserver-vm` as intentionally inactive or update the status in the same change.
+2. Verify `hosts/main/secrets/secrets.yaml` contains the `homeserver_vm_age_key` secret.
+3. Enable the `modules/nixos/microvms/homeserver-vm.nix` import in `hosts/main/default.nix`.
+4. Build `main-ci` and `homeserver-vm`, then run `smoke-homeserver` if KVM is available.
+5. Rebuild `main`, start `microvm@homeserver-vm.service`, and verify Vaultwarden, Syncthing, and Grafana endpoints.
+
 ## QEMU VM
 
-`scripts/vm.sh` and `nix run '.#vm'` are archived for hardware-style testing:
-impermanence, bootloader behavior, and LUKS workflows. They are not the
-`homeserver-vm` path.
+`scripts/vm.sh` and `nix run '.#vm'` are legacy-supported for hardware-style
+testing: impermanence, bootloader behavior, and LUKS workflows. They are not
+the `homeserver-vm` path.
 
 ```bash
 nix run '.#vm' -- create vm
@@ -71,6 +81,9 @@ QEMU VM metadata comes from `lib/hosts.nix`; entries need `sshPort` and
 
 ## Homeserver Bootstrap
 
+Status: inactive. This path is retained for future real-hardware bootstrap but
+is not a current deployment workflow.
+
 Cold installs use the flake app that wraps `nixos-anywhere`.
 The script **refuses to proceed without verified host key trust material** —
 blind TOFU is not accepted.
@@ -81,8 +94,10 @@ blind TOFU is not accepted.
 2. Ensure `hosts/homeserver/secrets/ssh_host_ed25519_key.enc` and `.pub.enc` exist.
 3. Ensure `.sops.yaml` includes the matching `&homeserver_host` age key.
 4. Set required secrets in `hosts/homeserver/secrets/secrets.yaml`, including `tailscale_auth_key`.
-5. Run the reinstall app.
-6. Unlock `crypt-persist` on the local console during the first boot.
+5. Update `lib/hosts.nix` status in the same change if this becomes an operated target.
+6. Build `homeserver`, then run `smoke-homeserver` if KVM is available.
+7. Run the reinstall app.
+8. Unlock `crypt-persist` on the local console during the first boot.
 
 ### Obtain the installer fingerprint
 
@@ -125,7 +140,7 @@ Use the narrowest check that covers the files changed.
 bash scripts/validate.sh flake-eval
 bash scripts/validate.sh light
 bash scripts/validate.sh host main-ci
-bash scripts/validate.sh host vm
+bash scripts/validate.sh host vm-ci
 bash scripts/validate.sh host homeserver
 bash scripts/validate.sh host homeserver-vm
 bash scripts/validate.sh hosts
@@ -139,9 +154,10 @@ bash scripts/validate.sh cve-reports
 Rules of thumb:
 
 - Shared flake, library, or global module changes: run `light` and affected host builds; use `hosts` when impact is broad.
-- Desktop profile/Home Manager changes: build `main-ci` and `vm`.
-- Server profile changes: build `homeserver` and `homeserver-vm`.
-- Microvm host-side changes: build `main-ci` and `homeserver-vm`.
+- Desktop profile/Home Manager changes: build `main-ci` and `vm-ci`.
+- Server profile changes: build inactive `homeserver` targets to preserve evaluation/build health.
+- Microvm host-side changes: build `main-ci` and `homeserver-vm`, but do not assume runtime activation.
+- Docs changes: run `bash scripts/validate.sh docs`; CI runs this even for docs-only PRs.
 - NixOS test changes: run the relevant smoke/profile test if KVM is available.
 
 ## Formatting And Hooks

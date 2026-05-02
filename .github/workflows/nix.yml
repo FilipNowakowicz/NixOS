@@ -160,6 +160,9 @@ jobs:
           fi
           nix run nixpkgs#shellcheck -- "${shell_scripts[@]}"
 
+      - name: Check Markdown links
+        run: bash scripts/validate.sh docs
+
   packages:
     needs: [push-policy, changes, eval]
     if: |

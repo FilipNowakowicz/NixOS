@@ -15,6 +15,7 @@
   hardware.nvidia = {
     modesetting.enable = true; # required for Wayland / Hyprland
     powerManagement.enable = true; # suspend/resume reliability on laptops
+    powerManagement.finegrained = true; # Turing+ (TU117M): full dGPU power-gate when idle
     open = false; # use proprietary kernel module
     nvidiaSettings = true;
     package = config.boot.kernelPackages.nvidiaPackages.stable;

@@ -19,7 +19,6 @@
       "config-dashboard-wave-3"
     ];
     docs = [
-      "docs/config-dashboard.md"
       "docs/goals.md"
     ];
   }
@@ -185,7 +184,6 @@
     blockedBy = [ "config-dashboard-wave-1" ];
     unlocks = [ ];
     docs = [
-      "docs/config-dashboard.md"
       "docs/goals.md"
     ];
   }
@@ -209,7 +207,6 @@
     blockedBy = [ "config-dashboard-wave-1" ];
     unlocks = [ ];
     docs = [
-      "docs/config-dashboard.md"
       "docs/goals.md"
     ];
   }

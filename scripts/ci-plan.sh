@@ -9,7 +9,7 @@ cd "$repo_root"
 event_name="${GITHUB_EVENT_NAME:-}"
 base_sha="${BASE_SHA:-}"
 
-ci_core_change='^(\.github/workflows/nix\.yml|\.github/actions/setup-nix/|scripts/ci-plan\.sh|scripts/validate\.sh)'
+ci_core_change='^(\.github/workflows/nix\.yml|\.github/actions/setup-nix/|scripts/(ci-plan|validate|check-doc-links|doctor)\.sh)'
 flake_or_lib_change='^(flake\.nix|flake\.lock|lib/)'
 closure_script_change='^(scripts/closure-diff\.sh|\.github/scripts/upsert-closure-comment\.js)'
 tests_change='^tests/nixos/'
@@ -236,7 +236,7 @@ emit_bool() {
 
 if [[ $docs_only == "true" ]]; then
   run_eval=false
-  run_lint=false
+  run_lint=true
   run_light=false
   run_packages=false
 fi

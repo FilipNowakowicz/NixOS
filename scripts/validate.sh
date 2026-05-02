@@ -30,6 +30,7 @@ usage() {
 Usage: $0 <command>
 
 Commands:
+  docs               Check repository Markdown links
   flake-eval         Run flake evaluation only (no builds)
   light              Build lightweight blocking checks
   host <name>        Build one host closure: main-ci, vm-ci, homeserver, homeserver-vm
@@ -100,6 +101,10 @@ build_package() {
 }
 
 case "$command" in
+docs)
+  bash scripts/check-doc-links.sh
+  ;;
+
 flake-eval)
   nix flake check --no-build --show-trace
   ;;

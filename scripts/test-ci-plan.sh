@@ -43,7 +43,7 @@ assert_not_contains() {
 docs_output="$(run_plan $'README.md\ndocs/operations.md')"
 assert_contains "$docs_output" "docs_only=true"
 assert_contains "$docs_output" "run_eval=false"
-assert_contains "$docs_output" "run_lint=false"
+assert_contains "$docs_output" "run_lint=true"
 assert_contains "$docs_output" "run_light=false"
 assert_contains "$docs_output" "hosts=false"
 assert_contains "$docs_output" "tests=false"

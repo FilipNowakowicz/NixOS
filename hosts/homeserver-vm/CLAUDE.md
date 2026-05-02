@@ -1,11 +1,13 @@
-# Homeserver VM — Development Target
+# Homeserver VM — Inactive Development Target
 
-NixOS VM running homeserver services (Vaultwarden, Syncthing) for testing before
-hardware deployment. Runs as a systemd service on `main` via microvm.nix.
+Inactive NixOS VM target for homeserver services (Vaultwarden, Syncthing).
+It remains buildable for validation, but it does not run as part of the normal
+`main` workstation configuration because the host-side import is disabled.
 
 ## Quick Reference
 
 ```bash
+# Only after re-enabling the microvm host import in hosts/main/default.nix:
 nh os switch --hostname main .               # deploy config changes
 ssh user@10.0.100.2                          # SSH into VM
 sudo systemctl status microvm@homeserver-vm  # check VM status

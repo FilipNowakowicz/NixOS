@@ -56,6 +56,7 @@ A host's Nix store closure should only contain what is explicitly requested.
 `lib/hosts.nix` is the **Single Source of Truth (SSoT)** for host metadata.
 
 - **Multi-Arch Support:** Every host must define its target `system` (e.g., `x86_64-linux`), ensuring the flake evaluates correctly for heterogeneous fleets.
+- **Lifecycle Status:** Every host in `lib/hosts.nix` must define `status`. `active` means a current runtime target, `inactive` means buildable but not operated, and `legacy-supported` means retained tooling with an explicit maintenance boundary.
 - Network IDs, Tailscale tags, and roles must be defined in the registry, not hardcoded in modules.
 - Hosts and infrastructure modules receive this data through the `hostMeta` and `hostRegistry` special args. Avoid duplicating registry-owned values in host modules unless the local value is truly hardware-specific.
 - Generators may intentionally consume only a subset of the registry. For example, `lib/acl.nix` consumes `tailscale` metadata needed for explicit host:port policy (`tag`, `acceptFrom`, and `tailnetFQDN` when present) rather than inferring service exposure from host modules.
@@ -105,7 +106,9 @@ revalidated.
 
 ## 5. Microvm Boundary
 
-`homeserver-vm` is a first-class `nixosConfigurations` entry, but its lifecycle is owned by `main`.
+`homeserver-vm` is a first-class `nixosConfigurations` entry, but it is
+currently inactive. Its runtime lifecycle is owned by `main` only when the
+microvm host import is explicitly enabled there.
 
 | Side       | Files                                                                         | Responsibility                                                                                     |
 | :--------- | :---------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------- |
@@ -115,5 +118,5 @@ revalidated.
 Rules:
 
 - Do not add `deploy` metadata, `sshPort`, or `diskSize` to `homeserver-vm` in `lib/hosts.nix`; those fields are for QEMU VMs managed by `scripts/vm.sh`.
-- Deploying `homeserver-vm` means rebuilding `main` with `nh os switch --hostname main .`, then controlling `microvm@homeserver-vm.service`.
+- Reactivating `homeserver-vm` means enabling the microvm host import in `main`, rebuilding `main` with `nh os switch --hostname main .`, then controlling `microvm@homeserver-vm.service`.
 - Guest secrets are encrypted to `&homeserver_vm_age`; the private age key is stored in `hosts/main/secrets/secrets.yaml` and shared to the guest at runtime.

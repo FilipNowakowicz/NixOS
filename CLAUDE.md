@@ -11,7 +11,7 @@ approaches proactively. Explain why, not just what.
 - **Dev machine:** NixOS (main)
 - **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nixd`, `statix`, `deadnix`, `sops`, `ssh-to-age`, `qemu`, `OVMF`, `vulnix`, `direnv`, and the flake-managed pre-commit hook tooling.
 - **Per-project shells:** `direnv` enabled — use `use flake` in `.envrc` for automatic environment loading.
-- **Deploy (VM):** `deploy '.#vm'` (Note: `homeserver-vm` is managed via `main`'s microvm; QEMU `vm` is for testing only)
+- **Deploy (VM):** `deploy '.#vm'` (QEMU `vm` is legacy-supported testing only; `homeserver-vm` is inactive)
 - **Deploy (WSL):** `home-manager switch --flake .#user@wsl`
 - **Deploy (main):** `nh os switch --hostname main .` (alias: `rebuild`)
 - **Validate flake eval:** `bash scripts/validate.sh flake-eval`
@@ -34,12 +34,14 @@ approaches proactively. Explain why, not just what.
 
 ## VM Management
 
-### homeserver-vm (microvm — primary workflow)
+### homeserver-vm (microvm — inactive)
 
-homeserver-vm runs as a systemd service on `main` via microvm.nix.
+homeserver-vm is retained as a buildable microvm target, but the host-side
+integration is disabled in `hosts/main/default.nix`. These commands are only
+valid after deliberately re-enabling that import on `main`.
 
 ```bash
-nh os switch --hostname main .                       # deploy config changes (starts VM if not running)
+nh os switch --hostname main .                       # after re-enabling the microvm import
 sudo systemctl start microvm@homeserver-vm.service   # start manually
 sudo systemctl stop microvm@homeserver-vm.service    # stop
 sudo journalctl -u microvm@homeserver-vm.service -f  # watch logs
@@ -58,14 +60,14 @@ Services are reachable from main at:
 - **Tailscale** — used for secure remote access and service mesh.
 - **Tailscale ACLs** — generated declaratively from `lib/hosts.nix`.
   - Tags are assigned per-host in the registry (`tailscale.tag`).
-  - Current policy intent is minimal: `lib/acl.nix` consumes only tags and emits broad fleet-wide rules.
-  - Richer host metadata like `tailnetFQDN` stays outside the ACL output unless host-specific policy is added deliberately.
+  - Current policy intent is explicit: `lib/acl.nix` consumes tags, `acceptFrom`, and `tailnetFQDN` when host-specific policy is needed.
+  - Richer host metadata like `ip` and `backup.class` stays outside the ACL output unless host-specific policy is added deliberately.
   - Build/inspect ACLs: `nix build '.#packages.x86_64-linux.tailscale-acl'`.
-- **Tailscale Certs** — `homeserver` uses `tailscale-cert.service` to fetch TLS certificates automatically.
+- **Tailscale Certs** — inactive `homeserver` uses `tailscale-cert.service` to fetch TLS certificates automatically when deployed.
 
 ---
 
-### nix run '.#vm' (QEMU — archived)
+### nix run '.#vm' (QEMU — legacy-supported)
 
 `scripts/vm.sh` and `nix run '.#vm'` are archived for testing impermanence,
 bootloader, and LUKS on main hardware before real deployment. Not used for
@@ -100,7 +102,7 @@ nix run '.#vm' -- ssh <name>      # SSH into VM
 - `hosts/homeserver-vm/` — homeserver services in a VM (Vaultwarden, Syncthing)
 - `hosts/homeserver/` — real hardware homeserver (same services + Tailscale, Nginx, TLS)
 - `hosts/installer/` — minimal NixOS ISO config for fresh installs
-- `scripts/vm.sh` — archived QEMU VM management script
+- `scripts/vm.sh` — legacy-supported QEMU VM management script
 - `scripts/closure-diff.sh` — compute closure diffs in CI
 - `scripts/reinstall-homeserver.sh` — real homeserver reinstall (separate workflow)
 - `modules/nixos/microvms/` — microvm.nix VM definitions (homeserver-vm)
@@ -148,7 +150,6 @@ Managed with sops-nix + age. Edit secrets with `sops <file>`.
 ## Goals
 
 See [docs/goals.md](./docs/goals.md) for the full project roadmap and in-progress tasks.
-See [docs/ideas.md](./docs/ideas.md) for longer-term ideas and directions.
 
 ---
 
@@ -168,4 +169,4 @@ See [docs/ideas.md](./docs/ideas.md) for longer-term ideas and directions.
 - Prefer home-manager for user-level config over system-level
 - Keep things declarative — avoid imperative workarounds
 - Flag anything that might cause issues on rebuild
-- Validate only what you changed: if vm config changed build vm, if main changed build main, if homeserver changed build homeserver, if shared profiles changed build all three
+- Validate only what you changed: if VM config changed build `vm-ci`, if `main` changed build `main-ci`, if inactive homeserver targets changed build their closures, if shared profiles changed build all affected hosts

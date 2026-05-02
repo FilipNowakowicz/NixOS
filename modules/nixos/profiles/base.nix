@@ -1,27 +1,32 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 {
   zramSwap.enable = true;
 
   # ── Nix ────────────────────────────────────────────────────────────────────
   nixpkgs.config.allowUnfree = true;
   nix = {
-    settings = {
-      experimental-features = [
-        "nix-command"
-        "flakes"
-      ];
-      auto-optimise-store = true;
-    };
+    settings.experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
 
     gc = {
       automatic = true;
       dates = "weekly";
       options = "--delete-older-than 7d";
     };
+
+    # Hardlink duplicate store paths once a week instead of after every build.
+    # auto-optimise-store taxes every nix build with a synchronous dedup pass;
+    # the timer-driven variant runs out-of-band and matches the gc cadence.
+    optimise = {
+      automatic = true;
+      dates = [ "weekly" ];
+    };
   };
 
   # ── Localization ───────────────────────────────────────────────────────────
-  time.timeZone = "Europe/Warsaw";
+  time.timeZone = lib.mkDefault "Europe/Warsaw";
   i18n.defaultLocale = "en_GB.UTF-8";
   console.keyMap = "dvorak";
 

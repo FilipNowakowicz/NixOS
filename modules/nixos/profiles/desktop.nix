@@ -8,9 +8,6 @@
   users.users.user.extraGroups = [ "input" ];
 
   services = {
-    # ── Input ──────────────────────────────────────────────────────────────
-    libinput.enable = true;
-
     # ── Audio ──────────────────────────────────────────────────────────────
     pipewire = {
       enable = true;
@@ -51,14 +48,13 @@
   ];
 
   # ── Fonts ──────────────────────────────────────────────────────────────
+  # `enableDefaultPackages` already pulls dejavu_fonts, liberation_ttf, and
+  # noto-fonts-color-emoji; only list additions here.
   fonts = {
     enableDefaultPackages = true;
     fontDir.enable = true;
     packages = with pkgs; [
-      dejavu_fonts
-      liberation_ttf
       noto-fonts
-      noto-fonts-color-emoji
       nerd-fonts.jetbrains-mono
       inter
     ];

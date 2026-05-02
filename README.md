@@ -8,10 +8,10 @@ The repository separates hardware, host identity, system profiles, and user conf
 ## Overview
 
 - **Reproducible & Declarative**: NixOS defines the entire system state, services, and hardware. Home Manager manages the user environment and dotfiles.
-- **Multi-Host Ready**: Built from reusable profiles to support a primary workstation (`main`), a headless `homeserver`, a QEMU test VM, and a microvm-based homeserver development target. The host registry defines the target architecture (`system`) per host; the current fleet is `x86_64-linux`.
+- **Multi-Host Ready**: Built from reusable profiles for a primary workstation (`main`), inactive homeserver targets, a QEMU test VM, and Home Manager profiles. The host registry defines the target architecture (`system`) per host; the current fleet is `x86_64-linux`.
 - **Secrets Management**: Handled by [sops-nix](https://github.com/Mic92/sops-nix) with age encryption, with secrets decrypted at boot by the host itself.
-- **Impermanent Root**: VMs and the `homeserver` use an ephemeral root filesystem created with [impermanence](https://github.com/nix-community/impermanence). System state is reset on boot, with persistent data explicitly stored on a `/persist` volume; the real `homeserver` now places that volume inside LUKS.
-- **Declarative Disks**: Disk layouts for real hosts and the QEMU test VM are managed declaratively with [disko](https://github.com/nix-community/disko). The `homeserver-vm` microvm uses a `microvm.nix` volume for `/persist`.
+- **Impermanent Root**: VM-style targets and the inactive `homeserver` use an ephemeral root filesystem created with [impermanence](https://github.com/nix-community/impermanence). System state is reset on boot, with persistent data explicitly stored on a `/persist` volume; the inactive real `homeserver` design places that volume inside LUKS.
+- **Declarative Disks**: Disk layouts for real hosts and the QEMU test VM are managed declaratively with [disko](https://github.com/nix-community/disko). The inactive `homeserver-vm` microvm uses a `microvm.nix` volume for `/persist`.
 - **Runtime Theming**: A runtime-swappable color system allows changing themes without a full NixOS rebuild.
 
 ---
@@ -21,9 +21,59 @@ The repository separates hardware, host identity, system profiles, and user conf
 - [Architecture](docs/architecture.md) - layer boundaries, global imports, host registry rules, and the microvm split.
 - [Operations](docs/operations.md) - deployment, VM workflows, homeserver bootstrap, validation, and formatting commands.
 - [Security Model](docs/security.md) - sops recipients, initrd SSH, Tailscale exposure, USBGuard, hardening, and backups.
-- [Config Dashboard](docs/config-dashboard.md) - plan for evolving the generated inventory into an operator dashboard.
+- [Neovim](docs/neovim.md) - current editor setup and links to the longer module design.
 - [Backlog](docs/backlog.md) and [Goals](docs/goals.md) - deferred and active work.
-- [Superpowers Design Records](docs/superpowers/README.md) - historical specs and implementation plans.
+
+---
+
+## Support Policy
+
+This is personal infrastructure maintained to a publishable quality bar, not a reusable NixOS distribution.
+
+Supported contracts:
+
+- Flake evaluation, formatting, lightweight checks, library tests, invariants, and CI planner tests should work from a clean clone.
+- `x86_64-linux` is the only supported system today.
+- `main` is the active workstation target and is hardware-bound to the owner's machine.
+- `homeserver` and `homeserver-vm` are inactive runtime targets. They intentionally still evaluate and build in validation so server drift is caught before reactivation.
+- `vm` is legacy-supported QEMU tooling for hardware-style testing, not the primary homeserver path.
+- Secrets are managed with sops-nix. Encrypted files are committed; private keys and live service credentials are not.
+- Destructive install/reinstall commands are operator-only and must not be run without reviewing target disks.
+
+Unsupported or best-effort:
+
+- Reusing the host configs on arbitrary hardware without editing host registry, disk layouts, secrets, and hardware configs.
+- Deploying inactive hosts without the required age keys, Tailscale state, hardware, and operator review.
+- Treating legacy QEMU VM tooling as the primary homeserver path.
+
+## What Works Without Secrets Or Hardware
+
+Expected to work from a clean clone:
+
+```bash
+bash scripts/validate.sh flake-eval
+bash scripts/validate.sh docs
+bash scripts/validate.sh light
+bash scripts/test-ci-plan.sh
+bash scripts/doctor.sh
+bash scripts/check-secrets-directory.sh --working-tree
+nix fmt -- --fail-on-change
+nix build '.#packages.x86_64-linux.inventory'
+nix build '.#packages.x86_64-linux.tailscale-acl'
+```
+
+Requires extra local capability:
+
+- NixOS smoke/profile tests require KVM.
+- QEMU VM runtime requires KVM and VM secret bootstrap.
+- `main` switch requires the owner's workstation hardware and secrets.
+- `homeserver` deploy/reinstall is inactive and requires reviewed target hardware, sops access, and destructive disk approval.
+- `homeserver-vm` runtime is inactive and requires enabling the microvm integration in `main`.
+- R2 binary cache publishing requires CI secrets.
+
+## Destructive Operations
+
+Disk provisioning and reinstall workflows are destructive. Review the target device before running `disko`, `nixos-anywhere`, or `nix run '.#reinstall-homeserver'`. Current real-host disk layouts assume owner-specific devices such as `/dev/nvme0n1` for `main` and `/dev/sda` for `homeserver`.
 
 ---
 
@@ -70,8 +120,8 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 │   ├── architecture.md                 # Structural rules and module boundaries
 │   ├── operations.md                   # Deployment and validation runbook
 │   ├── security.md                     # Secrets, exposure, and hardening model
-│   ├── backlog.md                      # Deferred work
-│   └── superpowers/                    # Historical specs and implementation plans
+│   ├── goals.md                        # Active roadmap
+│   └── backlog.md                      # Deferred work
 ├── lib/
 │   ├── hosts.nix                      # Host registry (typed schema; single source of truth for all hosts)
 │   ├── generators.nix                 # Typed Alloy HCL generators
@@ -87,14 +137,14 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 │   │   ├── default.nix
 │   │   ├── disko.nix
 │   │   └── hardware-configuration.nix
-│   ├── homeserver/                    # Headless server (Vaultwarden, Syncthing, Tailscale)
+│   ├── homeserver/                    # Inactive headless server target
 │   │   ├── default.nix
 │   │   ├── disko.nix
 │   │   └── hardware-configuration.nix
 │   ├── vm/                            # Dev/test VM (desktop + home-manager)
 │   │   ├── default.nix
 │   │   └── secrets/
-│   ├── homeserver-vm/                 # Homeserver services in a VM
+│   ├── homeserver-vm/                 # Inactive microvm homeserver target
 │   │   ├── default.nix
 │   │   └── secrets/
 │   └── installer/                     # Minimal NixOS ISO for fresh installs
@@ -103,7 +153,9 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 │   ├── ci-plan.sh                     # CI path filtering and job matrix planner
 │   ├── closure-diff.sh                # Closure size diff helper for PR comments
 │   ├── validate.sh                    # Local/CI validation entry point
-│   ├── vm.sh                          # Archived QEMU VM management for hardware-style testing
+│   ├── check-doc-links.sh             # Markdown link checker used by CI
+│   ├── doctor.sh                      # Clean-clone validation bundle
+│   ├── vm.sh                          # Legacy-supported QEMU VM management for hardware-style testing
 │   └── reinstall-homeserver.sh        # Real homeserver reinstall
 ├── modules/
 │   └── nixos/
@@ -150,17 +202,18 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 
 ## VM Management
 
-### homeserver-vm (Primary)
+### homeserver-vm (Inactive)
 
-The `homeserver-vm` runs as a lightweight microvm on the `main` host via `microvm.nix`. It uses `cloud-hypervisor`, shares the host's Nix store via `virtiofs` for near-instant boots (~7s), and receives secrets through a secure `virtiofs` share.
+The `homeserver-vm` configuration is retained as an inactive microvm target. It is not enabled in the normal `main` workstation closure. If reactivated, it runs on `main` via `microvm.nix`, uses `cloud-hypervisor`, shares the host's Nix store via `virtiofs`, and receives secrets through a `virtiofs` share.
 
-- **Deploy**: `nh os switch --hostname main .`
-- **Control**: `sudo systemctl [start|stop|status] microvm@homeserver-vm.service`
-- **Logs**: `sudo journalctl -u microvm@homeserver-vm.service -f`
+- **Status**: inactive; `hosts/main/default.nix` currently keeps the microvm host integration disabled.
+- **Reactivation**: enable the microvm import in `main`, then rebuild `main`.
+- **Control after reactivation**: `sudo systemctl [start|stop|status] microvm@homeserver-vm.service`
+- **Logs after reactivation**: `sudo journalctl -u microvm@homeserver-vm.service -f`
 
-### QEMU Development VM (Archived / Secondary)
+### QEMU Development VM (Legacy-Supported)
 
-Traditional QEMU/KVM VMs are kept for testing desktop environments, bootloaders, impermanence, or full disk encryption. This is not the day-to-day `homeserver-vm` workflow.
+Traditional QEMU/KVM VMs are kept for testing desktop environments, bootloaders, impermanence, or full disk encryption. This path is supported enough to keep validating and documenting, but it is not the day-to-day `homeserver-vm` workflow.
 
 ```bash
 nix run '.#vm' -- <action> <name>
@@ -190,23 +243,27 @@ Multiple VMs can run simultaneously — each has its own disk image, OVMF vars, 
 
 ## Hosts
 
-| Host            | Description                                                                        |
-| --------------- | ---------------------------------------------------------------------------------- |
-| `main`          | Primary workstation, running a full desktop environment with NVIDIA PRIME support. |
-| `homeserver`    | Headless server for self-hosted services with an ephemeral root filesystem.        |
-| `vm`            | QEMU/KVM dev/test VM with desktop profile. Port 2222.                              |
-| `homeserver-vm` | `microvm.nix` guest running homeserver services on `main`, static IP `10.0.100.2`. |
-| `installer`     | Minimal ISO configuration used to bootstrap new installations.                     |
+Host lifecycle status for NixOS host configurations is owned by
+`lib/hosts.nix`; this table documents that registry. `installer` is a utility
+ISO outside the host registry.
+
+| Host            | Status           | Description                                                                        |
+| --------------- | ---------------- | ---------------------------------------------------------------------------------- |
+| `main`          | Active           | Primary workstation, running a full desktop environment with NVIDIA PRIME support. |
+| `homeserver`    | Inactive         | Buildable headless server config; real deployment is not an active workflow.       |
+| `vm`            | Legacy Supported | QEMU/KVM dev/test VM with desktop profile. Port 2222.                              |
+| `homeserver-vm` | Inactive         | Buildable `microvm.nix` guest; host-side integration is disabled on `main`.        |
+| `installer`     | Utility          | Minimal ISO configuration used to bootstrap new installations.                     |
 
 ### Deployment
 
-| Host            | Command                                  | Notes                                                 |
-| --------------- | ---------------------------------------- | ----------------------------------------------------- |
-| `main`          | `nh os switch --hostname main .`         | Modern Nix helper (`nh`) for fast rebuilds.           |
-| `homeserver`    | `deploy '.#homeserver'`                  | Standard remote deployment via `deploy-rs`.           |
-| `vm`            | `deploy '.#vm'`                          | After `nix run '.#vm' -- create vm`.                  |
-| `homeserver-vm` | `nh os switch --hostname main .`         | Managed as `microvm@homeserver-vm.service` on `main`. |
-| `user@wsl`      | `home-manager switch --flake .#user@wsl` | Portable Home Manager for WSL.                        |
+| Host            | Command                                  | Notes                                                            |
+| --------------- | ---------------------------------------- | ---------------------------------------------------------------- |
+| `main`          | `nh os switch --hostname main .`         | Active workstation rebuild.                                      |
+| `homeserver`    | `deploy '.#homeserver'`                  | Inactive; use only after explicit hardware bootstrap.            |
+| `vm`            | `deploy '.#vm'`                          | Legacy-supported QEMU path, after `nix run '.#vm' -- create vm`. |
+| `homeserver-vm` | `nh os switch --hostname main .`         | Inactive; only works after enabling the microvm import on main.  |
+| `user@wsl`      | `home-manager switch --flake .#user@wsl` | Portable Home Manager for WSL.                                   |
 
 **Cold Installs**: Use `nix run '.#reinstall-homeserver' -- <target-ip>` (which wraps `nixos-anywhere`) only for the initial installation on real hardware. Once bootstrapped, transition to the `deploy-rs` workflow for all configuration updates.
 
@@ -237,9 +294,9 @@ A `theme-switch` script is available in the shell to list and apply themes. It u
 
 ---
 
-## Services (Homeserver)
+## Services (Inactive Homeserver Target)
 
-The `homeserver` is configured to run the following services, accessible via Tailscale:
+The inactive `homeserver` target is configured to run the following services when explicitly provisioned. These endpoints should not be treated as live unless the host has been bootstrapped and deployed.
 
 | Service         | Purpose                                            | Access                                     |
 | --------------- | -------------------------------------------------- | ------------------------------------------ |
@@ -250,9 +307,9 @@ The `homeserver` is configured to run the following services, accessible via Tai
 
 ---
 
-## Observability (homeserver rollout)
+## Observability (Inactive Homeserver Rollout)
 
-`homeserver` now hosts the shared LGTM stack. `main` and `vm` ship logs/metrics/traces to it over authenticated Tailscale HTTPS ingest paths.
+`homeserver` and `homeserver-vm` include full LGTM stack configuration, but both targets are currently inactive. The observability stack is buildable and tested as configuration, not operated as an active production service.
 
 ### Infrastructure Dashboards
 
@@ -273,13 +330,13 @@ The stack includes pre-configured dashboards for fleet overview and deep-dives i
 | **Grafana Alloy**           | Journald log shipping to Loki    | local systemd service                |
 | **OpenTelemetry Collector** | Trace pipeline to Tempo          | receivers on `127.0.0.1:14317/14318` |
 
-Authenticated ingest routes on `https://homeserver.<tailnet-name>.ts.net`:
+When the real `homeserver` is explicitly activated, authenticated ingest routes on `https://homeserver.<tailnet-name>.ts.net` are:
 
 - `/obs/loki/` → Loki push API
 - `/obs/mimir/` → Mimir remote_write API
 - `/obs/otlp/` → OpenTelemetry Collector HTTP ingest
 
-Implementation is shared via `modules/nixos/profiles/observability/`, enabled as a full stack on `homeserver` and `homeserver-vm`, and enabled as telemetry sources on `main` and `vm` through `modules/nixos/profiles/observability-client.nix`.
+Implementation is shared via `modules/nixos/profiles/observability/`, configured as a full stack on inactive `homeserver` targets, and available as telemetry sources through `modules/nixos/profiles/observability-client.nix`.
 
 Grafana admin credentials and ingest credentials are managed with `sops` secrets; keep a mirrored copy in Vaultwarden for operator recovery.
 
@@ -339,8 +396,9 @@ The flake provides several `devShells` and `apps` for development and maintenanc
 | ---------- | ---------------------- | --------------------------------------------------------------------------------------- |
 | `devShell` | `default`              | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, `qemu`, `OVMF`, `nixd`, etc. |
 | `devShell` | `security`             | Includes common security tools: `nmap`, `gobuster`, `sqlmap`, `hydra`, `john`, etc.     |
-| `app`      | `vm`                   | Archived QEMU VM management: `nix run '.#vm' -- <action> <name>`                        |
-| `app`      | `reinstall-homeserver` | Runs `nixos-anywhere` for fresh homeserver install on real hardware.                    |
+| `app`      | `doctor`               | Clean-clone checks: `nix run '.#doctor'` or `bash scripts/doctor.sh`                    |
+| `app`      | `vm`                   | Legacy-supported QEMU VM management: `nix run '.#vm' -- <action> <name>`                |
+| `app`      | `reinstall-homeserver` | Inactive/destructive real-hardware bootstrap wrapper around `nixos-anywhere`.           |
 | `package`  | `installer-iso`        | Minimal NixOS ISO: `nix build '.#installer-iso'`                                        |
 | `template` | `python`               | Python dev shell with `uv`, `ruff`, `basedpyright`: `nix flake init -t ~/nix#python`    |
 
@@ -348,26 +406,9 @@ The flake provides several `devShells` and `apps` for development and maintenanc
 
 ## Neovim
 
-A performance-focused configuration built around the Neovim 0.11+ native LSP API and `lazy.nvim`. It prioritizes speed, minimal wrappers, and a keyboard-driven workflow.
-
-| Category       | Powered By       | Description                                                            |
-| :------------- | :--------------- | :--------------------------------------------------------------------- |
-| **Completion** | `blink.cmp`      | Fast completion engine with built-in Copilot integration.              |
-| **Filesystem** | `oil.nvim`       | Edit the filesystem as a text buffer to rename, move, or delete files. |
-| **Navigation** | `leap.nvim`      | 2-character jumps to any visible text on screen.                       |
-| **LSP**        | Native 0.11      | Minimal setup for `nixd`, `clangd`, `basedpyright`, and `ltex`.        |
-| **UI**         | `snacks.nvim`    | Notifications, bigfile support, and a startup dashboard.               |
-| **Search**     | `telescope.nvim` | Fuzzy finding for files, live grep, and LSP symbols.                   |
-
-### Highlights
-
-- **Filesystem Editing**: Press `-` to open `oil.nvim`. Batch-rename or move files across folders by editing lines in the buffer and saving.
-- **Modern Completion**: `blink.cmp` provides a fast completion menu that includes GitHub Copilot suggestions alongside LSP results.
-- **Integrated Tooling**: Full support for debugging (`nvim-dap`), testing (`neotest`), and formatting (`conform`).
-- **LaTeX Support**: `vimtex` integration with continuous compilation, SyncTeX support, and an optional grammar checker (`ltex`).
-- **Theme Integration**: Colors automatically update to match the system-wide runtime theme.
-
-Detailed keymaps are documented in the [**Neovim Cheat Sheet**](home/files/nvim/CHEATSHEET.md).
+The current editor setup is documented in [docs/neovim.md](docs/neovim.md).
+The first-class Home Manager module design is tracked separately in
+[docs/neovim-module.md](docs/neovim-module.md).
 
 ---
 
@@ -440,10 +481,10 @@ bash scripts/validate.sh cve-reports
 
 Tailscale security rules are managed declaratively within the flake. The `lib/acl.nix` generator processes the `lib/hosts.nix` registry to produce a `acl.hujson` compatible structure.
 
-- **Current Policy Scope**: The ACL model is intentionally minimal. It consumes only `tailscale.tag` from the registry and emits shared fleet-wide rules.
-- **Registry Richness**: Other host metadata such as `tailnetFQDN`, `role`, `ip`, and `backup.class` remains available to the rest of the flake, but does not affect ACL generation yet.
-- **Generator**: `lib/acl.nix` maps tags to owners and defines the current base access rules (workstations can reach servers; `autogroup:admin` can reach everything).
-- **Validation**: Unit tests in `tests/lib/acl.nix` verify both the generated rules and the intentionally minimal output shape.
+- **Current Policy Scope**: The ACL model is intentionally explicit. It consumes `tailscale.tag`, `tailscale.acceptFrom`, and `tailnetFQDN` where host-specific destinations are needed.
+- **Registry Richness**: Other host metadata such as `role`, `ip`, and `backup.class` remains available to the rest of the flake, but does not affect ACL generation yet.
+- **Generator**: `lib/acl.nix` maps tags to owners, emits explicit workstation-to-server rules, and keeps `autogroup:admin` as deliberate break-glass access.
+- **Validation**: Unit tests in `tests/lib/acl.nix` verify the generated rules and output shape.
 - **Output**: The generated ACL JSON can be inspected via:
   ```bash
   nix build '.#packages.x86_64-linux.tailscale-acl' --print-out-paths | xargs cat
@@ -459,7 +500,7 @@ The repository uses GitHub Actions (`.github/workflows/nix.yml` and `flake-updat
 | :------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Flake Evaluation** | Runs `bash scripts/validate.sh flake-eval`, which keeps `nix flake check --no-build` as a fast evaluation gate for flake outputs and configs. |
 | **Light Checks**     | Runs `bash scripts/validate.sh light` for deploy checks, invariants, SOPS bootstrap validation, and lightweight library tests.                |
-| **Linting**          | Runs `statix` (Nix), `deadnix` (dead code), `treefmt` (formatting), and `shellcheck` (shell scripts).                                         |
+| **Linting**          | Runs `statix` (Nix), `deadnix` (dead code), `treefmt` (formatting), `shellcheck` (shell scripts), and Markdown link checks.                   |
 | **Package Builds**   | Builds repo-native package outputs used in CI, currently `nix build '.#packages.x86_64-linux.inventory'`.                                     |
 | **Host Builds**      | Matrix-builds each host closure via `bash scripts/validate.sh host <name>`.                                                                   |
 | **Smoke Tests**      | Runs `bash scripts/validate.sh smoke-vm` and `smoke-homeserver` in full NixOS environments when relevant paths change.                        |
@@ -474,11 +515,11 @@ The repository uses GitHub Actions (`.github/workflows/nix.yml` and `flake-updat
 
 Examples:
 
-- Desktop Home Manager changes build `main-ci` and `vm`, but skip homeserver closures.
+- Desktop Home Manager changes build `main-ci` and `vm-ci`, but skip homeserver closures.
 - Server Home Manager changes build `homeserver` and `homeserver-vm`, but skip desktop closures.
 - VM host changes run the `vm` closure and desktop VM smoke test.
 - `flake.lock` and shared library changes run every host closure, smoke test, profile test, and closure diff.
-- Docs-only changes now stop at the planner and merge gate.
+- Docs-only changes run lint and Markdown link checks, then skip eval/build-heavy jobs.
 - WSL-only changes skip expensive host and VM jobs; eval, lint, and light checks still run.
 
 The workflow uses a signed Cloudflare R2 binary cache. CI builds capture store paths during each job and push them to R2 after a successful build so later jobs can substitute them instead of rebuilding.

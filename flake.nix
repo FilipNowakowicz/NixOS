@@ -613,6 +613,16 @@
         {
           # ── Apps ────────────────────────────────────────────────────────────
           apps = {
+            doctor = {
+              type = "app";
+              program = toString (
+                pkgs.writeShellScript "doctor" ''
+                  export PATH="${lib.makeBinPath [ pkgs.python3 ]}:$PATH"
+                  exec ${pkgs.bash}/bin/bash ${./scripts/doctor.sh} "$@"
+                ''
+              );
+              meta.description = "Run clean-clone documentation, planner, evaluation, and formatting checks";
+            };
             vm = vmApp;
             reinstall-homeserver = {
               type = "app";
@@ -673,6 +683,7 @@
                   ssh-to-age
                   qemu
                   OVMF
+                  python3
                   vulnix
                   direnv
                 ])

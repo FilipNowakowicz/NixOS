@@ -22,6 +22,7 @@ lib.mkIf (backupClass != null) {
     timerConfig = {
       OnCalendar = "daily";
       Persistent = true;
+      RandomizedDelaySec = "30m";
     };
     pruneOpts = pruneOptsByClass.${backupClass};
   };

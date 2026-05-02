@@ -45,13 +45,12 @@ in
 
   hardware = {
     bluetooth.enable = true;
-    firmware = [ pkgs.linux-firmware ];
     acpilight.enable = true;
   };
 
   system.stateVersion = "24.11";
 
-  time.timeZone = lib.mkForce "Europe/London";
+  time.timeZone = "Europe/London";
 
   nix.settings = {
     extra-substituters = [ "https://pub-706604c9179043ac98604d6de4c65c2c.r2.dev" ];

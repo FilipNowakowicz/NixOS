@@ -1,7 +1,10 @@
 # Homeserver Host
 
-Headless server running Vaultwarden, Syncthing, Tailscale, Nginx.
-Accessible via Tailscale at `homeserver.filip-nowakowicz.ts.net`.
+Inactive headless server target for Vaultwarden, Syncthing, Tailscale, and
+Nginx. It is buildable configuration, not an active deployment workflow.
+
+When explicitly provisioned, it is accessible via Tailscale at
+`homeserver.filip-nowakowicz.ts.net`.
 
 ## Services
 
@@ -25,7 +28,7 @@ encrypted files are present; it will fail-loud with instructions if they're miss
 
 ## First Deploy Checklist
 
-Hardware not yet provisioned. Steps in order:
+Status: inactive; hardware is not yet provisioned. Steps in order when this path is deliberately reactivated:
 
 1. **Replace hardware config** — run `nixos-generate-config` on target or use `nixos-anywhere --generate-hardware-config`
 2. **Set Tailscale auth key** — `sops hosts/homeserver/secrets/secrets.yaml`, set `tailscale_auth_key` (Tailscale admin → Settings → Keys → reusable + ephemeral)
@@ -36,6 +39,9 @@ Hardware not yet provisioned. Steps in order:
 No post-deploy sops key rotation needed — the host key is stable from first boot.
 
 ## Deployment Workflow
+
+Status: inactive. Do not run deployment commands for this host unless the
+hardware bootstrap is intentionally being resumed.
 
 **Cold-install (bootstrap only):** `nix run '.#reinstall-homeserver' -- <target-ip>` uses `--no-substitute-on-destination`, preventing package substitution on an empty target. This is slower (builds closures on-destination) but required for fresh deployments with no existing closure store.
 
