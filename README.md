@@ -21,7 +21,8 @@ The repository separates hardware, host identity, system profiles, and user conf
 - [Architecture](docs/architecture.md) - layer boundaries, global imports, host registry rules, and the microvm split.
 - [Operations](docs/operations.md) - deployment, VM workflows, homeserver bootstrap, validation, and formatting commands.
 - [Security Model](docs/security.md) - sops recipients, initrd SSH, Tailscale exposure, USBGuard, hardening, and backups.
-- [Backlog](docs/backlog.md) and [Goals](HSGOALS.md) - deferred and active work.
+- [Config Dashboard](docs/config-dashboard.md) - plan for evolving the generated inventory into an operator dashboard.
+- [Backlog](docs/backlog.md) and [Goals](docs/goals.md) - deferred and active work.
 - [Superpowers Design Records](docs/superpowers/README.md) - historical specs and implementation plans.
 
 ---

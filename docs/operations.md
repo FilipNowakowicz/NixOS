@@ -8,6 +8,7 @@ README high-level; put command-heavy procedures here.
 - `README.md` - project overview, host inventory, feature map.
 - `CLAUDE.md` - agent/operator preferences and validation shortcuts.
 - `docs/architecture.md` - structural rules and module boundaries.
+- `docs/config-dashboard.md` - local inventory/dashboard evolution plan.
 - `docs/security.md` - secrets, network exposure, and hardening model.
 
 ## Deployment Matrix
