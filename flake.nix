@@ -63,9 +63,7 @@
       home-manager,
       deploy-rs,
       nixos-anywhere,
-      disko,
       sops-nix,
-      lanzaboote,
       pre-commit-hooks,
       treefmt-nix,
       ...
@@ -154,8 +152,6 @@
             ./hosts/${host}/default.nix
             home-manager.nixosModules.home-manager
             sops-nix.nixosModules.sops
-            lanzaboote.nixosModules.lanzaboote
-            disko.nixosModules.disko
             {
               nixpkgs.overlays = [ libfprintGoodixOverlay ];
             }
@@ -346,6 +342,18 @@
               in
               mkResult (violations == [ ]) (lib.concatStringsSep "; " violations);
           };
+
+          persistentDirectoriesInclude =
+            expected: cfg:
+            let
+              persisted = map (entry: entry.directory) (
+                cfg.environment.persistence."/persist".directories or [ ]
+              );
+              missing = lib.filter (path: !(builtins.elem path persisted)) expected;
+            in
+            mkResult (
+              missing == [ ]
+            ) "missing persisted directory path(s): ${lib.concatStringsSep ", " missing}";
         in
         {
           invariants-main = invariants.mkInvariantCheck "main" (
@@ -413,6 +421,18 @@
                 name = "firewall enabled";
                 check = cfg: require cfg.networking.firewall.enable "networking.firewall.enable must be true";
               }
+              {
+                name = "stateful homeserver-vm services persist across reboot";
+                check = persistentDirectoriesInclude [
+                  "/var/lib/syncthing"
+                  "/var/lib/vaultwarden"
+                  "/var/lib/grafana"
+                  "/var/lib/loki"
+                  "/var/lib/mimir"
+                  "/var/lib/prometheus2"
+                  "/var/lib/tempo"
+                ];
+              }
               sshFail2banHardened
             ]
             ++ registryAssertionsFor "homeserver-vm"
@@ -460,6 +480,19 @@
                   require (
                     cfg.sops.age.sshKeyPaths != [ ]
                   ) "sops.age.sshKeyPaths must contain at least one SSH host key path";
+              }
+              {
+                name = "stateful homeserver services persist across reboot";
+                check = persistentDirectoriesInclude [
+                  "/var/lib/tailscale"
+                  "/var/lib/syncthing"
+                  "/var/lib/vaultwarden"
+                  "/var/lib/grafana"
+                  "/var/lib/loki"
+                  "/var/lib/mimir"
+                  "/var/lib/prometheus2"
+                  "/var/lib/tempo"
+                ];
               }
               sshFail2banHardened
             ]

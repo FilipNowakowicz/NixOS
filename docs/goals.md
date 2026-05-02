@@ -12,9 +12,6 @@ Turn `main` into a more intentional workstation layer. Tackled incrementally —
 
 #### Ready to implement
 
-- [x] **Volume/brightness OSD** — `swayosd` shows a floating Windows-style popup when media keys fire. Hooks into existing `brightnessctl`/`wpctl` binds in `hyprland.conf`, no design work needed.
-- [ ] **Performance modes** — `power-profiles-daemon` exposes balanced/performance/power-saver. Battery icon in Waybar gets a click action to cycle modes and an icon reflecting the active mode.
-- [ ] **Wallpaper transitions** — swap `swaybg` for `swww` so theme switches and wallpaper changes animate with a crossfade instead of a hard cut.
 - [ ] **Bluetooth menu** — replace Blueman (half-screen app) with a `bluetoothctl`-driven `fuzzel` popup: lists paired devices, click to connect/disconnect.
 - [ ] **WiFi menu** — replace `networkmanagerapplet` tray with an `nmcli`-driven `fuzzel` popup launched from the Waybar network module.
 - [ ] **Volume menu** — Waybar audio module opens a thin custom popup for output/input switching (via `wpctl` or `pavucontrol`), separate from the OSD.
@@ -27,32 +24,11 @@ Turn `main` into a more intentional workstation layer. Tackled incrementally —
 
 #### Deferred (low urgency or blocked on discussion)
 
-- [ ] **Scratchpad terminal** — dropdown Kitty via `Super+backtick` using Hyprland's native scratchpad. High daily value, low effort.
-- [ ] **Night mode** — `hyprsunset` for blue-light reduction. Waybar toggle or auto-schedule by time of day.
 - [ ] **Idle inhibitor toggle** — Waybar button that pauses `hypridle` (e.g. when watching something outside a browser).
 - [ ] **Do-not-disturb toggle** — `makoctl mode +dnd` wired to a Waybar button; silences notifications on demand.
-- [ ] **Emoji picker** — `fuzzel`-based, one keybind, types emoji into focused window.
-- [ ] **Color picker** — `hyprpicker` to grab hex colors off screen; useful for dev/design.
 - [ ] **GTK/cursor/icon theming** — wire `gtk.theme`, `cursorTheme`, and an icon pack (e.g. Papirus) through home-manager so all apps match the active theme. Discuss alongside theme studio.
 - [ ] **Screenshot workflow** — `satty` for annotation after `grim` capture; `tesseract` OCR pipeline outputting to clipboard.
 - [ ] **Keybinding cheat sheet** — auto-generated popup from `hyprland.conf` binds, shown via `Super+?`.
-
-### Config Dashboard
-
-The local inventory page already gives a good host-level view of the flake. The
-next step is to turn it into a better operator surface by separating manual
-roadmap items from computed config findings.
-
-- [x] **Config dashboard wave 1** (medium) -- redesign `nix build '.#inventory'`
-      around a structured goals board plus a separate computed attention panel. Add
-      machine-readable goals data, goal status groupings, and links back to
-      canonical docs. Detailed plan: `docs/config-dashboard.md`.
-- [x] **Config dashboard wave 2** (medium) -- add validation commands,
-      dependency context, and goal-to-host/service relationships so the dashboard
-      shows not just what matters, but how to act on it.
-- [x] **Config dashboard wave 3** (medium) -- add closure-size, invariant, and
-      validation-health signals so the dashboard exposes cost, drift, and proof of
-      health alongside inventory and roadmap state.
 
 ### Homeserver
 

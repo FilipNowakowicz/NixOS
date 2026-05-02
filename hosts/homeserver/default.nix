@@ -272,7 +272,9 @@ in
     "/var/lib/vaultwarden" # Persist Vaultwarden database and config
     "/var/lib/grafana"
     "/var/lib/loki"
+    "/var/lib/mimir"
     "/var/lib/prometheus2"
+    "/var/lib/tempo"
   ];
 
   # ── User ────────────────────────────────────────────────────────────────────

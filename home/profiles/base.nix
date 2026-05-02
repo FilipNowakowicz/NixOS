@@ -15,27 +15,10 @@
     which
     zip
 
-    # Dev
-    nodejs
-    python3
-    clang-tools
-    gnumake
-    gcc
-
     # Utilities
     yazi
-    yt-dlp
     nix-output-monitor
     nh
-
-    # AI
-    claude-code
-    codex
-    gemini-cli
-
-    # GitHub / Steam
-    gh
-    steam-run
   ];
 
   # ── Environment Variables ──────────────────────────────────────────────────

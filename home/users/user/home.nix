@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  skipHeavyPackages ? false,
   ...
 }:
 let
@@ -9,116 +10,134 @@ let
   privateUserJs = ../../files/firefox/private-user.js;
 in
 {
-  home.packages = with pkgs; [
-    (writeShellApplication {
-      name = "theme-switch";
-      runtimeInputs = with pkgs; [
-        home-manager
-        hyprland
-        waybar
-        swaybg
-        kitty
-        procps
-        systemd
-        libnotify
-        fzf
-      ];
-      text = ''
-        NIX_REPO="${nixRepo}"
-      ''
-      + builtins.readFile ../../files/scripts/theme-switch.sh;
-    })
+  home.packages =
+    (with pkgs; [
+      (writeShellApplication {
+        name = "theme-switch";
+        runtimeInputs = with pkgs; [
+          home-manager
+          hyprland
+          waybar
+          swaybg
+          kitty
+          procps
+          systemd
+          libnotify
+          fzf
+        ];
+        text = ''
+          NIX_REPO="${nixRepo}"
+        ''
+        + builtins.readFile ../../files/scripts/theme-switch.sh;
+      })
 
-    (writeShellApplication {
-      name = "waybar-weather";
-      runtimeInputs = with pkgs; [ curl ];
-      text = builtins.readFile ../../files/scripts/waybar-weather.sh;
-    })
+      (writeShellApplication {
+        name = "waybar-weather";
+        runtimeInputs = with pkgs; [ curl ];
+        text = builtins.readFile ../../files/scripts/waybar-weather.sh;
+      })
 
-    (writeShellApplication {
-      name = "clipboard-pick";
-      runtimeInputs = with pkgs; [
-        cliphist
-        fzf
-        wl-clipboard
-      ];
-      text = builtins.readFile ../../files/scripts/clipboard-pick.sh;
-    })
+      (writeShellApplication {
+        name = "clipboard-pick";
+        runtimeInputs = with pkgs; [
+          cliphist
+          fzf
+          wl-clipboard
+        ];
+        text = builtins.readFile ../../files/scripts/clipboard-pick.sh;
+      })
 
-    (writeShellApplication {
-      name = "power-profile";
-      runtimeInputs = with pkgs; [ power-profiles-daemon ];
-      text = ''
-        current=$(powerprofilesctl get)
-        case "$current" in
-          power-saver) next=balanced ;;
-          balanced)    next=performance ;;
-          performance) next=power-saver ;;
-          *)           next=balanced ;;
-        esac
-        powerprofilesctl set "$next"
-      '';
-    })
+      (writeShellApplication {
+        name = "power-profile";
+        runtimeInputs = with pkgs; [ power-profiles-daemon ];
+        text = ''
+          current=$(powerprofilesctl get)
+          case "$current" in
+            power-saver) next=balanced ;;
+            balanced)    next=performance ;;
+            performance) next=power-saver ;;
+            *)           next=balanced ;;
+          esac
+          powerprofilesctl set "$next"
+        '';
+      })
 
-    (writeShellApplication {
-      name = "battery-status";
-      runtimeInputs = with pkgs; [ power-profiles-daemon ];
-      text = ''
-        get_bat_icon() {
-          local pct=$1
-          local icons=("󰁺" "󰁻" "󰁼" "󰁽" "󰁾" "󰁿" "󰂀" "󰂁" "󰂂" "󰁹")
-          local idx=$(( pct / 10 ))
-          (( idx > 9 )) && idx=9
-          echo "''${icons[$idx]}"
-        }
+      (writeShellApplication {
+        name = "battery-status";
+        runtimeInputs = with pkgs; [ power-profiles-daemon ];
+        text = ''
+          get_bat_icon() {
+            local pct=$1
+            local icons=("󰁺" "󰁻" "󰁼" "󰁽" "󰁾" "󰁿" "󰂀" "󰂁" "󰂂" "󰁹")
+            local idx=$(( pct / 10 ))
+            (( idx > 9 )) && idx=9
+            echo "''${icons[$idx]}"
+          }
 
-        profile=$(powerprofilesctl get 2>/dev/null || echo "balanced")
+          profile=$(powerprofilesctl get 2>/dev/null || echo "balanced")
 
-        bat_dir=$(find /sys/class/power_supply -maxdepth 1 -name 'BAT*' 2>/dev/null | head -1)
-        if [[ -z "$bat_dir" ]]; then
-          printf '{"text":"%s","tooltip":"%s","class":"%s"}\n' "?" "$profile" "$profile"
-          exit 0
-        fi
+          bat_dir=$(find /sys/class/power_supply -maxdepth 1 -name 'BAT*' 2>/dev/null | head -1)
+          if [[ -z "$bat_dir" ]]; then
+            printf '{"text":"%s","tooltip":"%s","class":"%s"}\n' "?" "$profile" "$profile"
+            exit 0
+          fi
 
-        capacity=$(cat "$bat_dir/capacity")
-        status=$(cat "$bat_dir/status")
+          capacity=$(cat "$bat_dir/capacity")
+          status=$(cat "$bat_dir/status")
 
-        if [[ "$status" == "Full" ]]; then
-          printf '{"text":"","tooltip":"%s","class":"full"}\n' "$profile"
-          exit 0
-        fi
+          if [[ "$status" == "Full" ]]; then
+            printf '{"text":"","tooltip":"%s","class":"full"}\n' "$profile"
+            exit 0
+          fi
 
-        case "$status" in
-          Charging) bat_icon="󰂄" ;;
-          *)        bat_icon=$(get_bat_icon "$capacity") ;;
-        esac
+          case "$status" in
+            Charging) bat_icon="󰂄" ;;
+            *)        bat_icon=$(get_bat_icon "$capacity") ;;
+          esac
 
-        classes="$profile"
-        (( capacity <= 15 )) && classes="$classes critical"
-        (( capacity > 15 && capacity <= 30 )) && classes="$classes warning"
+          classes="$profile"
+          (( capacity <= 15 )) && classes="$classes critical"
+          (( capacity > 15 && capacity <= 30 )) && classes="$classes warning"
 
-        tooltip="$profile · ''${capacity}% · ''${status}"
-        text="''${bat_icon}  ''${capacity}%"
+          tooltip="$profile · ''${capacity}% · ''${status}"
+          text="''${bat_icon}  ''${capacity}%"
 
-        printf '{"text":"%s","tooltip":"%s","class":"%s"}\n' "$text" "$tooltip" "$classes"
-      '';
-    })
+          printf '{"text":"%s","tooltip":"%s","class":"%s"}\n' "$text" "$tooltip" "$classes"
+        '';
+      })
 
-    (writeShellApplication {
-      name = "firefox-private";
-      runtimeInputs = [ pkgs.firefox ];
-      text = ''
-        profile=$(mktemp -d)
-        trap 'rm -rf "$profile"' EXIT
-        cp ${privateUserJs} "$profile/user.js"
-        exec firefox --profile "$profile" --no-remote "$@"
-      '';
-    })
+      (writeShellApplication {
+        name = "firefox-private";
+        runtimeInputs = [ pkgs.firefox ];
+        text = ''
+          profile=$(mktemp -d)
+          trap 'rm -rf "$profile"' EXIT
+          cp ${privateUserJs} "$profile/user.js"
+          exec firefox --profile "$profile" --no-remote "$@"
+        '';
+      })
 
-    hypridle
-    opencode
-    opencode-claude-auth
-  ];
+      hypridle
+    ])
+    ++ lib.optionals (!skipHeavyPackages) (
+      with pkgs;
+      [
+        # Workstation-only packages; keep shared base lean for servers and CI.
+        nodejs
+        python3
+        clang-tools
+        gnumake
+        gcc
+        yt-dlp
+        claude-code
+        codex
+        gemini-cli
+        opencode
+        opencode-claude-auth
+        gh
+        steam-run
+      ]
+    );
 
   imports = [
     ./common.nix

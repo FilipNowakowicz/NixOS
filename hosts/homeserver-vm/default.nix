@@ -217,6 +217,15 @@ in
 
   # ── Impermanence ────────────────────────────────────────────────────────────
   fileSystems."/persist".neededForBoot = true;
+  environment.persistence."/persist".directories = [
+    "/var/lib/syncthing"
+    "/var/lib/vaultwarden"
+    "/var/lib/grafana"
+    "/var/lib/loki"
+    "/var/lib/mimir"
+    "/var/lib/prometheus2"
+    "/var/lib/tempo"
+  ];
 
   # ── User ────────────────────────────────────────────────────────────────────
   users.users.user = {
