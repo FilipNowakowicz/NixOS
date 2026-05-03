@@ -8,6 +8,15 @@
   users.users.user.extraGroups = [ "input" ];
 
   services = {
+    # ── Keyboard ──────────────────────────────────────────────────────────
+    keyd = {
+      enable = true;
+      keyboards.default = {
+        ids = [ "*" ];
+        settings.main.capslock = "backslash";
+      };
+    };
+
     # ── Audio ──────────────────────────────────────────────────────────────
     pipewire = {
       enable = true;
