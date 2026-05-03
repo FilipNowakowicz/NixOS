@@ -167,7 +167,7 @@ let
       homeManager = {
         role = "desktop";
         profiles = [ "desktop" ];
-        enableSpotify = false;
+        enableSpotify = true;
         packs = [
           "browsing"
           "coding"
@@ -207,6 +207,22 @@ let
       sshPort = 2222;
       diskSize = "40G";
       deploy.sshUser = "user";
+    };
+
+    homeserver-gcp = {
+      system = "x86_64-linux";
+      status = "inactive";
+      homeManager.role = "server";
+      tailnetFQDN = "homeserver-gcp.filip-nowakowicz.ts.net";
+      tailscale = {
+        tag = "server";
+        acceptFrom.workstation = [
+          22
+          443
+        ];
+      };
+      deploy.sshUser = "user";
+      backup.class = "critical";
     };
 
     homeserver-vm = {

@@ -8,6 +8,53 @@
 let
   nixRepo = "${config.home.homeDirectory}/nix";
   privateUserJs = ../../files/firefox/private-user.js;
+  batteryNotify = pkgs.writeShellApplication {
+    name = "battery-notify";
+    runtimeInputs = with pkgs; [
+      libnotify
+      coreutils
+    ];
+    text = ''
+      STATE_FILE="/tmp/battery-notify-level"
+
+      bat_dir=$(find /sys/class/power_supply -maxdepth 1 -name 'BAT*' 2>/dev/null | head -1)
+      [[ -z "$bat_dir" ]] && exit 0
+
+      capacity=$(cat "$bat_dir/capacity")
+      status=$(cat "$bat_dir/status")
+
+      # Clear state and exit when on AC power
+      [[ "$status" == "Charging" || "$status" == "Full" ]] && { rm -f "$STATE_FILE"; exit 0; }
+
+      if (( capacity <= 5 )); then
+        level="critical"
+      elif (( capacity <= 15 )); then
+        level="warning-low"
+      elif (( capacity <= 30 )); then
+        level="warning"
+      else
+        level="ok"
+      fi
+
+      prev_level=$(cat "$STATE_FILE" 2>/dev/null || echo "ok")
+      [[ "$level" == "$prev_level" ]] && exit 0
+
+      case "$level" in
+        critical)
+          notify-send -u critical -i battery-caution "Battery Critical" "''${capacity}% — plug in now"
+          ;;
+        warning-low)
+          notify-send -u critical -i battery-low "Battery Low" "''${capacity}% remaining"
+          ;;
+        warning)
+          notify-send -u normal -i battery-low "Battery Warning" "''${capacity}% remaining"
+          ;;
+        ok) ;;
+      esac
+
+      echo "$level" > "$STATE_FILE"
+    '';
+  };
 in
 {
   home.packages =
@@ -105,6 +152,8 @@ in
           printf '{"text":"%s","tooltip":"%s","class":"%s"}\n' "$text" "$tooltip" "$classes"
         '';
       })
+
+      batteryNotify
 
       (writeShellApplication {
         name = "firefox-private";
@@ -285,20 +334,40 @@ in
 
   # Start with the same user target that Hyprland explicitly starts in
   # ~/.config/hypr/hyprland.conf (nixos-fake-graphical-session.target).
-  systemd.user.services.hypridle = {
-    Unit = {
-      Description = "hypridle";
-      After = [ "nixos-fake-graphical-session.target" ];
-      PartOf = [ "nixos-fake-graphical-session.target" ];
+  systemd.user.services = {
+    battery-notify = {
+      Unit.Description = "Battery low notification check";
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${batteryNotify}/bin/battery-notify";
+        Environment = "DISPLAY=:0";
+      };
     };
-    Service = {
-      Type = "simple";
-      ExecStart = "${pkgs.hypridle}/bin/hypridle -c %h/.config/hypr/hypridle.conf";
-      Restart = "on-failure";
-      RestartSec = 10;
+
+    hypridle = {
+      Unit = {
+        Description = "hypridle";
+        After = [ "nixos-fake-graphical-session.target" ];
+        PartOf = [ "nixos-fake-graphical-session.target" ];
+      };
+      Service = {
+        Type = "simple";
+        ExecStart = "${pkgs.hypridle}/bin/hypridle -c %h/.config/hypr/hypridle.conf";
+        Restart = "on-failure";
+        RestartSec = 10;
+      };
+      Install = {
+        WantedBy = [ "nixos-fake-graphical-session.target" ];
+      };
     };
-    Install = {
-      WantedBy = [ "nixos-fake-graphical-session.target" ];
+  };
+
+  systemd.user.timers.battery-notify = {
+    Unit.Description = "Poll battery level every minute";
+    Timer = {
+      OnBootSec = "1min";
+      OnUnitActiveSec = "1min";
     };
+    Install.WantedBy = [ "timers.target" ];
   };
 }

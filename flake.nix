@@ -499,6 +499,72 @@
             ++ registryAssertionsFor "homeserver"
           ) allNixosConfigs.homeserver.config;
 
+          invariants-homeserver-gcp = invariants.mkInvariantCheck "homeserver-gcp" (
+            [
+              {
+                name = "has stateVersion";
+                check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
+              }
+              {
+                name = "no passwordless sudo";
+                check =
+                  cfg: require cfg.security.sudo.wheelNeedsPassword "security.sudo.wheelNeedsPassword must be true";
+              }
+              {
+                name = "firewall enabled";
+                check = cfg: require cfg.networking.firewall.enable "networking.firewall.enable must be true";
+              }
+              {
+                name = "nix trusted-users stay root-only";
+                check = cfg: invariants.checkExpectedTrustedUsers [ "root" ] cfg;
+              }
+              {
+                name = "SSH and HTTPS are not globally open";
+                check = cfg: invariants.checkNoGlobalTCPPorts [ 22 443 ] cfg;
+              }
+              {
+                name = "SSH and HTTPS stay Tailscale-only";
+                check =
+                  cfg:
+                  invariants.checkTCPPortsRestrictedToInterface {
+                    interface = "tailscale0";
+                    ports = [
+                      22
+                      443
+                    ];
+                  } cfg;
+              }
+              {
+                name = "sops uses SSH host key for decryption";
+                check =
+                  cfg:
+                  require (
+                    cfg.sops.age.sshKeyPaths != [ ]
+                  ) "sops.age.sshKeyPaths must contain at least one SSH host key path";
+              }
+              sshFail2banHardened
+            ]
+            ++ registryAssertionsFor "homeserver-gcp"
+          ) allNixosConfigs.homeserver-gcp.config;
+
+          homeserver-gcp-sops-bootstrap =
+            let
+              secretsDir = ./hosts/homeserver-gcp/secrets;
+              hasKey = builtins.pathExists (secretsDir + "/ssh_host_ed25519_key.enc");
+              hasPub = builtins.pathExists (secretsDir + "/ssh_host_ed25519_key.pub.enc");
+            in
+            if hasKey && hasPub then
+              pkgs.runCommand "homeserver-gcp-sops-bootstrap-check" { } "touch $out"
+            else
+              pkgs.runCommand "homeserver-gcp-sops-bootstrap-check" { } ''
+                echo "homeserver-gcp sops bootstrap incomplete — missing pre-baked host key files:"
+                ${lib.optionalString (!hasKey) ''echo "  hosts/homeserver-gcp/secrets/ssh_host_ed25519_key.enc"''}
+                ${lib.optionalString (
+                  !hasPub
+                ) ''echo "  hosts/homeserver-gcp/secrets/ssh_host_ed25519_key.pub.enc"''}
+                exit 1
+              '';
+
           # Fail-loud: pre-baked host key files must be present so reinstall-homeserver can inject
           # a stable age identity from first boot. Without them, sops secrets won't decrypt on boot.
           homeserver-sops-bootstrap =
@@ -641,6 +707,8 @@
 
           # ── Packages ────────────────────────────────────────────────────────
           packages = {
+            homeserver-gcp-image = allNixosConfigs.homeserver-gcp.config.system.build.googleComputeImage;
+
             inventory = import ./packages/inventory.nix {
               inherit
                 lib
@@ -686,6 +754,8 @@
                   python3
                   vulnix
                   direnv
+                  opentofu
+                  google-cloud-sdk
                 ])
                 ++ [
                   deploy-rs.packages.${system}.deploy-rs

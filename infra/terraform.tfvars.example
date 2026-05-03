@@ -1,0 +1,10 @@
+# Copy to terraform.tfvars (gitignored) and fill in your values.
+# Run `gcloud config get-value project` to find your project ID.
+
+gcp_project = "your-gcp-project-id"
+
+# Optional overrides (defaults are fine for most setups):
+# region       = "us-central1"
+# zone         = "us-central1-a"
+# machine_type = "e2-medium"
+# disk_size_gb = 50
