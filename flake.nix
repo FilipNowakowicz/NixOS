@@ -570,7 +570,7 @@
               sshFail2banHardened
             ]
             ++ registryAssertionsFor "homeserver-gcp"
-          ) allNixosConfigs.homeserver-gcp.config;
+          ) ciNixosConfigs.homeserver-gcp.config;
 
           homeserver-gcp-sops-bootstrap =
             let
