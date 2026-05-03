@@ -707,8 +707,6 @@
 
           # ── Packages ────────────────────────────────────────────────────────
           packages = {
-            homeserver-gcp-image = allNixosConfigs.homeserver-gcp.config.system.build.googleComputeImage;
-
             inventory = import ./packages/inventory.nix {
               inherit
                 lib
