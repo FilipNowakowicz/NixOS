@@ -222,7 +222,6 @@ let
         ];
       };
       deploy.sshUser = "user";
-      backup.class = "critical";
     };
 
     homeserver-vm = {

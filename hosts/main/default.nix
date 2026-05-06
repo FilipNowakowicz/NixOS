@@ -189,16 +189,18 @@ in
     restic.backups.local = {
       paths = [
         "/home/user/.ssh"
-        "/home/user/.gnupg"
-        "/home/user/nix"
-        "/home/user/documents"
+        "/home/user/.mozilla/firefox"
+        "/home/user/.config/spotify"
+        "/home/user/.config/discord"
+        "/home/user/.config/gh"
+        "/home/user/.config/gcloud"
+        "/home/user/.local/share/Anki2"
+        "/home/user/.config/chromium"
+        "/home/user/.local/share/kwalletd"
       ];
-      exclude = [
-        "/home/user/nix/.direnv"
-        "/home/user/nix/result"
-      ];
-      repository = "/var/backup/restic-repo";
+      repository = "b2:filipnowakowicz-backup:/main";
       passwordFile = config.sops.secrets.restic_password.path;
+      environmentFile = config.sops.secrets.b2_credentials.path;
     };
   };
 
@@ -342,6 +344,7 @@ in
         mode = "0440";
       };
       restic_password = { };
+      b2_credentials = { };
       initrd_ssh_host_ed25519_key = { };
     };
   };
