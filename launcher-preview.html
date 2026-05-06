@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Launcher Pill — Preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #0a0a0a;
+        --brown: #2a2a2a;
+        --orange: #888888;
+        --amber: #cccccc;
+        --text: #e8e8e8;
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        font-size: 12px;
+        background:
+          radial-gradient(
+            ellipse at 30% 60%,
+            rgba(40, 35, 25, 0.4) 0%,
+            transparent 60%
+          ),
+          radial-gradient(
+            ellipse at 75% 30%,
+            rgba(20, 25, 35, 0.4) 0%,
+            transparent 55%
+          ),
+          #111013;
+        min-height: 100vh;
+        color: var(--text);
+        overflow-x: hidden;
+      }
+
+      /* ── Wallpaper noise overlay ───────────────────────────── */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* ── Bar ──────────────────────────────────────────────── */
+      #waybar {
+        position: fixed;
+        top: 6px;
+        left: 12px;
+        right: 12px;
+        height: 48px;
+        display: flex;
+        align-items: stretch;
+        z-index: 100;
+        pointer-events: none;
+      }
+
+      .bar-section {
+        display: flex;
+        align-items: center;
+        pointer-events: all;
+      }
+      .bar-left {
+        flex: 0 0 auto;
+      }
+      .bar-center {
+        flex: 1;
+        justify-content: center;
+        gap: 4px;
+      }
+      .bar-right {
+        flex: 0 0 auto;
+        margin-left: auto;
+      }
+
+      /* ── Pill base ────────────────────────────────────────── */
+      .pill {
+        background: rgba(var(--bg-rgb, 10, 10, 10), 0.82);
+        border-radius: 12px;
+        margin: 6px 3px;
+        border: 1px solid rgba(var(--orange-rgb, 136, 136, 136), 0.28);
+        display: flex;
+        align-items: center;
+        height: calc(100% - 12px);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+
+      /* ── Workspaces ───────────────────────────────────────── */
+      #workspaces {
+        padding: 0 10px;
+        gap: 2px;
+      }
+      .ws-dot {
+        font-size: 9px;
+        padding: 0 4px;
+        color: rgba(var(--text-rgb, 232, 232, 232), 0.25);
+        line-height: 1;
+        transition: color 150ms ease;
+      }
+      .ws-dot.active {
+        color: var(--amber);
+      }
+      .ws-dot.used {
+        color: var(--text);
+      }
+
+      /* ── Clock ────────────────────────────────────────────── */
+      #clock {
+        padding: 0 18px;
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+        color: var(--text);
+        letter-spacing: 0.01em;
+      }
+      #clock .dim {
+        opacity: 0.5;
+      }
+
+      /* ── Right modules ────────────────────────────────────── */
+      #right-pill {
+        padding: 0 4px 0 10px;
+        gap: 0;
+      }
+      .rm {
+        padding: 0 10px;
+        opacity: 0.75;
+        font-size: 13px;
+      }
+      .rm.chevron {
+        padding: 0 6px 0 10px;
+        opacity: 0.4;
+        font-size: 13px;
+      }
+      .rm.bt-connected {
+        opacity: 1;
+      }
+
+      /* ── Launcher pill ────────────────────────────────────── */
+      #launcher-pill {
+        position: relative;
+        min-width: 0px;
+        max-width: 220px;
+        width: 0px;
+        padding: 0;
+        border: none !important;
+        transition:
+          width 220ms cubic-bezier(0.4, 0, 0.2, 1),
+          border-color 220ms ease,
+          background 220ms ease,
+          padding 220ms ease,
+          border-width 0ms ease;
+        overflow: hidden;
+        cursor: text;
+      }
+
+      #launcher-pill.active {
+        width: 200px;
+        padding: inherit;
+        border: 1px solid rgba(var(--orange-rgb, 136, 136, 136), 0.55) !important;
+      }
+
+      #launcher-pill.launched {
+        border-color: rgba(var(--amber-rgb, 204, 204, 204), 0.6) !important;
+        background: rgba(var(--amber-rgb, 204, 204, 204), 0.07);
+      }
+
+      /* ghost text container */
+      #launcher-input-wrap {
+        position: relative;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        opacity: 0;
+        transition: opacity 150ms ease 60ms;
+      }
+      #launcher-pill.active #launcher-input-wrap {
+        opacity: 1;
+      }
+
+      /* invisible ruler — measures typed text pixel width */
+      #text-ruler {
+        position: absolute;
+        visibility: hidden;
+        white-space: pre;
+        font-family: "Inter", sans-serif;
+        font-size: 12px;
+        font-weight: 400;
+        letter-spacing: 0;
+        pointer-events: none;
+      }
+
+      /* ghost completion — positioned by JS right after typed text */
+      #ghost-completion {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        white-space: pre;
+        pointer-events: none;
+        font-family: "Inter", sans-serif;
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--text);
+        opacity: 0.32;
+        letter-spacing: 0;
+        line-height: 1;
+      }
+
+      #launcher-input {
+        background: transparent;
+        border: none;
+        outline: none;
+        font-family: "Inter", sans-serif;
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--text);
+        width: 100%;
+        padding: 0 12px;
+        text-align: center;
+        caret-color: var(--amber);
+        position: relative;
+        z-index: 1;
+        letter-spacing: 0;
+      }
+
+      /* ── Controls panel ───────────────────────────────────── */
+      #controls {
+        position: fixed;
+        bottom: 32px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        z-index: 200;
+        pointer-events: all;
+      }
+
+      .ctrl-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .ctrl-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        opacity: 0.4;
+        margin-right: 4px;
+      }
+
+      .theme-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: rgba(255, 255, 255, 0.55);
+        font-family: "Inter", sans-serif;
+        font-size: 11px;
+        padding: 6px 14px;
+        cursor: pointer;
+        transition: all 150ms ease;
+        letter-spacing: 0.03em;
+      }
+      .theme-btn:hover {
+        background: rgba(255, 255, 255, 0.09);
+        color: rgba(255, 255, 255, 0.85);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+      .theme-btn.active-theme {
+        border-color: var(--amber);
+        color: var(--amber);
+        background: rgba(var(--amber-rgb, 204, 204, 204), 0.07);
+      }
+
+      .trigger-btn {
+        background: rgba(var(--amber-rgb, 204, 204, 204), 0.08);
+        border: 1px solid rgba(var(--amber-rgb, 204, 204, 204), 0.35);
+        border-radius: 8px;
+        color: var(--amber);
+        font-family: "Inter", sans-serif;
+        font-size: 11px;
+        padding: 6px 18px;
+        cursor: pointer;
+        transition: all 150ms ease;
+        letter-spacing: 0.04em;
+      }
+      .trigger-btn:hover {
+        background: rgba(var(--amber-rgb, 204, 204, 204), 0.14);
+        border-color: rgba(var(--amber-rgb, 204, 204, 204), 0.6);
+      }
+
+      .hint {
+        font-size: 10px;
+        opacity: 0.25;
+        letter-spacing: 0.05em;
+        text-align: center;
+      }
+
+      /* ── Launch flash ─────────────────────────────────────── */
+      @keyframes launch-flash {
+        0% {
+          opacity: 1;
+        }
+        40% {
+          opacity: 0.6;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+      .launch-flash {
+        animation: launch-flash 400ms ease forwards;
+      }
+
+      /* ── Clock tick ───────────────────────────────────────── */
+      @keyframes subtle-appear {
+        from {
+          opacity: 0;
+          transform: translateY(-2px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      #waybar {
+        animation: subtle-appear 350ms ease both;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── Waybar simulation ─────────────────────────────────── -->
+    <div id="waybar">
+      <!-- Left: workspaces -->
+      <div class="bar-section bar-left">
+        <div class="pill" id="workspaces">
+          <span class="ws-dot used">●</span>
+          <span class="ws-dot active">●</span>
+          <span class="ws-dot">○</span>
+          <span class="ws-dot">○</span>
+          <span class="ws-dot">○</span>
+          <span class="ws-dot">○</span>
+          <span class="ws-dot">○</span>
+          <span class="ws-dot">○</span>
+          <span class="ws-dot">○</span>
+          <span class="ws-dot">○</span>
+        </div>
+      </div>
+
+      <!-- Center: launcher + clock -->
+      <div class="bar-section bar-center">
+        <!-- Launcher pill -->
+        <div class="pill" id="launcher-pill" title="click or press trigger">
+          <div id="launcher-input-wrap">
+            <span id="text-ruler" aria-hidden="true"></span>
+            <span id="ghost-completion" aria-hidden="true"></span>
+            <input
+              id="launcher-input"
+              type="text"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+            />
+          </div>
+        </div>
+
+        <!-- Clock -->
+        <div class="pill" id="clock">
+          <span id="clock-time">14:32</span>&nbsp;<span class="dim"
+            >· <span id="clock-date">Wed 06</span></span
+          >
+        </div>
+      </div>
+
+      <!-- Right: status modules -->
+      <div class="bar-section bar-right">
+        <div class="pill" id="right-pill">
+          <span class="rm chevron">‹</span>
+          <span class="rm bt-connected">󰂱&nbsp; headphones</span>
+          <span class="rm">󰤨</span>
+          <span class="rm">󰕾</span>
+          <span class="rm">⚡ 85%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Controls ──────────────────────────────────────────── -->
+    <div id="controls">
+      <div class="ctrl-row">
+        <span class="ctrl-label">Theme</span>
+        <button class="theme-btn active-theme" data-theme="mono-mesh">
+          mono-mesh
+        </button>
+        <button class="theme-btn" data-theme="desert-dusk">desert-dusk</button>
+        <button class="theme-btn" data-theme="acid-statue">acid-statue</button>
+        <button class="theme-btn" data-theme="nighthawks">nighthawks</button>
+      </div>
+      <div class="ctrl-row">
+        <button class="trigger-btn" id="trigger-btn">
+          ⌨ Trigger launcher
+        </button>
+      </div>
+      <div class="hint">
+        Tab / → &nbsp;·&nbsp; accept ghost &nbsp;·&nbsp; Enter &nbsp;·&nbsp;
+        launch &nbsp;·&nbsp; Esc &nbsp;·&nbsp; dismiss
+      </div>
+    </div>
+
+    <script>
+      // ── Theme definitions ────────────────────────────────────
+      const THEMES = {
+        "mono-mesh": {
+          bg: [10, 10, 10],
+          brown: [42, 42, 42],
+          orange: [136, 136, 136],
+          amber: [204, 204, 204],
+          text: [232, 232, 232],
+        },
+        "desert-dusk": {
+          bg: [28, 26, 24],
+          brown: [74, 55, 40],
+          orange: [196, 110, 26],
+          amber: [232, 137, 12],
+          text: [240, 208, 160],
+        },
+        "acid-statue": {
+          bg: [30, 35, 48],
+          brown: [46, 58, 74],
+          orange: [74, 122, 106],
+          amber: [168, 232, 64],
+          text: [200, 212, 192],
+        },
+        nighthawks: {
+          bg: [22, 26, 32],
+          brown: [42, 48, 64],
+          orange: [74, 85, 104],
+          amber: [138, 164, 184],
+          text: [200, 208, 216],
+        },
+      };
+
+      function applyTheme(name) {
+        const t = THEMES[name];
+        if (!t) return;
+        const r = document.documentElement;
+        const hex = (rgb) =>
+          "#" + rgb.map((v) => v.toString(16).padStart(2, "0")).join("");
+        r.style.setProperty("--bg", hex(t.bg));
+        r.style.setProperty("--brown", hex(t.brown));
+        r.style.setProperty("--orange", hex(t.orange));
+        r.style.setProperty("--amber", hex(t.amber));
+        r.style.setProperty("--text", hex(t.text));
+        r.style.setProperty("--bg-rgb", t.bg.join(","));
+        r.style.setProperty("--orange-rgb", t.orange.join(","));
+        r.style.setProperty("--amber-rgb", t.amber.join(","));
+        r.style.setProperty("--text-rgb", t.text.join(","));
+
+        document.querySelectorAll(".theme-btn").forEach((b) => {
+          b.classList.toggle("active-theme", b.dataset.theme === name);
+        });
+      }
+
+      document.querySelectorAll(".theme-btn").forEach((b) => {
+        b.addEventListener("click", () => applyTheme(b.dataset.theme));
+      });
+
+      // ── App list ─────────────────────────────────────────────
+      const APPS = [
+        "alacritty",
+        "blueman-manager",
+        "btop",
+        "chromium",
+        "code",
+        "discord",
+        "firefox",
+        "foot",
+        "ghostty",
+        "gimp",
+        "heroic",
+        "htop",
+        "inkscape",
+        "kitty",
+        "lutris",
+        "mpv",
+        "nautilus",
+        "nvim",
+        "obsidian",
+        "pavucontrol",
+        "signal-desktop",
+        "spotify",
+        "steam",
+        "telegram-desktop",
+        "thunar",
+        "vlc",
+        "wezterm",
+        "zed",
+      ];
+
+      // ── Launcher state ────────────────────────────────────────
+      const pill = document.getElementById("launcher-pill");
+      const input = document.getElementById("launcher-input");
+      const ruler = document.getElementById("text-ruler");
+      const ghostComp = document.getElementById("ghost-completion");
+
+      let currentMatch = "";
+
+      function bestMatch(query) {
+        if (!query) return "";
+        const q = query.toLowerCase();
+        return APPS.find((a) => a.startsWith(q) && a !== q) || "";
+      }
+
+      function updateGhost() {
+        const val = input.value;
+        currentMatch = bestMatch(val);
+
+        if (currentMatch && val) {
+          // Measure typed text with the hidden ruler (identical font)
+          ruler.textContent = val;
+          const typedPx = ruler.offsetWidth;
+
+          // With text-align:center, typed text center = input center
+          // typed text ends at: center + typedPx/2
+          const inputCenter = input.offsetWidth / 2;
+          const ghostLeft = inputCenter + typedPx / 2;
+
+          ghostComp.textContent = currentMatch.slice(val.length);
+          ghostComp.style.left = ghostLeft + "px";
+        } else {
+          ghostComp.textContent = "";
+        }
+      }
+
+      function activateLauncher() {
+        pill.classList.add("active");
+        input.focus();
+        updateGhost();
+      }
+
+      function dismissLauncher() {
+        input.value = "";
+        ghostComp.textContent = "";
+        currentMatch = "";
+        pill.classList.remove("active", "launched");
+        input.blur();
+      }
+
+      function acceptGhost() {
+        if (currentMatch) {
+          input.value = currentMatch;
+          ghostComp.textContent = "";
+          currentMatch = "";
+        }
+      }
+
+      function launch() {
+        const app = input.value.trim() || currentMatch;
+        if (!app) {
+          dismissLauncher();
+          return;
+        }
+        input.value = app;
+        ghostComp.textContent = "";
+
+        pill.classList.add("launched");
+        input.blur();
+
+        // brief confirmation flash then dismiss
+        setTimeout(() => {
+          pill.classList.remove("launched");
+          dismissLauncher();
+        }, 500);
+      }
+
+      // Input events
+      input.addEventListener("input", updateGhost);
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Tab" || e.key === "ArrowRight") {
+          if (currentMatch && input.selectionStart === input.value.length) {
+            e.preventDefault();
+            acceptGhost();
+          }
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          launch();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          dismissLauncher();
+        }
+      });
+
+      input.addEventListener("blur", () => {
+        // small delay so trigger-btn click can re-focus
+        setTimeout(() => {
+          if (document.activeElement !== input) {
+            dismissLauncher();
+          }
+        }, 120);
+      });
+
+      // Click on pill to activate
+      pill.addEventListener("click", activateLauncher);
+
+      // Trigger button
+      document.getElementById("trigger-btn").addEventListener("click", () => {
+        if (pill.classList.contains("active")) {
+          dismissLauncher();
+        } else {
+          activateLauncher();
+        }
+      });
+
+      // ── Live clock ────────────────────────────────────────────
+      function updateClock() {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, "0");
+        const mm = String(now.getMinutes()).padStart(2, "0");
+        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const day = days[now.getDay()];
+        const dd = String(now.getDate()).padStart(2, "0");
+        document.getElementById("clock-time").textContent = `${hh}:${mm}`;
+        document.getElementById("clock-date").textContent = `${day} ${dd}`;
+      }
+      updateClock();
+      setInterval(updateClock, 10000);
+
+      // ── Init ──────────────────────────────────────────────────
+      applyTheme("mono-mesh");
+    </script>
+  </body>
+</html>

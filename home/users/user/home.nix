@@ -8,6 +8,49 @@
 let
   nixRepo = "${config.home.homeDirectory}/nix";
   privateUserJs = ../../files/firefox/private-user.js;
+
+  launcher =
+    let
+      python = pkgs.python3.withPackages (ps: [ ps.pygobject3 ]);
+      src = pkgs.writeText "launcher.py" (builtins.readFile ../../files/scripts/launcher.py);
+    in
+    pkgs.stdenv.mkDerivation {
+      name = "launcher";
+      dontUnpack = true;
+
+      nativeBuildInputs = with pkgs; [
+        gobject-introspection
+        wrapGAppsHook4
+      ];
+
+      buildInputs = with pkgs; [
+        glib
+        pango
+        gdk-pixbuf
+        graphene
+        harfbuzz
+        gtk4
+        gtk4-layer-shell
+      ];
+
+      installPhase = ''
+        mkdir -p $out/bin $out/libexec
+        cp ${src} $out/libexec/launcher.py
+        cat > $out/bin/launcher <<EOF
+        #!${pkgs.bash}/bin/sh
+        exec ${python}/bin/python3 $out/libexec/launcher.py "\$@"
+        EOF
+        chmod +x $out/bin/launcher
+      '';
+
+      preFixup = ''
+        gappsWrapperArgs+=(
+          --set GDK_BACKEND wayland
+          --set GTK4_LAYER_SHELL_LIB "${pkgs.gtk4-layer-shell}/lib/libgtk4-layer-shell.so.0"
+        )
+      '';
+    };
+
   batteryNotify = pkgs.writeShellApplication {
     name = "battery-notify";
     runtimeInputs = with pkgs; [
@@ -154,6 +197,7 @@ in
       })
 
       batteryNotify
+      launcher
 
       (writeShellApplication {
         name = "firefox-private";
