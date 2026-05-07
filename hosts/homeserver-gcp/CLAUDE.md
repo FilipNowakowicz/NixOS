@@ -1,6 +1,6 @@
 # homeserver-gcp Host
 
-GCP-hosted headless server. Runs Vaultwarden, LGTM stack, Syncthing, Tailscale, and Nginx.
+GCP-hosted headless server. Runs Vaultwarden, LGTM stack, Tailscale, and Nginx.
 No LUKS or impermanence (GCP handles at-rest encryption; state persists on the GCE disk).
 
 Status: **active** — deployed on GCP, accessible via Tailscale.
@@ -8,19 +8,18 @@ Status: **active** — deployed on GCP, accessible via Tailscale.
 ## Services
 
 - **Vaultwarden** — `127.0.0.1:8222`, proxied via Nginx over HTTPS
-- **Syncthing** — peer-to-peer file sync
-- **LGTM stack** — Grafana, Loki, Mimir, Tempo (full observability)
+- **LGTM stack** — Grafana (sub-path `/grafana/`), Loki, Mimir, Tempo (full observability)
 - **Nginx** — reverse proxy, TLS via Tailscale cert
 - **SSH** — firewall exposure limited to `tailscale0`
 - **Tailscale** — auth key from sops secret `tailscale_auth_key`
-- **Restic/B2** — off-site backups to Backblaze B2
+- **Restic/B2** — off-site backups to Backblaze B2 (`/var/lib/vaultwarden`, `/var/lib/grafana`)
 
 ## Architecture
 
 - **No LUKS** — GCP provides at-rest disk encryption automatically
 - **No impermanence** — service state persists at `/var/lib/...` on the stateful GCE disk
-- **GRUB bootloader** — via `virtualisation/google-compute-image.nix`
-- **50 GB boot disk** — configured in `hardware-configuration.nix`
+- **systemd-boot** — UEFI bootloader (see `hardware-configuration.nix`)
+- **50 GB boot disk** — partitioned by `disko.nix` (512 MB ESP + ext4 root taking the rest)
 
 ## Sops Bootstrap
 
@@ -32,49 +31,53 @@ Pre-baked host SSH key is committed encrypted to the repo.
 
 `nix build '.#checks.x86_64-linux.homeserver-gcp-sops-bootstrap'` verifies both files are present.
 
-The pre-baked key must be injected into the VM before first boot so sops can decrypt
-secrets (Tailscale auth key, passwords) on startup. See **First Deploy Checklist** below.
+The pre-baked key is injected into the VM **automatically** on first boot:
 
-## Building the GCE Image
+1. `scripts/deploy-gcp.sh` decrypts the key and passes it to OpenTofu as `ssh_host_key_b64`.
+2. OpenTofu (`infra/main.tf`) attaches it as the `ssh-host-key-b64` GCE instance metadata attribute.
+3. The `injectGceSshHostKey` activation script in `default.nix` reads that metadata over the GCE metadata server before sops-nix runs and installs it at `/etc/ssh/ssh_host_ed25519_key`.
 
-The `homeserver-gcp-image` package was removed because `google-compute-image.nix`
-is not wired into the host config and the package broke `nix flake check`. The VM
-is provisioned via `scripts/deploy-gcp.sh` (nixos-anywhere) and updated via
-`deploy '.#homeserver-gcp'` — no image rebuild needed.
+No manual key injection step is needed.
+
+## Provisioning
+
+Provisioning is end-to-end automated via `scripts/deploy-gcp.sh`:
+
+```bash
+nix develop                          # provides sops, opentofu, nixos-anywhere, gcloud
+bash scripts/deploy-gcp.sh           # plan + apply (interactive)
+bash scripts/deploy-gcp.sh -auto-approve
+bash scripts/deploy-gcp.sh -destroy  # tear down bootstrap infra
+```
+
+The script:
+
+1. Decrypts the pre-baked SSH host key.
+2. Runs `tofu apply` to create the GCE VM (with the host key in metadata + the operator's bootstrap pubkey).
+3. Waits for SSH to come up.
+4. Runs `nixos-anywhere --flake '.#homeserver-gcp'` to install NixOS over the bootstrap image.
+
+Before the first run, copy `infra/terraform.tfvars.example` to `infra/terraform.tfvars` and fill in the GCP project ID.
 
 ## First Deploy Checklist
 
-Steps in order when reprovisioning from scratch:
+When provisioning from scratch:
 
 1. **Fill in real secrets** — `sops hosts/homeserver-gcp/secrets/secrets.yaml`, set:
    - `tailscale_auth_key` — Tailscale admin → Settings → Keys → reusable + ephemeral
    - `user_password` — bcrypt hash: `mkpasswd -m bcrypt`
-   - `grafana_admin_password`, `grafana_secret_key`, `observability_ingest_htpasswd`, `restic_password`
+   - `grafana_admin_password`, `grafana_secret_key`, `observability_ingest_htpasswd`
+   - `restic_password`, `b2_credentials` (env-file format: `B2_ACCOUNT_ID=…` / `B2_ACCOUNT_KEY=…`)
 
-2. **Build and upload GCE image** — see above
+2. **Provision the VM + install NixOS** — `bash scripts/deploy-gcp.sh` (see above).
 
-3. **Provision VM** — use OpenTofu (see `infra/` when created); e2-medium, 50 GB SSD, region `us-central1`
+3. **Wait ~60s for first boot** — sops decrypts secrets, Tailscale joins the tailnet.
 
-4. **Inject pre-baked SSH host key** — the GCE image does NOT include the host key by default.
-   Use a startup script or GCP serial console on first boot to write it:
+4. **Confirm reachability** — `tailscale status | grep homeserver-gcp`.
 
-   ```bash
-   # Decrypt and write via gcloud (run from admin machine with age key):
-   sops --decrypt --input-type binary --output-type binary \
-     hosts/homeserver-gcp/secrets/ssh_host_ed25519_key.enc \
-     > /tmp/host_key
-   gcloud compute ssh homeserver-gcp --command "sudo install -m 600 /dev/stdin /etc/ssh/ssh_host_ed25519_key" < /tmp/host_key
-   sudo systemctl restart sshd sops-install-secrets
-   ```
+5. **Remove bootstrap metadata** — run the command printed by `tofu output ssh_host_key_removal_cmd` to scrub the host key, bootstrap pubkey, and startup script from instance metadata.
 
-   After this, sops can decrypt secrets and Tailscale joins the tailnet.
-
-5. **Activate deploy-rs** — once the VM is on the tailnet:
-   - Add `deploy.sshUser = "user"` is already in `lib/hosts.nix`
-   - Deploy: `deploy '.#homeserver-gcp'`
-
-6. **Create Vaultwarden account** — set `SIGNUPS_ALLOWED = true`, deploy, create account,
-   set back to `false`, redeploy.
+6. **Create Vaultwarden account** — temporarily set `SIGNUPS_ALLOWED = true`, deploy, sign up, set back to `false`, redeploy.
 
 ## Ongoing Updates
 
@@ -84,10 +87,13 @@ deploy '.#homeserver-gcp'
 
 ## Gotchas
 
-- **sops fails on first boot if host key is not injected** — Tailscale won't join, SSH won't
-  work over Tailscale. Use GCE serial console or `gcloud compute ssh` (uses GCP project keys)
-  to recover.
-- **TLS cert is not ACME** — `tailscale-cert.service` fetches it; nginx depends on that service.
+- **sops fails on first boot if host key wasn't injected** — Tailscale won't join, SSH won't
+  work over Tailscale. Recover via GCE serial console or `gcloud compute ssh` (project SSH keys
+  bypass tailnet-only firewall during recovery).
+- **TLS cert is not ACME** — `tailscale-cert.service` fetches it via `tailscale cert`; nginx
+  depends on that service via `requires=` so it doesn't start without a cert.
 - **Access is tailnet-only** — `tailscale0` is the only interface that permits inbound SSH/HTTPS.
 - **Disk is stateful** — no impermanence. Data survives reboots naturally.
-- **Off-site backup via B2** — restic backs up to Backblaze B2; see `modules/nixos/profiles/backup.nix`.
+- **Off-site backup via B2** — `services.restic.backups.b2` runs daily at 03:00 with its own
+  prune policy (7d/4w/6m). The shared `modules/nixos/profiles/backup.nix` retention class is
+  not currently consumed by this host.

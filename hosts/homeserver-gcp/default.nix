@@ -62,11 +62,6 @@ in
       after = [ "tailscale-cert.service" ];
       requires = [ "tailscale-cert.service" ];
     };
-
-    prometheus-node-exporter = {
-      wants = [ "prometheus-node-exporter.socket" ];
-      after = [ "prometheus-node-exporter.socket" ];
-    };
   };
 
   system = {

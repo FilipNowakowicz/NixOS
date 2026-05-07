@@ -19,7 +19,7 @@
           };
         };
         root = {
-          size = "30G";
+          size = "100%";
           content = {
             type = "filesystem";
             format = "ext4";
@@ -27,18 +27,6 @@
             extraArgs = [
               "-L"
               "gcp-root"
-            ];
-          };
-        };
-        persist = {
-          size = "100%";
-          content = {
-            type = "filesystem";
-            format = "ext4";
-            mountpoint = "/persist";
-            extraArgs = [
-              "-L"
-              "persist"
             ];
           };
         };
