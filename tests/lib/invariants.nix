@@ -104,7 +104,7 @@ let
     };
 
     backupMetadataRequiresRestic = {
-      expr = runAssertion "backup metadata configures local Restic backup" (
+      expr = runAssertion "backup metadata configures Restic backup target" (
         baseConfig
         // {
           services = baseConfig.services // {

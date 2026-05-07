@@ -22,7 +22,7 @@ The repository separates hardware, host identity, system profiles, and user conf
 - [Operations](docs/operations.md) - deployment, VM workflows, validation, and formatting commands.
 - [Security Model](docs/security.md) - sops recipients, initrd SSH, Tailscale exposure, USBGuard, hardening, and backups.
 - [Neovim](docs/neovim.md) - current editor setup and links to the longer module design.
-- [Backlog](docs/backlog.md) and [Goals](docs/goals.md) - deferred and active work.
+- [Backlog](docs/backlog.md), [Goals](docs/goals.md), and [Homeserver Goals](docs/homeserver-goals.md) - deferred and active work.
 
 ---
 
@@ -119,6 +119,7 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 │   ├── operations.md                   # Deployment and validation runbook
 │   ├── security.md                     # Secrets, exposure, and hardening model
 │   ├── goals.md                        # Active roadmap
+│   ├── homeserver-goals.md             # Ordered homeserver implementation roadmap
 │   └── backlog.md                      # Deferred work
 ├── lib/
 │   ├── hosts.nix                      # Host registry (typed schema; single source of truth for all hosts)
@@ -135,7 +136,7 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 │   │   ├── default.nix
 │   │   ├── disko.nix
 │   │   └── hardware-configuration.nix
-│   ├── homeserver-gcp/                # GCP homeserver (Vaultwarden, LGTM, Syncthing, Nginx)
+│   ├── homeserver-gcp/                # GCP homeserver (Vaultwarden, LGTM, Nginx)
 │   │   ├── default.nix
 │   │   └── secrets/
 │   ├── vm/                            # Dev/test VM (desktop + home-manager)

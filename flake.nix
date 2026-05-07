@@ -368,6 +368,45 @@
               mkResult (violations == [ ]) (lib.concatStringsSep "; " violations);
           };
 
+          homeserverGcpB2BackupUsesCriticalPolicy = {
+            name = "homeserver-gcp B2 backup uses critical policy";
+            check =
+              cfg:
+              let
+                backup = cfg.services.restic.backups.b2;
+                expectedPruneOpts = [
+                  "--keep-daily 14"
+                  "--keep-weekly 8"
+                  "--keep-monthly 6"
+                  "--keep-yearly 2"
+                ];
+                pathCheck = requirePaths backup.paths [
+                  "/var/lib/vaultwarden"
+                  "/var/lib/grafana"
+                ];
+                violations = lib.filter (msg: msg != "") [
+                  (lib.optionalString (
+                    backup.repository != "b2:filipnowakowicz-gcp:"
+                  ) "services.restic.backups.b2.repository must target filipnowakowicz-gcp")
+                  (lib.optionalString (
+                    !(lib.hasPrefix "/run/secrets/" (backup.passwordFile or ""))
+                  ) "services.restic.backups.b2.passwordFile must come from /run/secrets/*")
+                  (lib.optionalString (
+                    !(lib.hasPrefix "/run/secrets/" (backup.environmentFile or ""))
+                  ) "services.restic.backups.b2.environmentFile must come from /run/secrets/*")
+                  (lib.optionalString (!backup.initialize) "services.restic.backups.b2.initialize must be true")
+                  (lib.optionalString (
+                    backup.pruneOpts != expectedPruneOpts
+                  ) "services.restic.backups.b2.pruneOpts must match the critical retention class")
+                  (lib.optionalString (
+                    (backup.timerConfig.OnCalendar or null) != "daily"
+                  ) "services.restic.backups.b2.timerConfig.OnCalendar must be \"daily\"")
+                  (lib.optionalString (!pathCheck.passed) pathCheck.message)
+                ];
+              in
+              mkResult (violations == [ ]) (lib.concatStringsSep "; " violations);
+          };
+
         in
         {
           invariants-main = invariants.mkInvariantCheck "main" (
@@ -463,6 +502,7 @@
                   ) "sops.age.sshKeyPaths must contain at least one SSH host key path";
               }
               sshFail2banHardened
+              homeserverGcpB2BackupUsesCriticalPolicy
             ]
             ++ registryAssertionsFor "homeserver-gcp"
           ) ciNixosConfigs.homeserver-gcp.config;

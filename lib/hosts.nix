@@ -17,6 +17,7 @@
 #     .enableSpotify — whether to include the proprietary Spotify package
 #   backup      — drives modules/nixos/profiles/backup.nix retention policy
 #     .class    — "critical" (14d/8w/6m/2y) | "standard" (7d/4w/3m); absent = no backup module
+#     .name     — restic backup job name; defaults to "local"
 #   ip          — static IP (e.g. microvm guest); consumed by host network config via hostMeta
 let
   knownFields = [
@@ -145,9 +146,10 @@ let
                 "critical"
                 "standard"
               ]
+              && (!cfg.backup ? name || (builtins.isString cfg.backup.name && cfg.backup.name != ""))
             )
           )
-          "${name}.backup.class: must be \"critical\" or \"standard\", got ${
+          "${name}.backup: expected class \"critical\" or \"standard\" and optional non-empty string name, got ${
             builtins.toJSON (cfg.backup.class or null)
           }"
         )
@@ -198,6 +200,10 @@ let
       status = "active";
       homeManager.role = "server";
       tailnetFQDN = "homeserver-gcp.tail90fc7a.ts.net";
+      backup = {
+        class = "critical";
+        name = "b2";
+      };
       tailscale = {
         tag = "server";
         acceptFrom.workstation = [

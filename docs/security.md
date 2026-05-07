@@ -114,5 +114,6 @@ Current classes:
 | `critical` | 14 daily, 8 weekly, 6 monthly, 2 yearly |
 | `standard` | 7 daily, 4 weekly, 3 monthly            |
 
-Current repositories are local paths. Off-site backup is tracked as deferred
-work in `docs/goals.md`.
+`hostMeta.backup.name` selects the restic job to receive that policy and
+defaults to `local`. `main` uses `local`; `homeserver-gcp` uses `b2` for
+Backblaze B2 off-site backups.

@@ -46,10 +46,9 @@ bash scripts/validate.sh flake-eval
 bash scripts/validate.sh light
 bash scripts/validate.sh host main-ci
 bash scripts/validate.sh host vm-ci
-bash scripts/validate.sh host homeserver-gcp-ci
+bash scripts/validate.sh host homeserver-gcp
 bash scripts/validate.sh hosts
 bash scripts/validate.sh smoke-vm
-bash scripts/validate.sh smoke-homeserver
 bash scripts/validate.sh profile-tests
 bash scripts/validate.sh heavy
 bash scripts/validate.sh cve-reports
@@ -59,7 +58,7 @@ Rules of thumb:
 
 - Shared flake, library, or global module changes: run `light` and affected host builds; use `hosts` when impact is broad.
 - Desktop profile/Home Manager changes: build `main-ci` and `vm-ci`.
-- Server profile/GCP changes: build `homeserver-gcp-ci`.
+- Server profile/GCP changes: build `homeserver-gcp`.
 - Docs changes: run `bash scripts/validate.sh docs`; CI runs this even for docs-only PRs.
 - NixOS test changes: run the relevant smoke/profile test if KVM is available.
 

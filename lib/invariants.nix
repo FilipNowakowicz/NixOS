@@ -17,11 +17,11 @@ let
 
   stripPrefixLength = address: builtins.head (lib.splitString "/" address);
 
-  hasLocalResticBackup =
-    cfg:
-    cfg.services.restic.backups ? local
-    && (cfg.services.restic.backups.local ? repository)
-    && cfg.services.restic.backups.local.repository != null;
+  hasResticBackup =
+    backupName: cfg:
+    builtins.hasAttr backupName cfg.services.restic.backups
+    && (cfg.services.restic.backups.${backupName} ? repository)
+    && cfg.services.restic.backups.${backupName}.repository != null;
 in
 rec {
   formatList = values: lib.concatStringsSep ", " values;
@@ -195,8 +195,8 @@ rec {
     ]
     ++ lib.optionals (hostMeta ? backup) [
       {
-        name = "backup metadata configures local Restic backup";
-        check = hasLocalResticBackup;
+        name = "backup metadata configures Restic backup target";
+        check = hasResticBackup (hostMeta.backup.name or "local");
       }
     ]
     ++ lib.optionals ((hostMeta ? tailscale) || (hostMeta ? tailnetFQDN)) [

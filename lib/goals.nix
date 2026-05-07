@@ -26,29 +26,52 @@
     status = "done";
     priority = "p1";
     area = "homeserver";
-    summary = "Boot the homeserver configuration on GCE — Tailscale, Vaultwarden, Syncthing, LGTM stack, and Restic backups to B2.";
+    summary = "Boot the homeserver configuration on GCE with Tailscale, Vaultwarden, LGTM stack, Nginx, and Restic backups to B2.";
     hosts = [ "homeserver-gcp" ];
     services = [
       "tailscale"
       "vaultwarden"
-      "syncthing"
+      "nginx"
+      "lgtm"
     ];
     blockedBy = [ ];
     unlocks = [
       "deploy-pipeline"
       "b2-backups"
+      "homeserver-smoke-tests"
       "adguard"
       "lgtm-tuning"
     ];
     docs = [
-      "docs/goals.md"
+      "docs/homeserver-goals.md"
       "hosts/homeserver-gcp/CLAUDE.md"
     ];
   }
   {
+    id = "homeserver-smoke-tests";
+    title = "Homeserver live smoke tests";
+    status = "next";
+    priority = "p2";
+    area = "homeserver";
+    summary = "Probe Vaultwarden, Grafana, and observability ingest paths so deployments catch broken routing, TLS, and auth wiring.";
+    hosts = [ "homeserver-gcp" ];
+    services = [
+      "nginx"
+      "vaultwarden"
+      "grafana"
+      "smoke-tests"
+    ];
+    blockedBy = [ "gcp-homeserver" ];
+    unlocks = [
+      "deploy-pipeline"
+      "secret-rotation"
+    ];
+    docs = [ "docs/homeserver-goals.md" ];
+  }
+  {
     id = "deploy-pipeline";
     title = "Automated deploy pipeline";
-    status = "next";
+    status = "later";
     priority = "p2";
     area = "deploy";
     summary = "Add a self-hosted Actions runner, extend smoke coverage, and automate homeserver-gcp then main deployment after passing checks.";
@@ -63,21 +86,22 @@
     ];
     blockedBy = [
       "gcp-homeserver"
+      "homeserver-smoke-tests"
     ];
     unlocks = [ "secret-rotation" ];
-    docs = [ "docs/goals.md" ];
+    docs = [
+      "docs/goals.md"
+      "docs/homeserver-goals.md"
+    ];
   }
   {
     id = "b2-backups";
-    title = "Off-site backup (B2)";
+    title = "Backup verification and restore drill";
     status = "next";
     priority = "p2";
     area = "backup";
-    summary = "Replace the local-only main restic target with Backblaze B2 — homeserver-gcp already uses B2.";
-    hosts = [
-      "homeserver-gcp"
-      "main"
-    ];
+    summary = "Verify homeserver-gcp B2 backups with periodic checks and restore drills.";
+    hosts = [ "homeserver-gcp" ];
     services = [
       "restic"
       "b2"
@@ -85,8 +109,27 @@
     blockedBy = [
       "gcp-homeserver"
     ];
+    unlocks = [
+      "adguard"
+      "gce-disk-snapshots"
+    ];
+    docs = [ "docs/homeserver-goals.md" ];
+  }
+  {
+    id = "vaultwarden-websocket";
+    title = "Vaultwarden websocket notifications";
+    status = "next";
+    priority = "p2";
+    area = "homeserver";
+    summary = "Enable the Vaultwarden websocket notification path through Nginx so clients receive instant sync updates.";
+    hosts = [ "homeserver-gcp" ];
+    services = [
+      "vaultwarden"
+      "nginx"
+    ];
+    blockedBy = [ "homeserver-smoke-tests" ];
     unlocks = [ ];
-    docs = [ "docs/goals.md" ];
+    docs = [ "docs/homeserver-goals.md" ];
   }
   {
     id = "adguard";
@@ -102,9 +145,11 @@
     ];
     blockedBy = [
       "gcp-homeserver"
+      "b2-backups"
+      "lgtm-tuning"
     ];
     unlocks = [ ];
-    docs = [ "docs/goals.md" ];
+    docs = [ "docs/homeserver-goals.md" ];
   }
   {
     id = "lgtm-tuning";
@@ -125,9 +170,32 @@
     ];
     blockedBy = [
       "gcp-homeserver"
+      "homeserver-smoke-tests"
     ];
-    unlocks = [ "host-introspection" ];
-    docs = [ "docs/goals.md" ];
+    unlocks = [
+      "host-introspection"
+      "adguard"
+    ];
+    docs = [
+      "docs/goals.md"
+      "docs/homeserver-goals.md"
+    ];
+  }
+  {
+    id = "gce-disk-snapshots";
+    title = "GCE disk snapshots";
+    status = "next";
+    priority = "p2";
+    area = "backup";
+    summary = "Add short-retention managed snapshots for fast homeserver rollback alongside restic application backups.";
+    hosts = [ "homeserver-gcp" ];
+    services = [
+      "opentofu"
+      "gcp"
+    ];
+    blockedBy = [ "b2-backups" ];
+    unlocks = [ "adguard" ];
+    docs = [ "docs/homeserver-goals.md" ];
   }
   {
     id = "config-dashboard-wave-2";
@@ -192,7 +260,43 @@
     ];
     blockedBy = [ "lgtm-tuning" ];
     unlocks = [ ];
-    docs = [ "docs/goals.md" ];
+    docs = [ "docs/homeserver-goals.md" ];
+  }
+  {
+    id = "acl-drift-detection";
+    title = "ACL drift detection";
+    status = "later";
+    priority = "p3";
+    area = "security";
+    summary = "Compare the rendered Tailscale ACL package against the live tailnet policy and fail CI on drift.";
+    hosts = [
+      "main"
+      "homeserver-gcp"
+    ];
+    services = [
+      "tailscale"
+      "ci"
+    ];
+    blockedBy = [ "gcp-homeserver" ];
+    unlocks = [ ];
+    docs = [ "docs/homeserver-goals.md" ];
+  }
+  {
+    id = "vulnix-dashboard";
+    title = "Vulnix CVE dashboard";
+    status = "later";
+    priority = "p3";
+    area = "security";
+    summary = "Schedule vulnix against the live closure, export results, and alert on new critical vulnerabilities.";
+    hosts = [ "homeserver-gcp" ];
+    services = [
+      "vulnix"
+      "grafana"
+      "mimir"
+    ];
+    blockedBy = [ "lgtm-tuning" ];
+    unlocks = [ ];
+    docs = [ "docs/homeserver-goals.md" ];
   }
   {
     id = "service-composition-dsl";
@@ -211,7 +315,7 @@
     ];
     blockedBy = [ ];
     unlocks = [ ];
-    docs = [ "docs/goals.md" ];
+    docs = [ "docs/homeserver-goals.md" ];
   }
   {
     id = "typed-generators";
@@ -231,7 +335,7 @@
     ];
     blockedBy = [ ];
     unlocks = [ ];
-    docs = [ "docs/goals.md" ];
+    docs = [ "docs/homeserver-goals.md" ];
   }
   {
     id = "secret-rotation";
@@ -248,8 +352,11 @@
       "sops"
       "age"
     ];
-    blockedBy = [ "deploy-pipeline" ];
+    blockedBy = [ "homeserver-smoke-tests" ];
     unlocks = [ ];
-    docs = [ "docs/goals.md" ];
+    docs = [
+      "docs/goals.md"
+      "docs/homeserver-goals.md"
+    ];
   }
 ]

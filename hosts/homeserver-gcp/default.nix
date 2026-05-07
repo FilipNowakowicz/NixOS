@@ -21,46 +21,57 @@ in
     ../../modules/nixos/profiles/user.nix
   ];
 
-  environment.systemPackages = [ pkgs.kitty ];
+  systemd = {
+    tmpfiles.rules = [
+      "d /var/lib/nginx/certs 0750 root nginx -"
+    ];
 
-  systemd.tmpfiles.rules = [
-    "d /var/lib/nginx/certs 0750 root nginx -"
-  ];
+    services = {
+      tailscale-cert = {
+        description = "Fetch TLS certificate from Tailscale";
+        wantedBy = [ "multi-user.target" ];
+        after = [
+          "tailscaled.service"
+          "network-online.target"
+        ];
+        wants = [ "network-online.target" ];
+        script = ''
+          for attempt in {1..60}; do
+            ${pkgs.tailscale}/bin/tailscale status > /dev/null 2>&1 && break
+            [ $attempt -lt 60 ] && sleep 1
+          done
+          mkdir -p /var/lib/tailscale/certs
+          ${pkgs.tailscale}/bin/tailscale cert \
+            --cert-file /var/lib/tailscale/certs/homeserver-gcp.crt \
+            --key-file /var/lib/tailscale/certs/homeserver-gcp.key \
+            ${tailnetFQDN}
+          # /var/lib/tailscale is root:root 700; copy certs to a path nginx can read
+          mkdir -p /var/lib/nginx/certs
+          install -m 644 /var/lib/tailscale/certs/homeserver-gcp.crt /var/lib/nginx/certs/homeserver-gcp.crt
+          install -m 640 -g nginx /var/lib/tailscale/certs/homeserver-gcp.key /var/lib/nginx/certs/homeserver-gcp.key
+          if ${pkgs.systemd}/bin/systemctl is-active --quiet nginx.service; then
+            ${pkgs.systemd}/bin/systemctl reload nginx.service
+          fi
+        '';
+        serviceConfig = {
+          Type = "oneshot";
+          TimeoutStartSec = 120;
+        };
+      };
 
-  systemd.services = {
-    tailscale-cert = {
-      description = "Fetch TLS certificate from Tailscale";
-      wantedBy = [ "multi-user.target" ];
-      after = [
-        "tailscaled.service"
-        "network-online.target"
-      ];
-      wants = [ "network-online.target" ];
-      script = ''
-        for attempt in {1..60}; do
-          ${pkgs.tailscale}/bin/tailscale status > /dev/null 2>&1 && break
-          [ $attempt -lt 60 ] && sleep 1
-        done
-        mkdir -p /var/lib/tailscale/certs
-        ${pkgs.tailscale}/bin/tailscale cert \
-          --cert-file /var/lib/tailscale/certs/homeserver-gcp.crt \
-          --key-file /var/lib/tailscale/certs/homeserver-gcp.key \
-          ${tailnetFQDN}
-        # /var/lib/tailscale is root:root 700; copy certs to a path nginx can read
-        mkdir -p /var/lib/nginx/certs
-        install -m 644 /var/lib/tailscale/certs/homeserver-gcp.crt /var/lib/nginx/certs/homeserver-gcp.crt
-        install -m 640 -g nginx /var/lib/tailscale/certs/homeserver-gcp.key /var/lib/nginx/certs/homeserver-gcp.key
-      '';
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        TimeoutStartSec = 60;
+      nginx = {
+        after = [ "tailscale-cert.service" ];
+        requires = [ "tailscale-cert.service" ];
       };
     };
 
-    nginx = {
-      after = [ "tailscale-cert.service" ];
-      requires = [ "tailscale-cert.service" ];
+    timers.tailscale-cert = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "daily";
+        Persistent = true;
+        RandomizedDelaySec = "1h";
+      };
     };
   };
 
@@ -161,19 +172,9 @@ in
         "/var/lib/vaultwarden"
         "/var/lib/grafana"
       ];
-      initialize = true;
       repository = "b2:filipnowakowicz-gcp:";
       passwordFile = config.sops.secrets.restic_password.path;
       environmentFile = config.sops.secrets.b2_credentials.path;
-      pruneOpts = [
-        "--keep-daily 7"
-        "--keep-weekly 4"
-        "--keep-monthly 6"
-      ];
-      timerConfig = {
-        OnCalendar = "03:00";
-        RandomizedDelaySec = "1h";
-      };
     };
 
     openssh = {

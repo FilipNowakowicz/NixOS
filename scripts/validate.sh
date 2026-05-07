@@ -33,7 +33,7 @@ Commands:
   docs               Check repository Markdown links
   flake-eval         Run flake evaluation only (no builds)
   light              Build lightweight blocking checks
-  host <name>        Build one host closure: main-ci, vm-ci
+  host <name>        Build one host closure: main-ci, vm-ci, homeserver-gcp
   hosts              Build all host system closures used in CI
   package <name>     Build one package output used in CI
   profile-test <name>
@@ -55,6 +55,9 @@ build_host() {
     ;;
   vm-ci)
     build_attrs ".#nixosConfigurations.vm-ci.config.system.build.toplevel"
+    ;;
+  homeserver-gcp)
+    build_attrs ".#nixosConfigurations.homeserver-gcp.config.system.build.toplevel"
     ;;
   *)
     echo "Unknown host target: $1" >&2
@@ -106,6 +109,8 @@ light)
   build_attrs \
     ".#checks.${system}.deploy-activate" \
     ".#checks.${system}.deploy-schema" \
+    ".#checks.${system}.homeserver-gcp-sops-bootstrap" \
+    ".#checks.${system}.invariants-homeserver-gcp" \
     ".#checks.${system}.invariants-main" \
     ".#checks.${system}.invariants-vm" \
     ".#checks.${system}.lib-generators" \
@@ -126,7 +131,8 @@ package)
 hosts)
   build_attrs \
     ".#nixosConfigurations.main-ci.config.system.build.toplevel" \
-    ".#nixosConfigurations.vm-ci.config.system.build.toplevel"
+    ".#nixosConfigurations.vm-ci.config.system.build.toplevel" \
+    ".#nixosConfigurations.homeserver-gcp.config.system.build.toplevel"
   ;;
 
 smoke-vm)

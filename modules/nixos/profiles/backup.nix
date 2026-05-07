@@ -1,6 +1,8 @@
 { lib, hostMeta, ... }:
 let
-  backupClass = hostMeta.backup.class or null;
+  backup = hostMeta.backup or { };
+  backupClass = backup.class or null;
+  backupName = backup.name or "local";
 
   pruneOptsByClass = {
     critical = [
@@ -17,7 +19,7 @@ let
   };
 in
 lib.mkIf (backupClass != null) {
-  services.restic.backups.local = {
+  services.restic.backups.${backupName} = {
     initialize = true;
     timerConfig = {
       OnCalendar = "daily";

@@ -91,9 +91,9 @@ deploy '.#homeserver-gcp'
   work over Tailscale. Recover via GCE serial console or `gcloud compute ssh` (project SSH keys
   bypass tailnet-only firewall during recovery).
 - **TLS cert is not ACME** — `tailscale-cert.service` fetches it via `tailscale cert`; nginx
-  depends on that service via `requires=` so it doesn't start without a cert.
+  depends on that service via `requires=` so it doesn't start without a cert. A daily
+  `tailscale-cert.timer` renews the material and reloads nginx if it is already running.
 - **Access is tailnet-only** — `tailscale0` is the only interface that permits inbound SSH/HTTPS.
 - **Disk is stateful** — no impermanence. Data survives reboots naturally.
-- **Off-site backup via B2** — `services.restic.backups.b2` runs daily at 03:00 with its own
-  prune policy (7d/4w/6m). The shared `modules/nixos/profiles/backup.nix` retention class is
-  not currently consumed by this host.
+- **Off-site backup via B2** — `services.restic.backups.b2` uses the shared
+  `backup.class = "critical"` policy from `modules/nixos/profiles/backup.nix`.

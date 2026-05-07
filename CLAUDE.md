@@ -112,7 +112,9 @@ Managed with sops-nix + age. Edit secrets with `sops <file>`.
 
 ## Goals
 
-See [docs/goals.md](./docs/goals.md) for the full project roadmap and in-progress tasks.
+See [docs/goals.md](./docs/goals.md) for the full project roadmap and
+[docs/homeserver-goals.md](./docs/homeserver-goals.md) for the ordered
+homeserver implementation plan.
 
 ---
 
