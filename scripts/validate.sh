@@ -33,13 +33,12 @@ Commands:
   docs               Check repository Markdown links
   flake-eval         Run flake evaluation only (no builds)
   light              Build lightweight blocking checks
-  host <name>        Build one host closure: main-ci, vm-ci, homeserver, homeserver-vm
+  host <name>        Build one host closure: main-ci, vm-ci
   hosts              Build all host system closures used in CI
   package <name>     Build one package output used in CI
   profile-test <name>
                      Build one profile test: profile-security, profile-observability, profile-hardening
   smoke-vm           Build the desktop VM smoke test
-  smoke-homeserver   Build the homeserver-vm smoke test
   profile-tests      Build all profile NixOS tests
   heavy              Build all smoke and profile tests
   cve-reports        Build and print the CVE report outputs
@@ -56,12 +55,6 @@ build_host() {
     ;;
   vm-ci)
     build_attrs ".#nixosConfigurations.vm-ci.config.system.build.toplevel"
-    ;;
-  homeserver)
-    build_attrs ".#nixosConfigurations.homeserver.config.system.build.toplevel"
-    ;;
-  homeserver-vm)
-    build_attrs ".#nixosConfigurations.homeserver-vm.config.system.build.toplevel"
     ;;
   *)
     echo "Unknown host target: $1" >&2
@@ -115,9 +108,6 @@ light)
     ".#checks.${system}.deploy-schema" \
     ".#checks.${system}.invariants-main" \
     ".#checks.${system}.invariants-vm" \
-    ".#checks.${system}.invariants-homeserver" \
-    ".#checks.${system}.invariants-homeserver-vm" \
-    ".#checks.${system}.homeserver-sops-bootstrap" \
     ".#checks.${system}.lib-generators" \
     ".#checks.${system}.lib-generators-golden" \
     ".#checks.${system}.lib-acl" \
@@ -136,17 +126,11 @@ package)
 hosts)
   build_attrs \
     ".#nixosConfigurations.main-ci.config.system.build.toplevel" \
-    ".#nixosConfigurations.vm-ci.config.system.build.toplevel" \
-    ".#nixosConfigurations.homeserver.config.system.build.toplevel" \
-    ".#nixosConfigurations.homeserver-vm.config.system.build.toplevel"
+    ".#nixosConfigurations.vm-ci.config.system.build.toplevel"
   ;;
 
 smoke-vm)
   build_attrs ".#legacyPackages.${system}.ciTests.vm-smoke"
-  ;;
-
-smoke-homeserver)
-  build_attrs ".#legacyPackages.${system}.ciTests.homeserver-vm-smoke"
   ;;
 
 profile-test)
@@ -163,7 +147,6 @@ profile-tests)
 heavy)
   build_attrs \
     ".#legacyPackages.${system}.ciTests.vm-smoke" \
-    ".#legacyPackages.${system}.ciTests.homeserver-vm-smoke" \
     ".#legacyPackages.${system}.ciTests.profile-security" \
     ".#legacyPackages.${system}.ciTests.profile-observability" \
     ".#legacyPackages.${system}.ciTests.profile-hardening"
@@ -171,8 +154,7 @@ heavy)
 
 cve-reports)
   show_report_attrs \
-    ".#legacyPackages.${system}.ciReports.main" \
-    ".#legacyPackages.${system}.ciReports.homeserver"
+    ".#legacyPackages.${system}.ciReports.main"
   ;;
 
 "" | -h | --help | help)

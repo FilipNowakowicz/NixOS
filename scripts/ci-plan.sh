@@ -17,17 +17,12 @@ docs_change='^(README\.md|docs/|.*\.md$|.*/CLAUDE\.md$|AGENTS\.md$)'
 package_change='^packages/'
 main_change='^hosts/main/'
 vm_change='^hosts/vm/'
-homeserver_change='^hosts/homeserver/'
-homeserver_vm_change='^hosts/homeserver-vm/'
-
 module_all_hosts='^modules/nixos/(default\.nix|services/|profiles/(base|backup|security|sops-base|user)\.nix)'
 module_desktop_hosts='^modules/nixos/(profiles/(desktop|observability-client)\.nix|hardware/nvidia-prime\.nix)'
 module_server_hosts='^modules/nixos/profiles/observability/'
 module_machine_hosts='^modules/nixos/profiles/(impermanence-base|machine-common)\.nix'
 module_vm_host='^modules/nixos/profiles/vm\.nix'
 module_microvm_guest='^modules/nixos/profiles/microvm-guest\.nix'
-module_microvm_host='^modules/nixos/microvms/homeserver-vm\.nix'
-
 home_all_hosts='^home/(profiles/base\.nix|users/user/common\.nix)'
 home_desktop_hosts='^home/(neovim/|profiles/(desktop|workstation)\.nix|profiles/workflow-packs/|users/user/home\.nix|theme/|files/(nvim/|firefox|hypr|kitty|waybar|scripts/(theme-switch|waybar-weather|clipboard-pick)\.sh))'
 home_server_hosts='^home/users/user/server\.nix'
@@ -40,39 +35,25 @@ run_light=false
 run_packages=false
 main_ci=false
 vm=false
-homeserver=false
-homeserver_vm=false
 profile_tests=false
 vm_smoke=false
-homeserver_smoke=false
 closure_main=false
-closure_homeserver=false
 
 select_all_hosts() {
   main_ci=true
   vm=true
-  homeserver=true
-  homeserver_vm=true
   closure_main=true
-  closure_homeserver=true
 }
 
 select_all_tests() {
   profile_tests=true
   vm_smoke=true
-  homeserver_smoke=true
 }
 
 select_desktop_hosts() {
   main_ci=true
   vm=true
   closure_main=true
-}
-
-select_server_hosts() {
-  homeserver=true
-  homeserver_vm=true
-  closure_homeserver=true
 }
 
 changed_files="${CI_CHANGED_FILES:-}"
@@ -110,7 +91,7 @@ if [[ -n $changed_files ]]; then
 
     if
       [[ $path =~ ^modules/nixos/ ]] &&
-        ! grep -qE "${module_all_hosts}|${module_desktop_hosts}|${module_server_hosts}|${module_machine_hosts}|${module_vm_host}|${module_microvm_guest}|${module_microvm_host}" <<<"$path"
+        ! grep -qE "${module_all_hosts}|${module_desktop_hosts}|${module_server_hosts}|${module_machine_hosts}|${module_vm_host}|${module_microvm_guest}" <<<"$path"
     then
       unknown_module_changed=true
     fi
@@ -139,7 +120,6 @@ if [[ -n $changed_files ]]; then
 
   if grep -qE "${closure_script_change}" <<<"$changed_files"; then
     closure_main=true
-    closure_homeserver=true
   fi
 
   if grep -qE "${main_change}" <<<"$changed_files"; then
@@ -150,17 +130,6 @@ if [[ -n $changed_files ]]; then
   if grep -qE "${vm_change}" <<<"$changed_files"; then
     vm=true
     vm_smoke=true
-  fi
-
-  if grep -qE "${homeserver_change}" <<<"$changed_files"; then
-    homeserver=true
-    closure_homeserver=true
-    homeserver_smoke=true
-  fi
-
-  if grep -qE "${homeserver_vm_change}" <<<"$changed_files"; then
-    homeserver_vm=true
-    homeserver_smoke=true
   fi
 
   if grep -qE "${module_all_hosts}" <<<"$changed_files"; then
@@ -175,33 +144,17 @@ if [[ -n $changed_files ]]; then
   fi
 
   if grep -qE "${module_server_hosts}" <<<"$changed_files"; then
-    select_server_hosts
-    homeserver_smoke=true
     profile_tests=true
   fi
 
   if grep -qE "${module_machine_hosts}" <<<"$changed_files"; then
     vm=true
-    select_server_hosts
     vm_smoke=true
-    homeserver_smoke=true
   fi
 
   if grep -qE "${module_vm_host}" <<<"$changed_files"; then
     vm=true
     vm_smoke=true
-  fi
-
-  if grep -qE "${module_microvm_guest}" <<<"$changed_files"; then
-    homeserver_vm=true
-    homeserver_smoke=true
-  fi
-
-  if grep -qE "${module_microvm_host}" <<<"$changed_files"; then
-    main_ci=true
-    homeserver_vm=true
-    closure_main=true
-    homeserver_smoke=true
   fi
 
   if [[ $unknown_module_changed == "true" ]]; then
@@ -216,10 +169,6 @@ if [[ -n $changed_files ]]; then
 
   if grep -qE "${home_desktop_hosts}" <<<"$changed_files"; then
     select_desktop_hosts
-  fi
-
-  if grep -qE "${home_server_hosts}" <<<"$changed_files"; then
-    select_server_hosts
   fi
 
   if [[ $unknown_home_changed == "true" ]]; then
@@ -249,14 +198,6 @@ if [[ $main_ci == "true" ]]; then
 fi
 if [[ $vm == "true" ]]; then
   hosts_matrix+="${sep}"'{"name":"vm-ci"}'
-  sep=","
-fi
-if [[ $homeserver == "true" ]]; then
-  hosts_matrix+="${sep}"'{"name":"homeserver"}'
-  sep=","
-fi
-if [[ $homeserver_vm == "true" ]]; then
-  hosts_matrix+="${sep}"'{"name":"homeserver-vm"}'
 fi
 hosts_matrix+=']}'
 
@@ -264,10 +205,6 @@ tests_matrix='{"include":['
 sep=""
 if [[ $vm_smoke == "true" ]]; then
   tests_matrix+='{"name":"vm-smoke","command":"smoke-vm","target":""}'
-  sep=","
-fi
-if [[ $homeserver_smoke == "true" ]]; then
-  tests_matrix+="${sep}"'{"name":"homeserver-vm-smoke","command":"smoke-homeserver","target":""}'
   sep=","
 fi
 if [[ $profile_tests == "true" ]]; then
@@ -278,19 +215,19 @@ if [[ $profile_tests == "true" ]]; then
 fi
 tests_matrix+=']}'
 
-if [[ $main_ci == "true" || $vm == "true" || $homeserver == "true" || $homeserver_vm == "true" ]]; then
+if [[ $main_ci == "true" || $vm == "true" ]]; then
   emit_bool hosts true
 else
   emit_bool hosts false
 fi
 
-if [[ $vm_smoke == "true" || $homeserver_smoke == "true" || $profile_tests == "true" ]]; then
+if [[ $vm_smoke == "true" || $profile_tests == "true" ]]; then
   emit_bool tests true
 else
   emit_bool tests false
 fi
 
-if [[ $closure_main == "true" || $closure_homeserver == "true" ]]; then
+if [[ $closure_main == "true" ]]; then
   emit_bool closure true
 else
   emit_bool closure false
@@ -302,7 +239,6 @@ emit_bool run_lint "$run_lint"
 emit_bool run_light "$run_light"
 emit_bool run_packages "$run_packages"
 emit_bool closure_main "$closure_main"
-emit_bool closure_homeserver "$closure_homeserver"
 
 {
   echo "hosts_matrix<<EOF"
@@ -316,4 +252,4 @@ emit_bool closure_homeserver "$closure_homeserver"
 echo "Selected hosts: $hosts_matrix"
 echo "Selected tests: $tests_matrix"
 echo "Job selectors: docs_only=$docs_only eval=$run_eval lint=$run_lint light=$run_light packages=$run_packages"
-echo "Closure selectors: main=$closure_main homeserver=$closure_homeserver"
+echo "Closure selectors: main=$closure_main"

@@ -101,18 +101,7 @@ let
               check = c: !c.security.sudo.wheelNeedsPassword;
             }
           ]
-        else if name == "homeserver-vm" then
-          [
-            {
-              name = "firewall enabled";
-              check = c: c.networking.firewall.enable;
-            }
-            {
-              name = "passwordless sudo enabled";
-              check = c: !c.security.sudo.wheelNeedsPassword;
-            }
-          ]
-        else if name == "homeserver" then
+        else if name == "homeserver-gcp" then
           [
             {
               name = "no passwordless sudo";
@@ -819,11 +808,10 @@ let
           p2: 1,
           p3: 2,
         };
-        const goalHostOrder = ['main', 'homeserver', 'homeserver-vm', 'vm'];
+        const goalHostOrder = ['main', 'homeserver-gcp', 'vm'];
         const goalHostLabels = {
           main: 'main',
-          homeserver: 'homeserver',
-          'homeserver-vm': 'homeserver-vm',
+          'homeserver-gcp': 'homeserver-gcp',
           vm: 'vm',
         };
         const goalServiceLabels = {
@@ -975,8 +963,6 @@ let
             add(`nix build '.#nixosConfigurations.''${hostName}.config.system.build.toplevel'`);
             if (hostName === 'main') {
               add(`nh os switch --hostname main .`);
-            } else if (hostName === 'homeserver-vm') {
-              add(`nh os switch --hostname main .`);
             } else if (host.deployable) {
               add(`deploy '.#''${hostName}'`);
             }
@@ -987,7 +973,7 @@ let
 
         function hostCommands(host) {
           const commands = [`nix build '.#nixosConfigurations.''${host.name}.config.system.build.toplevel'`];
-          if (host.name === 'main' || host.name === 'homeserver-vm') {
+          if (host.name === 'main') {
             commands.push(`nh os switch --hostname main .`);
           } else if (host.deployable) {
             commands.push(`deploy '.#''${host.name}'`);

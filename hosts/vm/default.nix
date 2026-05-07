@@ -20,7 +20,7 @@
 
   profiles.observability-client = {
     enable = true;
-    remoteEndpoint.host = hostRegistry.homeserver.tailnetFQDN;
+    remoteEndpoint.host = hostRegistry.homeserver-gcp.tailnetFQDN;
   };
 
   # ── Systemd Failure Notifications ──────────────────────────────────────────

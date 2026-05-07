@@ -368,17 +368,6 @@
               mkResult (violations == [ ]) (lib.concatStringsSep "; " violations);
           };
 
-          persistentDirectoriesInclude =
-            expected: cfg:
-            let
-              persisted = map (entry: entry.directory) (
-                cfg.environment.persistence."/persist".directories or [ ]
-              );
-              missing = lib.filter (path: !(builtins.elem path persisted)) expected;
-            in
-            mkResult (
-              missing == [ ]
-            ) "missing persisted directory path(s): ${lib.concatStringsSep ", " missing}";
         in
         {
           invariants-main = invariants.mkInvariantCheck "main" (
@@ -429,97 +418,6 @@
             ]
             ++ registryAssertionsFor "vm"
           ) allNixosConfigs.vm.config;
-
-          invariants-homeserver-vm = invariants.mkInvariantCheck "homeserver-vm" (
-            [
-              {
-                name = "has stateVersion";
-                check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
-              }
-              {
-                name = "passwordless sudo enabled";
-                check =
-                  cfg:
-                  require (!cfg.security.sudo.wheelNeedsPassword) "security.sudo.wheelNeedsPassword must be false";
-              }
-              {
-                name = "firewall enabled";
-                check = cfg: require cfg.networking.firewall.enable "networking.firewall.enable must be true";
-              }
-              {
-                name = "stateful homeserver-vm services persist across reboot";
-                check = persistentDirectoriesInclude [
-                  "/var/lib/syncthing"
-                  "/var/lib/vaultwarden"
-                  "/var/lib/grafana"
-                  "/var/lib/loki"
-                  "/var/lib/mimir"
-                  "/var/lib/prometheus2"
-                  "/var/lib/tempo"
-                ];
-              }
-              sshFail2banHardened
-            ]
-            ++ registryAssertionsFor "homeserver-vm"
-          ) allNixosConfigs.homeserver-vm.config;
-
-          invariants-homeserver = invariants.mkInvariantCheck "homeserver" (
-            [
-              {
-                name = "has stateVersion";
-                check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
-              }
-              {
-                name = "no passwordless sudo";
-                check =
-                  cfg: require cfg.security.sudo.wheelNeedsPassword "security.sudo.wheelNeedsPassword must be true";
-              }
-              {
-                name = "firewall enabled";
-                check = cfg: require cfg.networking.firewall.enable "networking.firewall.enable must be true";
-              }
-              {
-                name = "nix trusted-users stay root-only";
-                check = cfg: invariants.checkExpectedTrustedUsers [ "root" ] cfg;
-              }
-              {
-                name = "SSH and HTTPS are not globally open";
-                check = cfg: invariants.checkNoGlobalTCPPorts [ 22 443 ] cfg;
-              }
-              {
-                name = "SSH stays Tailscale-only";
-                check =
-                  cfg:
-                  invariants.checkTCPPortsRestrictedToInterface {
-                    interface = "tailscale0";
-                    ports = [ 22 ];
-                  } cfg;
-              }
-              {
-                name = "sops uses SSH host key for decryption";
-                check =
-                  cfg:
-                  require (
-                    cfg.sops.age.sshKeyPaths != [ ]
-                  ) "sops.age.sshKeyPaths must contain at least one SSH host key path";
-              }
-              {
-                name = "stateful homeserver services persist across reboot";
-                check = persistentDirectoriesInclude [
-                  "/var/lib/tailscale"
-                  "/var/lib/syncthing"
-                  "/var/lib/vaultwarden"
-                  "/var/lib/grafana"
-                  "/var/lib/loki"
-                  "/var/lib/mimir"
-                  "/var/lib/prometheus2"
-                  "/var/lib/tempo"
-                ];
-              }
-              sshFail2banHardened
-            ]
-            ++ registryAssertionsFor "homeserver"
-          ) allNixosConfigs.homeserver.config;
 
           invariants-homeserver-gcp = invariants.mkInvariantCheck "homeserver-gcp" (
             [
@@ -587,33 +485,6 @@
                 exit 1
               '';
 
-          # Fail-loud: pre-baked host key files must be present so reinstall-homeserver can inject
-          # a stable age identity from first boot. Without them, sops secrets won't decrypt on boot.
-          homeserver-sops-bootstrap =
-            let
-              secretsDir = ./hosts/homeserver/secrets;
-              hasKey = builtins.pathExists (secretsDir + "/ssh_host_ed25519_key.enc");
-              hasPub = builtins.pathExists (secretsDir + "/ssh_host_ed25519_key.pub.enc");
-            in
-            if hasKey && hasPub then
-              pkgs.runCommand "homeserver-sops-bootstrap-check" { } "touch $out"
-            else
-              pkgs.runCommand "homeserver-sops-bootstrap-check" { } ''
-                echo "homeserver sops bootstrap incomplete — missing pre-baked host key files:"
-                ${lib.optionalString (!hasKey) ''echo "  hosts/homeserver/secrets/ssh_host_ed25519_key.enc"''}
-                ${lib.optionalString (!hasPub) ''echo "  hosts/homeserver/secrets/ssh_host_ed25519_key.pub.enc"''}
-                echo ""
-                echo "Generate and commit them:"
-                echo "  ssh-keygen -t ed25519 -f /tmp/homeserver_host_key -N \"\""
-                echo "  sops encrypt --filename-override hosts/homeserver/secrets/ssh_host_ed25519_key.enc \\"
-                echo "    --input-type binary --output-type binary \\"
-                echo "    --output hosts/homeserver/secrets/ssh_host_ed25519_key.enc /tmp/homeserver_host_key"
-                echo "  sops encrypt --filename-override hosts/homeserver/secrets/ssh_host_ed25519_key.pub.enc \\"
-                echo "    --input-type binary --output-type binary \\"
-                echo "    --output hosts/homeserver/secrets/ssh_host_ed25519_key.pub.enc /tmp/homeserver_host_key.pub"
-                echo "  sops updatekeys hosts/homeserver/secrets/secrets.yaml"
-                exit 1
-              '';
         };
 
       cveReportPackagesFor =
@@ -627,14 +498,10 @@
         in
         {
           main = targetCveChecks.mkCveCheck "main" allNixosConfigs.main.config.system.build.toplevel;
-          homeserver = targetCveChecks.mkCveCheck "homeserver" allNixosConfigs.homeserver.config.system.build.toplevel;
         };
 
       ciTestsFor = system: {
         vm-smoke = import ./tests/nixos/vm-smoke.nix {
-          inherit nixpkgs system inputs;
-        };
-        homeserver-vm-smoke = import ./tests/nixos/homeserver-vm-smoke.nix {
           inherit nixpkgs system inputs;
         };
         profile-security = import ./tests/nixos/profile-security.nix {
@@ -712,19 +579,6 @@
               meta.description = "Run clean-clone documentation, planner, evaluation, and formatting checks";
             };
             vm = vmApp;
-            reinstall-homeserver = {
-              type = "app";
-              program = toString (
-                pkgs.writeShellScript "reinstall-homeserver" ''
-                  export SOPS_BIN="${pkgs.sops}/bin/sops"
-                  export NIXOS_ANYWHERE_BIN="${nixos-anywhere.packages.${system}.nixos-anywhere}/bin/nixos-anywhere"
-                  export SSH_KEYSCAN_BIN="${pkgs.openssh}/bin/ssh-keyscan"
-                  export SSH_KEYGEN_BIN="${pkgs.openssh}/bin/ssh-keygen"
-                  exec ${pkgs.bash}/bin/bash ${./scripts/reinstall-homeserver.sh} "$@"
-                ''
-              );
-              meta.description = "Reinstall NixOS on the homeserver via nixos-anywhere";
-            };
           };
 
           # ── Packages ────────────────────────────────────────────────────────

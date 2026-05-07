@@ -179,22 +179,6 @@ let
       backup.class = "standard";
     };
 
-    homeserver = {
-      system = "x86_64-linux";
-      status = "inactive";
-      homeManager.role = "server";
-      tailnetFQDN = "homeserver.tail90fc7a.ts.net";
-      tailscale = {
-        tag = "server";
-        acceptFrom.workstation = [
-          22
-          443
-        ];
-      };
-      deploy.sshUser = "user";
-      backup.class = "critical";
-    };
-
     vm = {
       system = "x86_64-linux";
       status = "legacy-supported";
@@ -224,13 +208,6 @@ let
       deploy.sshUser = "user";
     };
 
-    homeserver-vm = {
-      system = "x86_64-linux";
-      status = "inactive";
-      homeManager.role = "server";
-      ip = "10.0.100.2";
-      backup.class = "critical";
-    };
   };
 in
 builtins.mapAttrs validateHost raw

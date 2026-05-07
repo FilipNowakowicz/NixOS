@@ -6,9 +6,6 @@
   ...
 }:
 let
-  # Keep the homeserver microVM host integration out of the normal workstation
-  # closure. Flip this to true when actively using the local microVM.
-  enableHomeserverMicrovm = false;
   tailscaleBypassRules = pkgs.writeShellScript "tailscale-bypass-rules" ''
     set -eu
 
@@ -79,10 +76,6 @@ in
     ../../modules/nixos/profiles/sops-base.nix
     ../../modules/nixos/profiles/user.nix
     ../../modules/nixos/hardware/nvidia-prime.nix
-  ]
-  ++ lib.optionals enableHomeserverMicrovm [
-    inputs.microvm.nixosModules.host
-    ../../modules/nixos/microvms/homeserver-vm.nix
   ];
 
   # ── Hardware ────────────────────────────────────────────────────────────────
@@ -465,8 +458,4 @@ in
     hashedPasswordFile = config.sops.secrets.user_password.path;
   };
 
-}
-// lib.optionalAttrs enableHomeserverMicrovm {
-  # ── microvm ─────────────────────────────────────────────────────────────────
-  microvms.homeserver-vm.externalInterface = "wlp0s20f3";
 }

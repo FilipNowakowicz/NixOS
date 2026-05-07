@@ -76,7 +76,6 @@ jobs:
       tests_matrix: ${{ steps.plan.outputs.tests_matrix }}
       closure: ${{ steps.plan.outputs.closure }}
       closure_main: ${{ steps.plan.outputs.closure_main }}
-      closure_homeserver: ${{ steps.plan.outputs.closure_homeserver }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -296,7 +295,6 @@ jobs:
         id: diff
         env:
           DIFF_MAIN: ${{ needs.changes.outputs.closure_main }}
-          DIFF_HOMESERVER: ${{ needs.changes.outputs.closure_homeserver }}
           BASE_REF: origin/${{ github.base_ref }}
         run: |
           TARGET_REF="HEAD"
@@ -308,13 +306,6 @@ jobs:
 
             if [[ "$DIFF_MAIN" == "true" ]]; then
               bash scripts/closure-diff.sh "$BASE_REF" "$TARGET_REF" "main" || echo "Failed to diff main"
-            fi
-
-            if [[ "$DIFF_HOMESERVER" == "true" ]]; then
-              if [[ "$DIFF_MAIN" == "true" ]]; then
-                echo
-              fi
-              bash scripts/closure-diff.sh "$BASE_REF" "$TARGET_REF" "homeserver" || echo "Failed to diff homeserver"
             fi
           } > /tmp/closure-summary.md
 

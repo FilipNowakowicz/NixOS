@@ -11,7 +11,7 @@ approaches proactively. Explain why, not just what.
 - **Dev machine:** NixOS (main)
 - **Dev shell:** `nix develop` — provides `deploy-rs`, `nixos-anywhere`, `nixd`, `statix`, `deadnix`, `sops`, `ssh-to-age`, `qemu`, `OVMF`, `vulnix`, `direnv`, and the flake-managed pre-commit hook tooling.
 - **Per-project shells:** `direnv` enabled — use `use flake` in `.envrc` for automatic environment loading.
-- **Deploy (VM):** `deploy '.#vm'` (QEMU `vm` is legacy-supported testing only; `homeserver-vm` is inactive)
+- **Deploy (VM):** `deploy '.#vm'` (QEMU `vm` is legacy-supported testing only)
 - **Deploy (WSL):** `home-manager switch --flake .#user@wsl`
 - **Deploy (main):** `nh os switch --hostname main .` (alias: `rebuild`)
 - **Validate flake eval:** `bash scripts/validate.sh flake-eval`
@@ -34,28 +34,7 @@ approaches proactively. Explain why, not just what.
 
 ## VM Management
 
-### homeserver-vm (microvm — inactive)
-
-homeserver-vm is retained as a buildable microvm target, but the host-side
-integration is disabled in `hosts/main/default.nix`. These commands are only
-valid after deliberately re-enabling that import on `main`.
-
-```bash
-nh os switch --hostname main .                       # after re-enabling the microvm import
-sudo systemctl start microvm@homeserver-vm.service   # start manually
-sudo systemctl stop microvm@homeserver-vm.service    # stop
-sudo journalctl -u microvm@homeserver-vm.service -f  # watch logs
-ssh user@10.0.100.2                                  # SSH into VM
-```
-
-Services are reachable from main at:
-
-- Vaultwarden: `https://10.0.100.2:8443`
-- Syncthing: `http://10.0.100.2:8384`
-
----
-
-## Networking & VPN
+### nix run '.#vm' (QEMU — legacy-supported)
 
 - **Tailscale** — used for secure remote access and service mesh.
 - **Tailscale ACLs** — generated declaratively from `lib/hosts.nix`.
@@ -63,15 +42,10 @@ Services are reachable from main at:
   - Current policy intent is explicit: `lib/acl.nix` consumes tags, `acceptFrom`, and `tailnetFQDN` when host-specific policy is needed.
   - Richer host metadata like `ip` and `backup.class` stays outside the ACL output unless host-specific policy is added deliberately.
   - Build/inspect ACLs: `nix build '.#packages.x86_64-linux.tailscale-acl'`.
-- **Tailscale Certs** — inactive `homeserver` uses `tailscale-cert.service` to fetch TLS certificates automatically when deployed.
-
----
-
-### nix run '.#vm' (QEMU — legacy-supported)
+- **Tailscale Certs** — `homeserver-gcp` uses `tailscale-cert.service` to fetch TLS certificates automatically.
 
 `scripts/vm.sh` and `nix run '.#vm'` are archived for testing impermanence,
-bootloader, and LUKS on main hardware before real deployment. Not used for
-homeserver-vm day-to-day.
+bootloader, and LUKS on main hardware before real deployment.
 
 ```bash
 nix run '.#vm' -- create <name>   # Full setup (impermanence testing only)
@@ -99,13 +73,10 @@ nix run '.#vm' -- ssh <name>      # SSH into VM
 - `docs/security.md` — secrets, exposure, and hardening model
 - `hosts/main/` — real machine config, disko layout, LUKS/LVM, Lanzaboote (Secure Boot)
 - `hosts/vm/` — dev/test VM config (desktop profile + home-manager)
-- `hosts/homeserver-vm/` — homeserver services in a VM (Vaultwarden, Syncthing)
-- `hosts/homeserver/` — real hardware homeserver (same services + Tailscale, Nginx, TLS)
+- `hosts/homeserver-gcp/` — GCP homeserver (Vaultwarden, Syncthing, LGTM, Nginx, Tailscale, TLS)
 - `hosts/installer/` — minimal NixOS ISO config for fresh installs
 - `scripts/vm.sh` — legacy-supported QEMU VM management script
 - `scripts/closure-diff.sh` — compute closure diffs in CI
-- `scripts/reinstall-homeserver.sh` — real homeserver reinstall (separate workflow)
-- `modules/nixos/microvms/` — microvm.nix VM definitions (homeserver-vm)
 - `modules/nixos/profiles/` — system profiles (base, desktop, security, observability, observability-client, vm, sops-base)
 - `modules/nixos/services/` — standalone systemd services (hardened.nix, failure-notify)
 - `modules/nixos/hardware/` — hardware drivers and graphics (NVIDIA PRIME)
@@ -137,14 +108,6 @@ Managed with sops-nix + age. Edit secrets with `sops <file>`.
 - **Initrd Secrets:** `boot.initrd.secrets` MUST only point to sops-managed paths (e.g., `config.sops.secrets.X.path`). This is enforced by an invariant check.
 - **vm host:** has its own SSH host key in `hosts/vm/secrets/` — injected during `create`/`reinstall`
 
-- **homeserver-vm:** uses a dedicated age key stored in main's sops secrets (`hosts/main/secrets/secrets.yaml`), injected into the VM via virtiofs at `/run/age-keys/`
-
-- **Homeserver Bootstrap:** Real hardware reinstall requires pre-baked host keys in `hosts/homeserver/secrets/` to ensure the host has a stable age identity from first boot. If missing, the `homeserver-sops-bootstrap` invariant check will fail.
-  1. Generate key: `ssh-keygen -t ed25519 -f /tmp/hs_key -N ""`
-  2. Encrypt: `sops encrypt --input-type binary --output-type binary --output hosts/homeserver/secrets/ssh_host_ed25519_key.enc /tmp/hs_key`
-  3. Encrypt pubkey: `sops encrypt --input-type binary --output-type binary --output hosts/homeserver/secrets/ssh_host_ed25519_key.pub.enc /tmp/hs_key.pub`
-  4. Update `.sops.yaml` with the new age key and run `sops updatekeys hosts/homeserver/secrets/secrets.yaml`.
-
 ---
 
 ## Goals
@@ -169,4 +132,4 @@ See [docs/goals.md](./docs/goals.md) for the full project roadmap and in-progres
 - Prefer home-manager for user-level config over system-level
 - Keep things declarative — avoid imperative workarounds
 - Flag anything that might cause issues on rebuild
-- Validate only what you changed: if VM config changed build `vm-ci`, if `main` changed build `main-ci`, if inactive homeserver targets changed build their closures, if shared profiles changed build all affected hosts
+- Validate only what you changed: if VM config changed build `vm-ci`, if `main` changed build `main-ci`, if `homeserver-gcp` changed build its closure, if shared profiles changed build all affected hosts
