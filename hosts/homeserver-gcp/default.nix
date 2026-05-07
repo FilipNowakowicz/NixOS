@@ -96,7 +96,10 @@ in
 
   security.sudo.wheelNeedsPassword = lib.mkForce true;
 
-  nix.settings.trusted-users = lib.mkForce [ "root" ];
+  nix.settings.trusted-users = lib.mkForce [
+    "root"
+    "user"
+  ];
 
   networking = {
     hostName = "homeserver-gcp";

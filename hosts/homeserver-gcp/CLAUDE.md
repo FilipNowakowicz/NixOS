@@ -36,19 +36,10 @@ secrets (Tailscale auth key, passwords) on startup. See **First Deploy Checklist
 
 ## Building the GCE Image
 
-```bash
-nix build '.#packages.x86_64-linux.homeserver-gcp-image'
-# produces result/nixos.raw.tar.gz
-```
-
-Upload to GCS and import as a custom image:
-
-```bash
-gcloud storage cp result/nixos.raw.tar.gz gs://<your-bucket>/homeserver-gcp.raw.tar.gz
-gcloud compute images create homeserver-gcp \
-  --source-uri gs://<your-bucket>/homeserver-gcp.raw.tar.gz \
-  --guest-os-features VIRTIO_SCSI_MULTIQUEUE
-```
+The `homeserver-gcp-image` package was removed because `google-compute-image.nix`
+is not wired into the host config and the package broke `nix flake check`. The VM
+is provisioned via `scripts/deploy-gcp.sh` (nixos-anywhere) and updated via
+`deploy '.#homeserver-gcp'` — no image rebuild needed.
 
 ## First Deploy Checklist
 

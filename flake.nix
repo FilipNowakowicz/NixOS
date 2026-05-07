@@ -760,14 +760,6 @@
                 modules = [ ./hosts/installer/default.nix ];
               }).config.system.build.isoImage;
 
-            homeserver-gcp-image =
-              lib.overrideDerivation allNixosConfigs.homeserver-gcp.config.system.build.googleComputeImage
-                (old: {
-                  # The GCE image builder uses structured attrs but the shell reads
-                  # top-level QEMU_OPTS. Mirror the real env value here so the VM
-                  # gets enough RAM during cptofs.
-                  QEMU_OPTS = old.env.QEMU_OPTS or old.QEMU_OPTS;
-                });
           };
 
           # ── Formatter ───────────────────────────────────────────────────────
