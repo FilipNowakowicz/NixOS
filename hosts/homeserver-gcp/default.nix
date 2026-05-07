@@ -23,6 +23,10 @@ in
 
   environment.systemPackages = [ pkgs.kitty ];
 
+  systemd.tmpfiles.rules = [
+    "d /var/lib/nginx/certs 0750 root nginx -"
+  ];
+
   systemd.services = {
     tailscale-cert = {
       description = "Fetch TLS certificate from Tailscale";
