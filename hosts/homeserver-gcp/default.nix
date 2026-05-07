@@ -107,12 +107,14 @@ in
     };
   };
 
-  security.sudo.wheelNeedsPassword = false;
-
-  nix.settings.trusted-users = lib.mkForce [
-    "root"
-    "user"
-  ];
+  nix = {
+    settings.trusted-users = lib.mkForce [ "root" ];
+    gc = {
+      automatic = true;
+      dates = "weekly";
+      options = "--delete-older-than 7d";
+    };
+  };
 
   networking = {
     hostName = "homeserver-gcp";

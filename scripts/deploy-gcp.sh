@@ -87,17 +87,20 @@ fi
 
 echo "==> Loading bootstrap SSH key..."
 if ssh-add -l >/dev/null 2>&1; then
-  :
+  # Key already in agent — don't pass -i to nixos-anywhere (it tries to copy
+  # encrypted keys to a temp file, which fails without an interactive passphrase prompt).
+  NIXOS_ANYWHERE_KEY_ARGS=()
 else
   eval "$(ssh-agent -s)" >/dev/null
   TEMP_SSH_AGENT_STARTED=1
   ssh-add "$BOOTSTRAP_PRIVKEY_PATH" >/dev/null
+  NIXOS_ANYWHERE_KEY_ARGS=()
 fi
 
 echo "==> Installing NixOS with nixos-anywhere..."
 nixos-anywhere \
   --flake '.#homeserver-gcp' \
-  -i "${BOOTSTRAP_PRIVKEY_PATH}" \
+  "${NIXOS_ANYWHERE_KEY_ARGS[@]}" \
   --ssh-option "StrictHostKeyChecking=yes" \
   --ssh-option "UserKnownHostsFile=${known_hosts}" \
   "bootstrap@${INSTANCE_IP}"

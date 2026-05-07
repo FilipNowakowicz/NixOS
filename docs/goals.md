@@ -32,7 +32,7 @@ Turn `main` into a more intentional workstation layer. Tackled incrementally —
 
 ### Homeserver (GCP)
 
-`homeserver-gcp` is the active homeserver running on GCP (GCE). Vaultwarden, Syncthing, LGTM stack, Nginx, Tailscale, and Backblaze B2 backups are all live.
+`homeserver-gcp` is the active homeserver running on GCP (GCE). Vaultwarden, LGTM stack, Nginx, Tailscale, and Backblaze B2 backups are all live.
 
 - [ ] **Automated deploy pipeline** — add a self-hosted GitHub Actions runner as a NixOS service on the homeserver (always-on, has KVM). Extend smoke test to probe live endpoints (Grafana login, ingest auth). Add automated deploy job that deploys homeserver-gcp then main in order after smoke test passes. CI already builds the relevant closures and publishes them to the signed R2 binary cache. Secrets rotation (ingest credentials, Grafana admin password) becomes a cheap add-on once deploy is automated — Tailscale auth key stays manual.
 - [ ] **Local DNS & ad-blocking** — deploy AdGuard Home on the GCE VM, integrated with Tailscale MagicDNS for network-wide privacy.
