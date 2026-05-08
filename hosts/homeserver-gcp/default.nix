@@ -108,14 +108,19 @@ in
 
       vulnix-scan = {
         description = "Vulnix CVE scan of current system closure";
+        after = [ "network-online.target" ];
+        wants = [ "network-online.target" ];
         serviceConfig = {
           Type = "oneshot";
           ExecStart = pkgs.writeShellScript "vulnix-scan" ''
             whitelist=${./vulnix-whitelist.toml}
             tmp=${textfileDir}/vulnix.prom.tmp
 
-            json=$(${pkgs.vulnix}/bin/vulnix --json -N --whitelist "$whitelist" \
-              /run/current-system 2>/dev/null)
+            # --system scans /run/current-system; -j = JSON output
+            # NVD data is downloaded and cached in /var/cache/vulnix
+            json=$(${pkgs.vulnix}/bin/vulnix -S -j \
+              --whitelist "$whitelist" \
+              --cache-dir /var/cache/vulnix 2>/dev/null)
             rc=$?
             # exit 0 = clean, exit 1 = CVEs found — both are successful scans
             if [ "$rc" -gt 1 ]; then
@@ -275,6 +280,10 @@ in
   };
 
   environment.enableAllTerminfo = true;
+
+  systemd.tmpfiles.rules = [
+    "d /var/cache/vulnix 0750 root root -"
+  ];
 
   networking = {
     hostName = "homeserver-gcp";
