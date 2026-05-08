@@ -5,6 +5,10 @@ recovered from the B2 restic repository.
 
 **Last drill:** _(not yet performed)_
 
+This field records the last manual quarterly restore exercise. The homeserver
+backup milestone also added the restore runbook, weekly `restic-check-b2`
+verification, and the Grafana **Backup Health** dashboard.
+
 ---
 
 ## Prerequisites

@@ -22,7 +22,7 @@ The repository separates hardware, host identity, system profiles, and user conf
 - [Operations](docs/operations.md) - deployment, VM workflows, validation, and formatting commands.
 - [Security Model](docs/security.md) - sops recipients, initrd SSH, Tailscale exposure, USBGuard, hardening, and backups.
 - [Neovim](docs/neovim.md) - current editor setup and links to the longer module design.
-- [Backlog](docs/backlog.md), [Goals](docs/goals.md), and [Homeserver Goals](docs/homeserver-goals.md) - deferred and active work.
+- [Backlog](docs/backlog.md), [Goals](docs/goals.md), and [Homeserver Goals](docs/homeserver-goals.md) - deferred and remaining roadmap work.
 
 ---
 
@@ -100,6 +100,7 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 - **Runtime Theming**: A runtime-swappable color system allows changing themes without a full NixOS rebuild.
 - **USB Device Control**: USBGuard enabled on `main` with a strict deny-default policy; only the primary mouse (Logitech receiver) is whitelisted by ID.
 - **Tailscale ACLs as Nix**: Security rules and tag owners are generated declaratively from the host registry, providing a single source of truth for network access control.
+- **Generated Inventory Dashboard**: `packages/inventory.nix` renders a homepage-style inventory with host health, service shape, validation signals, and the current unfinished goals.
 - **Systemd Hardening**: A custom DSL (`services.hardened`) applies a high-security sandbox baseline to critical services (Vaultwarden, Nginx, Syncthing).
 - **Intrusion Prevention**: Fail2ban integrated into the security profile with automated E2E testing.
 - **Idle Policy (desktop)**: Hypridle locks at 10 minutes of inactivity and suspends at 15 minutes.
@@ -276,19 +277,21 @@ A `theme-switch` script is available in the shell to list and apply themes. It u
 
 ## Services (homeserver-gcp)
 
-| Service         | Purpose                                            | Access                                          |
-| --------------- | -------------------------------------------------- | ----------------------------------------------- |
-| **Tailscale**   | Zero-config VPN for secure remote access.          | Connect from any Tailscale client.              |
-| **Nginx**       | Reverse proxy with automatic Tailscale TLS certs.  | `https://homeserver-gcp.<tailnet-name>.ts.net`  |
-| **Vaultwarden** | Self-hosted Bitwarden-compatible password manager. | `https://homeserver-gcp...` (via Nginx)         |
-| **Syncthing**   | Continuous, peer-to-peer file synchronization.     | `http://localhost:8384` (via SSH tunnel)        |
-| **Restic/B2**   | Off-site backups to Backblaze B2.                  | Automated via systemd timers; see `backup.nix`. |
+| Service           | Purpose                                                                                          | Access                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| **Tailscale**     | Zero-config VPN for secure remote access.                                                        | Connect from any Tailscale client.                          |
+| **Nginx**         | Reverse proxy with automatic Tailscale TLS certs.                                                | `https://homeserver-gcp.<tailnet-name>.ts.net`              |
+| **Vaultwarden**   | Self-hosted Bitwarden-compatible password manager with websocket notifications for instant sync. | `https://homeserver-gcp...` (via Nginx)                     |
+| **Syncthing**     | Continuous, peer-to-peer file synchronization.                                                   | `http://localhost:8384` (via SSH tunnel)                    |
+| **AdGuard Home**  | Tailnet DNS filtering and ad-blocking.                                                           | DNS on `tailscale0`; web UI on `http://<tailscale-ip>:3001` |
+| **Restic/B2**     | Off-site backups to Backblaze B2.                                                                | Automated via systemd timers; see `backup.nix`.             |
+| **GCE Snapshots** | Fast provider-local rollback for the boot disk.                                                  | Daily schedule managed by `infra/main.tf`.                  |
 
 ---
 
 ## Observability
 
-`homeserver-gcp` runs the full LGTM stack. The observability stack is active and operated.
+`homeserver-gcp` runs the full LGTM stack. The observability stack is active and operated, including backup, host-hardening, and CVE health signals.
 
 ### Infrastructure Dashboards
 
@@ -296,6 +299,9 @@ The stack includes pre-configured dashboards for fleet overview and deep-dives i
 
 - **Main Machine**: Real-time monitoring of disk usage, CPU/Memory load, thermal zones, battery health, failed systemd units, and kernel error logs.
 - **Fleet Overview**: Aggregated view of CPU and memory usage across all hosts, combined with centralized systemd journal logs.
+- **Backup Health**: Age of the latest restic backup and weekly repository integrity check for `homeserver-gcp`.
+- **CVE Scan**: Daily `vulnix` findings and affected package count after whitelist suppression.
+- **Host Hardening**: Daily `lynis` hardening index, warning count, and scan freshness.
 
 ### LGTM Stack Components
 
@@ -440,7 +446,7 @@ bash scripts/validate.sh hosts
 
 # Build smoke tests individually
 bash scripts/validate.sh smoke-vm
-bash scripts/validate.sh smoke-homeserver
+bash scripts/validate.sh smoke-homeserver-gcp
 
 # Build all profile-specific NixOS tests
 bash scripts/validate.sh profile-tests
@@ -464,6 +470,7 @@ Tailscale security rules are managed declaratively within the flake. The `lib/ac
 - **Registry Richness**: Other host metadata such as `role`, `ip`, and `backup.class` remains available to the rest of the flake, but does not affect ACL generation yet.
 - **Generator**: `lib/acl.nix` maps tags to owners, emits explicit workstation-to-server rules, and keeps `autogroup:admin` as deliberate break-glass access.
 - **Validation**: Unit tests in `tests/lib/acl.nix` verify the generated rules and output shape.
+- **Drift Detection**: `.github/workflows/tailscale-acl-drift.yml` runs `scripts/check-tailscale-acl-drift.sh` against the live tailnet policy.
 - **Output**: The generated ACL JSON can be inspected via:
   ```bash
   nix build '.#packages.x86_64-linux.tailscale-acl' --print-out-paths | xargs cat
@@ -475,18 +482,18 @@ Tailscale security rules are managed declaratively within the flake. The `lib/ac
 
 The repository uses GitHub Actions (`.github/workflows/nix.yml` and `flake-update.yml`) for automated validation and maintenance. The CI pipeline is designed for both correctness and performance, using path-filtering to skip expensive tests when possible.
 
-| Job                  | Description                                                                                                                                   |
-| :------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Flake Evaluation** | Runs `bash scripts/validate.sh flake-eval`, which keeps `nix flake check --no-build` as a fast evaluation gate for flake outputs and configs. |
-| **Light Checks**     | Runs `bash scripts/validate.sh light` for deploy checks, invariants, SOPS bootstrap validation, and lightweight library tests.                |
-| **Linting**          | Runs `statix` (Nix), `deadnix` (dead code), `treefmt` (formatting), `shellcheck` (shell scripts), and Markdown link checks.                   |
-| **Package Builds**   | Builds repo-native package outputs used in CI, currently `nix build '.#packages.x86_64-linux.inventory'`.                                     |
-| **Host Builds**      | Matrix-builds each host closure via `bash scripts/validate.sh host <name>`.                                                                   |
-| **Smoke Tests**      | Runs `bash scripts/validate.sh smoke-vm` and `smoke-homeserver-gcp` in full NixOS environments when relevant paths change.                    |
-| **Profile Tests**    | Matrix-builds each profile test via `bash scripts/validate.sh profile-test <name>`.                                                           |
-| **Closure Diff**     | Automatically computes and comments the `nvd` diff of package closures on PRs.                                                                |
-| **Merge Gate**       | Consolidates all required checks into a single status; required for branch protection and automated flake updates.                            |
-| **Flake Update**     | Automated weekly `flake.lock` updates via GitHub Action; auto-merges if the `merge-gate` passes.                                              |
+| Job                  | Description                                                                                                                                         |
+| :------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Flake Evaluation** | Runs `bash scripts/validate.sh flake-eval`, which keeps `nix flake check --no-build` as a fast evaluation gate for flake outputs and configs.       |
+| **Light Checks**     | Runs `bash scripts/validate.sh light` for deploy checks, invariants, SOPS bootstrap validation, and lightweight library tests.                      |
+| **Linting**          | Runs `statix` (Nix), `deadnix` (dead code), `treefmt` (formatting), `shellcheck` (shell scripts), and Markdown link checks.                         |
+| **Package Builds**   | Builds repo-native package outputs used in CI, currently `nix build '.#packages.x86_64-linux.inventory'`.                                           |
+| **Host Builds**      | Matrix-builds each host closure via `bash scripts/validate.sh host <name>`.                                                                         |
+| **Smoke Tests**      | Runs `bash scripts/validate.sh smoke-vm` and `bash scripts/validate.sh smoke-homeserver-gcp` in full NixOS environments when relevant paths change. |
+| **Profile Tests**    | Matrix-builds each profile test via `bash scripts/validate.sh profile-test <name>`.                                                                 |
+| **Closure Diff**     | Automatically computes and comments the `nvd` diff of package closures on PRs.                                                                      |
+| **Merge Gate**       | Consolidates all required checks into a single status; required for branch protection and automated flake updates.                                  |
+| **Flake Update**     | Automated weekly `flake.lock` updates via GitHub Action; auto-merges if the `merge-gate` passes.                                                    |
 
 ### Path Filtering & Performance
 

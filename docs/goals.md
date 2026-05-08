@@ -30,8 +30,19 @@ Turn `main` into a more intentional workstation layer. Tackled incrementally —
 - [ ] **Screenshot workflow** — `satty` for annotation after `grim` capture; `tesseract` OCR pipeline outputting to clipboard.
 - [ ] **Keybinding cheat sheet** — auto-generated popup from `hyprland.conf` binds, shown via `Super+?`.
 
+### Goal 02 — Config dashboard wave 2
+
+Keep the generated inventory homepage useful as the repo grows.
+
+- [ ] Add validation command context for hosts and shared checks.
+- [ ] Show dependency context for unfinished goals without turning the page into a kanban archive.
+- [ ] Surface richer host/service relationships where they help answer "what depends on this?" quickly.
+
 ### Homeserver (GCP)
 
 `homeserver-gcp` has its own ordered roadmap in
 [docs/homeserver-goals.md](./homeserver-goals.md). Keep detailed homeserver
-sequencing there so this file remains a project-level index.
+sequencing there so this file remains a project-level index. Completed
+homeserver milestones are documented in `README.md`, `docs/operations.md`,
+`docs/security.md`, and `docs/restore-drill.md` rather than staying in the
+active roadmap.

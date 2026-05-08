@@ -9,6 +9,7 @@ README high-level; put command-heavy procedures here.
 - `CLAUDE.md` - agent/operator preferences and validation shortcuts.
 - `docs/architecture.md` - structural rules and module boundaries.
 - `docs/security.md` - secrets, network exposure, and hardening model.
+- `docs/restore-drill.md` - quarterly manual restore procedure for the B2 restic repository.
 
 ## Deployment Matrix
 
@@ -75,6 +76,30 @@ For full rollback, prefer creating a replacement VM or replacement boot disk
 from the snapshot, then redeploying the NixOS configuration once the system is
 reachable. This avoids treating provider-local snapshots as the authoritative
 long-term backup and keeps Terraform/OpenTofu state drift visible.
+
+## Homeserver Smoke Tests
+
+`bash scripts/validate.sh smoke-homeserver-gcp` builds the booted NixOS test for
+the live homeserver routing surface. The test checks:
+
+- `/` reaches Vaultwarden through Nginx.
+- `/grafana/` works as a sub-path deployment.
+- `/obs/loki/`, `/obs/mimir/`, and `/obs/otlp/` enforce the expected auth boundary.
+
+Use this before deploy work that touches `hosts/homeserver-gcp/` or the
+observability ingress path.
+
+## Tailscale ACL Drift
+
+The generated ACL artifact is also checked against the live tailnet policy by
+`.github/workflows/tailscale-acl-drift.yml`, which runs
+`bash scripts/check-tailscale-acl-drift.sh`.
+
+Run it locally when changing `lib/acl.nix` or registry-owned Tailscale metadata:
+
+```bash
+bash scripts/check-tailscale-acl-drift.sh
+```
 
 ## Validation
 
