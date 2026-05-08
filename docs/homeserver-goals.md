@@ -27,11 +27,11 @@ through `scripts/deploy-gcp.sh`.
 | 6     | GCE disk snapshots                    | Medium     | Done     | Daily 7-day provider-local boot disk snapshots are attached for fast rollback alongside restic.     |
 | 7     | Local DNS and ad-blocking             | Medium     | Done     | First new service; depends on backup, smoke, alert, and disk posture being clear.                   |
 | 8     | Secret rotation ritual                | Medium     | Deferred | Valuable once deploy/smoke paths can prove rotation did not break the server.                       |
-| 9     | ACL drift detection                   | Medium     | Later    | The ACL package exists; live API comparison is useful but not a blocker for new services.           |
+| 9     | ACL drift detection                   | Medium     | Done     | GitHub Actions workflow compares generated ACL against live Tailscale API and alerts on drift.      |
 | 10    | Vulnix/CVE dashboard                  | Medium     | Done     | Daily vulnix-scan timer, textfile metrics, CVE Scan dashboard, VulnixCveFound/ScanStale alerts.     |
 | 11    | Automated deploy pipeline             | Hard       | Later    | High leverage, but design depends on runner placement, KVM needs, and smoke-test coverage.          |
 | 12    | Tailscale-aware Grafana SSO           | Hard       | Later    | Removes a secret, but authentication mistakes can lock out observability.                           |
-| 13    | Host introspection into LGTM          | Medium     | Later    | Adds useful audit signals after retention/cardinality limits are tuned.                             |
+| 13    | Host introspection into LGTM          | Medium     | Done     | Daily lynis-audit timer, hardening index + warnings metrics, LynisScoreLow/ScanStale alerts.        |
 | 14    | Typed Nginx/timer generators          | Medium     | Later    | Refactor after enough repeated service patterns exist.                                              |
 | 15    | Service composition DSL               | Hard       | Deferred | Worth doing only after Vaultwarden plus at least one more service show the real abstraction shape.  |
 
