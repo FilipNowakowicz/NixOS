@@ -28,7 +28,7 @@ through `scripts/deploy-gcp.sh`.
 | 7     | Local DNS and ad-blocking             | Medium     | Done     | First new service; depends on backup, smoke, alert, and disk posture being clear.                   |
 | 8     | Secret rotation ritual                | Medium     | Deferred | Valuable once deploy/smoke paths can prove rotation did not break the server.                       |
 | 9     | ACL drift detection                   | Medium     | Later    | The ACL package exists; live API comparison is useful but not a blocker for new services.           |
-| 10    | Vulnix/CVE dashboard                  | Medium     | Later    | Security visibility is useful after alerting conventions are settled.                               |
+| 10    | Vulnix/CVE dashboard                  | Medium     | Done     | Daily vulnix-scan timer, textfile metrics, CVE Scan dashboard, VulnixCveFound/ScanStale alerts.     |
 | 11    | Automated deploy pipeline             | Hard       | Later    | High leverage, but design depends on runner placement, KVM needs, and smoke-test coverage.          |
 | 12    | Tailscale-aware Grafana SSO           | Hard       | Later    | Removes a secret, but authentication mistakes can lock out observability.                           |
 | 13    | Host introspection into LGTM          | Medium     | Later    | Adds useful audit signals after retention/cardinality limits are tuned.                             |

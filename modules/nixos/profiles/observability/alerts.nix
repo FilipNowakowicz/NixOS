@@ -8,6 +8,8 @@
 #   SystemdUnitFailed — any unit in failed state for > 2 min
 #   ResticBackupStale — backup older than 26 h (daily + 2 h buffer)
 #   ResticCheckStale  — integrity check older than 8 d (weekly + 1 d buffer)
+#   VulnixCveFound    — any CVE finding after whitelist (add known-acceptable CVEs to vulnix-whitelist.toml)
+#   VulnixScanStale   — no successful scan in 26 h (daily + 2 h buffer)
 {
   config,
   lib,
@@ -62,6 +64,26 @@ let
             annotations = {
               summary = "Restic integrity check stale on {{ $labels.instance }}";
               description = "Last check {{ $value | printf \"%.1f\" }}d ago (threshold: 8d).";
+            };
+          }
+          {
+            alert = "VulnixCveFound";
+            expr = "vulnix_cve_total > 0";
+            for = "0m";
+            labels.severity = "critical";
+            annotations = {
+              summary = "CVE findings on {{ $labels.instance }}";
+              description = "{{ $value }} CVE(s) found in current system closure. Review and suppress known-acceptable findings in vulnix-whitelist.toml.";
+            };
+          }
+          {
+            alert = "VulnixScanStale";
+            expr = "(time() - vulnix_scan_timestamp_seconds) / 3600 > 26";
+            for = "0m";
+            labels.severity = "warning";
+            annotations = {
+              summary = "Vulnix scan stale on {{ $labels.instance }}";
+              description = "Last CVE scan {{ $value | printf \"%.1f\" }}h ago (threshold: 26h). Check vulnix-scan.service logs.";
             };
           }
         ];

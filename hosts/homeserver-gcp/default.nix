@@ -63,6 +63,42 @@ in
         };
       };
 
+      vulnix-scan = {
+        description = "Vulnix CVE scan of current system closure";
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = pkgs.writeShellScript "vulnix-scan" ''
+            whitelist=${./vulnix-whitelist.toml}
+            tmp=${textfileDir}/vulnix.prom.tmp
+
+            json=$(${pkgs.vulnix}/bin/vulnix --json -N --whitelist "$whitelist" \
+              /run/current-system 2>/dev/null)
+            rc=$?
+            # exit 0 = clean, exit 1 = CVEs found — both are successful scans
+            if [ "$rc" -gt 1 ]; then
+              echo "vulnix scan failed (exit $rc)" >&2
+              exit 1
+            fi
+
+            pkg_count=$(printf '%s' "$json" | ${pkgs.jq}/bin/jq 'length // 0')
+            cve_count=$(printf '%s' "$json" | ${pkgs.jq}/bin/jq '[.[].affected_by | length] | add // 0')
+
+            {
+              echo "# HELP vulnix_affected_packages_total Packages with known CVEs after whitelist"
+              echo "# TYPE vulnix_affected_packages_total gauge"
+              echo "vulnix_affected_packages_total $pkg_count"
+              echo "# HELP vulnix_cve_total CVE findings after whitelist"
+              echo "# TYPE vulnix_cve_total gauge"
+              echo "vulnix_cve_total $cve_count"
+              echo "# HELP vulnix_scan_timestamp_seconds Unix timestamp of last successful scan"
+              echo "# TYPE vulnix_scan_timestamp_seconds gauge"
+              echo "vulnix_scan_timestamp_seconds $(date +%s)"
+            } > "$tmp"
+            mv "$tmp" ${textfileDir}/vulnix.prom
+          '';
+        };
+      };
+
       tailscale-cert = {
         description = "Fetch TLS certificate from Tailscale";
         wantedBy = [ "multi-user.target" ];
@@ -101,21 +137,32 @@ in
       };
     };
 
-    timers.restic-check-b2 = {
-      wantedBy = [ "timers.target" ];
-      timerConfig = {
-        OnCalendar = "weekly";
-        Persistent = true;
-        RandomizedDelaySec = "2h";
+    timers = {
+      vulnix-scan = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = "daily";
+          Persistent = true;
+          RandomizedDelaySec = "1h";
+        };
       };
-    };
 
-    timers.tailscale-cert = {
-      wantedBy = [ "timers.target" ];
-      timerConfig = {
-        OnCalendar = "daily";
-        Persistent = true;
-        RandomizedDelaySec = "1h";
+      restic-check-b2 = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = "weekly";
+          Persistent = true;
+          RandomizedDelaySec = "2h";
+        };
+      };
+
+      tailscale-cert = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = "daily";
+          Persistent = true;
+          RandomizedDelaySec = "1h";
+        };
       };
     };
   };
@@ -210,48 +257,112 @@ in
       logs.enable = true;
       traces.enable = true;
     };
-    dashboards.fleet.enable = true;
-    dashboards.backup = {
-      enable = true;
-      definition = dash.mkDashboard {
-        uid = "homeserver-backup-health";
-        title = "Backup Health";
-        panels = [
-          (dash.timeseriesPanel {
-            id = 1;
-            title = "Backup Age (hours)";
-            ds = dash.mimirDS;
-            gridPos = dash.gridPos {
-              x = 0;
-              y = 0;
-              w = 12;
-              h = 8;
-            };
-            targets = [
-              (dash.target {
-                expr = "(time() - restic_last_backup_timestamp_seconds) / 3600";
-                legendFormat = "hours since last backup";
-              })
-            ];
-          })
-          (dash.timeseriesPanel {
-            id = 2;
-            title = "Check Age (hours)";
-            ds = dash.mimirDS;
-            gridPos = dash.gridPos {
-              x = 12;
-              y = 0;
-              w = 12;
-              h = 8;
-            };
-            targets = [
-              (dash.target {
-                expr = "(time() - restic_last_check_timestamp_seconds) / 3600";
-                legendFormat = "hours since last check";
-              })
-            ];
-          })
-        ];
+    dashboards = {
+      fleet.enable = true;
+
+      cve = {
+        enable = true;
+        definition = dash.mkDashboard {
+          uid = "homeserver-cve";
+          title = "CVE Scan";
+          panels = [
+            (dash.timeseriesPanel {
+              id = 1;
+              title = "CVE Findings (after whitelist)";
+              ds = dash.mimirDS;
+              gridPos = dash.gridPos {
+                x = 0;
+                y = 0;
+                w = 12;
+                h = 8;
+              };
+              targets = [
+                (dash.target {
+                  expr = "vulnix_cve_total";
+                  legendFormat = "CVEs";
+                })
+              ];
+            })
+            (dash.timeseriesPanel {
+              id = 2;
+              title = "Affected Packages (after whitelist)";
+              ds = dash.mimirDS;
+              gridPos = dash.gridPos {
+                x = 12;
+                y = 0;
+                w = 12;
+                h = 8;
+              };
+              targets = [
+                (dash.target {
+                  expr = "vulnix_affected_packages_total";
+                  legendFormat = "packages";
+                })
+              ];
+            })
+            (dash.timeseriesPanel {
+              id = 3;
+              title = "Scan Age (hours)";
+              ds = dash.mimirDS;
+              gridPos = dash.gridPos {
+                x = 0;
+                y = 8;
+                w = 12;
+                h = 8;
+              };
+              targets = [
+                (dash.target {
+                  expr = "(time() - vulnix_scan_timestamp_seconds) / 3600";
+                  legendFormat = "hours since last scan";
+                })
+              ];
+            })
+          ];
+        };
+      };
+
+      backup = {
+        enable = true;
+        definition = dash.mkDashboard {
+          uid = "homeserver-backup-health";
+          title = "Backup Health";
+          panels = [
+            (dash.timeseriesPanel {
+              id = 1;
+              title = "Backup Age (hours)";
+              ds = dash.mimirDS;
+              gridPos = dash.gridPos {
+                x = 0;
+                y = 0;
+                w = 12;
+                h = 8;
+              };
+              targets = [
+                (dash.target {
+                  expr = "(time() - restic_last_backup_timestamp_seconds) / 3600";
+                  legendFormat = "hours since last backup";
+                })
+              ];
+            })
+            (dash.timeseriesPanel {
+              id = 2;
+              title = "Check Age (hours)";
+              ds = dash.mimirDS;
+              gridPos = dash.gridPos {
+                x = 12;
+                y = 0;
+                w = 12;
+                h = 8;
+              };
+              targets = [
+                (dash.target {
+                  expr = "(time() - restic_last_check_timestamp_seconds) / 3600";
+                  legendFormat = "hours since last check";
+                })
+              ];
+            })
+          ];
+        };
       };
     };
   };

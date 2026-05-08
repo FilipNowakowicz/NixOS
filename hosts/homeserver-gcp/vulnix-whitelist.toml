@@ -1,0 +1,8 @@
+# Suppressed CVE findings for homeserver-gcp.
+# vulnix skips whitelisted CVEs so they don't appear in metrics or alerts.
+# Add entries here after reviewing a finding and deciding to accept the risk.
+#
+# Format:
+#   [CVE-YYYY-NNNNN]
+#   comment = "Reason — link to upstream issue or explain why it's acceptable"
+#   affected-pkgs = ["optional-package-scope"]  # omit to suppress across all packages
