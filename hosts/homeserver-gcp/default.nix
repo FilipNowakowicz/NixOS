@@ -157,8 +157,16 @@ in
     };
   };
 
+  # Passwordless sudo is safe here: access is SSH-key-only over Tailscale,
+  # no interactive console, and deploy-rs needs it for activation.
+  security.sudo.wheelNeedsPassword = false;
+
   nix = {
     settings.trusted-users = lib.mkForce [ "root" ];
+    settings.trusted-public-keys = [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "main.local:fSo1pk+WU1RU7vpv+GTbzldKn4MMtBS46vQasXJ2oeQ="
+    ];
     gc = {
       automatic = true;
       dates = "weekly";

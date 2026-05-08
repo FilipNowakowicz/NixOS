@@ -248,6 +248,11 @@ in
     };
   };
 
+  profiles.observability-client = {
+    enable = true;
+    remoteEndpoint.host = "homeserver-gcp.tail90fc7a.ts.net";
+  };
+
   services.hardened = {
     # thermald: Intel thermal daemon running in --adaptive mode.
     # Needs /sys writes for thermal zones and perf_event_open for RAPL energy

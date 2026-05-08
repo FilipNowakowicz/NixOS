@@ -10,6 +10,9 @@ let
 
   shouldUseIngestAuth = cfg.ingestAuth.username != null && cfg.ingestAuth.passwordFile != null;
   shouldUseRemoteTraceAuth = shouldUseIngestAuth && cfg.collectors.traces.exportURL != null;
+  ingestAuthGroups = lib.optionals (shouldUseIngestAuth && cfg.ingestAuth.group != null) [
+    cfg.ingestAuth.group
+  ];
   metricsRemoteWriteAuth = lib.optionalAttrs shouldUseIngestAuth {
     basic_auth = {
       inherit (cfg.ingestAuth) username;
@@ -216,15 +219,24 @@ in
       ];
 
       services = {
+        prometheus = lib.mkIf cfg.collectors.metrics.enable {
+          serviceConfig.SupplementaryGroups = ingestAuthGroups;
+        };
+
         alloy = lib.mkIf cfg.collectors.logs.enable {
           after = lib.optionals cfg.loki.enable [ "loki.service" ];
           requires = lib.optionals cfg.loki.enable [ "loki.service" ];
-          serviceConfig.SupplementaryGroups = [ "systemd-journal" ];
+          serviceConfig.SupplementaryGroups = [ "systemd-journal" ] ++ ingestAuthGroups;
         };
 
-        "opentelemetry-collector" = lib.mkIf (
-          cfg.collectors.traces.enable && cfg.ingestAuth.serviceEnvironmentFile != null
-        ) { serviceConfig.EnvironmentFiles = [ cfg.ingestAuth.serviceEnvironmentFile ]; };
+        "opentelemetry-collector" =
+          lib.mkIf (cfg.collectors.traces.enable && cfg.ingestAuth.serviceEnvironmentFile != null)
+            {
+              serviceConfig = {
+                EnvironmentFile = cfg.ingestAuth.serviceEnvironmentFile;
+                SupplementaryGroups = ingestAuthGroups;
+              };
+            };
       };
     };
   };

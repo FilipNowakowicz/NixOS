@@ -37,6 +37,45 @@ nix run '.#vm' -- destroy vm
 QEMU VM metadata comes from `lib/hosts.nix`; entries need `sshPort` and
 `diskSize` to appear in the VM registry.
 
+## Homeserver GCE Snapshots
+
+`infra/main.tf` attaches a daily GCE snapshot schedule to the
+`homeserver-gcp` boot disk. These snapshots are provider-local rollback points
+stored in Google Cloud snapshot storage, in `snapshot_storage_locations` when
+set or in `var.region` by default. The default retention is 7 daily snapshots.
+
+Use GCE snapshots for fast VM-shaped rollback after bad deploys, disk mistakes,
+or package/config migrations. Use restic/B2 for durable application recovery,
+off-site recovery, and point restores of `/var/lib/vaultwarden` or
+`/var/lib/grafana`.
+
+Inspect available scheduled snapshots:
+
+```bash
+gcloud compute snapshots list \
+  --filter='labels.host=homeserver-gcp AND labels.purpose=fast-rollback' \
+  --sort-by='~creationTimestamp'
+```
+
+Create a temporary disk from a snapshot for inspection or file extraction:
+
+```bash
+SNAPSHOT=<snapshot-name>
+gcloud compute disks create homeserver-gcp-restore-inspect \
+  --zone=europe-west2-a \
+  --source-snapshot="$SNAPSHOT" \
+  --type=pd-ssd
+```
+
+Attach that disk to a temporary recovery VM or to `homeserver-gcp` while it is
+stopped, mount it read-only, and copy out the needed files. Delete the
+inspection disk after recovery.
+
+For full rollback, prefer creating a replacement VM or replacement boot disk
+from the snapshot, then redeploying the NixOS configuration once the system is
+reachable. This avoids treating provider-local snapshots as the authoritative
+long-term backup and keeps Terraform/OpenTofu state drift visible.
+
 ## Validation
 
 Use the narrowest check that covers the files changed.

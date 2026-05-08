@@ -28,22 +28,6 @@ let
           })
         ];
       })
-      (dash.logsPanel {
-        id = 2;
-        title = "Systemd Journal Logs";
-        ds = dash.lokiDS;
-        gridPos = dash.gridPos {
-          x = 0;
-          y = 8;
-          w = 24;
-          h = 8;
-        };
-        targets = [
-          (dash.target {
-            expr = "{job=\"systemd-journal\"}";
-          })
-        ];
-      })
       (dash.timeseriesPanel {
         id = 3;
         title = "Memory Usage %";
@@ -58,6 +42,90 @@ let
           (dash.target {
             expr = "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100";
             legendFormat = "{{instance}}";
+          })
+        ];
+      })
+      (dash.timeseriesPanel {
+        id = 4;
+        title = "Disk Usage %";
+        ds = dash.mimirDS;
+        gridPos = dash.gridPos {
+          x = 0;
+          y = 8;
+          w = 12;
+          h = 8;
+        };
+        targets = [
+          (dash.target {
+            expr = ''(1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|efivarfs|squashfs|devtmpfs",mountpoint="/"} / node_filesystem_size_bytes) * 100'';
+            legendFormat = "{{instance}}";
+          })
+        ];
+      })
+      (dash.timeseriesPanel {
+        id = 5;
+        title = "Failed Systemd Units";
+        ds = dash.mimirDS;
+        gridPos = dash.gridPos {
+          x = 12;
+          y = 8;
+          w = 12;
+          h = 8;
+        };
+        targets = [
+          (dash.target {
+            expr = ''sum by(instance) (node_systemd_unit_state{state="failed"})'';
+            legendFormat = "{{instance}}";
+          })
+        ];
+      })
+      (dash.timeseriesPanel {
+        id = 6;
+        title = "Backup Age (hours)";
+        ds = dash.mimirDS;
+        gridPos = dash.gridPos {
+          x = 0;
+          y = 16;
+          w = 12;
+          h = 8;
+        };
+        targets = [
+          (dash.target {
+            expr = "(time() - restic_last_backup_timestamp_seconds) / 3600";
+            legendFormat = "{{instance}}";
+          })
+        ];
+      })
+      (dash.timeseriesPanel {
+        id = 7;
+        title = "Backup Check Age (hours)";
+        ds = dash.mimirDS;
+        gridPos = dash.gridPos {
+          x = 12;
+          y = 16;
+          w = 12;
+          h = 8;
+        };
+        targets = [
+          (dash.target {
+            expr = "(time() - restic_last_check_timestamp_seconds) / 3600";
+            legendFormat = "{{instance}}";
+          })
+        ];
+      })
+      (dash.logsPanel {
+        id = 2;
+        title = "Systemd Journal Logs";
+        ds = dash.lokiDS;
+        gridPos = dash.gridPos {
+          x = 0;
+          y = 24;
+          w = 24;
+          h = 8;
+        };
+        targets = [
+          (dash.target {
+            expr = "{job=\"systemd-journal\"}";
           })
         ];
       })

@@ -227,6 +227,7 @@
           inherit (cfg.deploy) sshUser;
           magicRollback = true;
           autoRollback = true;
+          remoteBuild = true;
           profiles.system = {
             user = "root";
             path = deploy-rs.lib.${cfg.system}.activate.nixos nixosConfigs.${name};
@@ -465,9 +466,11 @@
                 check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
               }
               {
-                name = "no passwordless sudo";
+                name = "passwordless sudo enabled";
                 check =
-                  cfg: require cfg.security.sudo.wheelNeedsPassword "security.sudo.wheelNeedsPassword must be true";
+                  cfg:
+                  require (!cfg.security.sudo.wheelNeedsPassword)
+                    "security.sudo.wheelNeedsPassword must be false (deploy-rs needs passwordless sudo; access is SSH-key-only over Tailscale)";
               }
               {
                 name = "firewall enabled";

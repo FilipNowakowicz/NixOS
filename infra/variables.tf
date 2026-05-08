@@ -27,6 +27,24 @@ variable "disk_size_gb" {
   default     = 50
 }
 
+variable "snapshot_retention_days" {
+  type        = number
+  description = "Number of daily GCE boot disk snapshots to retain for fast provider-local rollback"
+  default     = 7
+}
+
+variable "snapshot_start_time" {
+  type        = string
+  description = "UTC start time for the daily GCE boot disk snapshot schedule, formatted as HH:MM"
+  default     = "03:00"
+}
+
+variable "snapshot_storage_locations" {
+  type        = list(string)
+  description = "Regional or multi-regional storage locations for scheduled snapshots; defaults to the VM region when empty"
+  default     = []
+}
+
 variable "bootstrap_image_project" {
   type        = string
   description = "GCP project containing the stock bootstrap image family"

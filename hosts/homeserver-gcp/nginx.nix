@@ -39,6 +39,11 @@ in
             proxyWebsockets = true;
           };
 
+          "= /notifications/hub" = {
+            proxyPass = "http://127.0.0.1:8222";
+            proxyWebsockets = true;
+          };
+
           "/grafana/" = {
             proxyPass = "http://127.0.0.1:3000";
             proxyWebsockets = true;

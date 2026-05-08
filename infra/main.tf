@@ -1,5 +1,7 @@
 locals {
   name = "homeserver-gcp"
+
+  snapshot_storage_locations = length(var.snapshot_storage_locations) > 0 ? var.snapshot_storage_locations : [var.region]
 }
 
 # ── Firewall ─────────────────────────────────────────────────────────────────
@@ -16,6 +18,38 @@ resource "google_compute_firewall" "tailscale" {
 
   target_tags   = [local.name]
   source_ranges = ["0.0.0.0/0"]
+}
+
+# ── Disk snapshots ───────────────────────────────────────────────────────────
+
+resource "google_compute_resource_policy" "homeserver_boot_daily_snapshots" {
+  name        = "${local.name}-boot-daily-snapshots"
+  region      = var.region
+  description = "Daily snapshots for fast rollback of the ${local.name} boot disk. Restic/B2 remains the off-site application backup."
+
+  snapshot_schedule_policy {
+    schedule {
+      daily_schedule {
+        days_in_cycle = 1
+        start_time    = var.snapshot_start_time
+      }
+    }
+
+    retention_policy {
+      max_retention_days    = var.snapshot_retention_days
+      on_source_disk_delete = "KEEP_AUTO_SNAPSHOTS"
+    }
+
+    snapshot_properties {
+      storage_locations = local.snapshot_storage_locations
+
+      labels = {
+        host    = local.name
+        purpose = "fast-rollback"
+        backup  = "provider-local"
+      }
+    }
+  }
 }
 
 # ── VM instance ──────────────────────────────────────────────────────────────
@@ -81,4 +115,10 @@ resource "google_compute_instance" "homeserver_gcp" {
       metadata["ssh-host-key-b64"],
     ]
   }
+}
+
+resource "google_compute_disk_resource_policy_attachment" "homeserver_boot_daily_snapshots" {
+  name = google_compute_resource_policy.homeserver_boot_daily_snapshots.name
+  disk = google_compute_instance.homeserver_gcp.name
+  zone = var.zone
 }

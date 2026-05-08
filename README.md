@@ -330,7 +330,7 @@ Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) and [age]
 - `.sops.yaml` defines rules for which age public keys can decrypt which secret files.
 - Keys are grouped by name (e.g., `&user`, `&vm_host`, `&main_host`, `&homeserver_gcp_host`).
 - Host keys are derived from their respective SSH host public keys using `ssh-to-age`.
-- This allows a host to decrypt its own secrets automatically during activation. The host's SSH key is persisted via `impermanence` to ensure the age key remains stable across reboots.
+- This allows a host to decrypt its own secrets automatically during activation. Impermanent hosts keep their SSH key under `/persist` so the age key remains stable across reboots.
 - The user's personal age key (`user`) can decrypt all secrets.
 - The QEMU `vm` has encrypted SSH host keys in `hosts/vm/secrets/`, injected during `create`/`reinstall` so sops works from first boot.
 - `homeserver-gcp` uses a pre-baked encrypted SSH host key committed in `hosts/homeserver-gcp/secrets/`; deployed once during initial GCE image bootstrap.

@@ -13,6 +13,7 @@ Status: **active** — deployed on GCP, accessible via Tailscale.
 - **SSH** — firewall exposure limited to `tailscale0`
 - **Tailscale** — auth key from sops secret `tailscale_auth_key`
 - **Restic/B2** — off-site backups to Backblaze B2 (`/var/lib/vaultwarden`, `/var/lib/grafana`)
+- **GCE snapshots** — daily 7-day boot disk snapshots for fast provider-local rollback
 
 ## Architecture
 
@@ -20,6 +21,18 @@ Status: **active** — deployed on GCP, accessible via Tailscale.
 - **No impermanence** — service state persists at `/var/lib/...` on the stateful GCE disk
 - **systemd-boot** — UEFI bootloader (see `hardware-configuration.nix`)
 - **50 GB boot disk** — partitioned by `disko.nix` (512 MB ESP + ext4 root taking the rest)
+
+## Disk Layout
+
+`homeserver-gcp` intentionally keeps a root-only data layout: `disko.nix` creates
+one 512 MB EFI system partition and one ext4 root filesystem that consumes the
+remaining GCE boot disk. There is no `/persist` volume and no reserved data
+partition without an owner.
+
+Keep this layout until a concrete operational need appears for isolated quotas
+or retention, such as separating Loki, Mimir, or restic cache churn from the root
+filesystem. If that happens, mount only the specific high-churn paths and update
+the restore procedure alongside the partition change.
 
 ## Sops Bootstrap
 
@@ -94,6 +107,8 @@ deploy '.#homeserver-gcp'
   depends on that service via `requires=` so it doesn't start without a cert. A daily
   `tailscale-cert.timer` renews the material and reloads nginx if it is already running.
 - **Access is tailnet-only** — `tailscale0` is the only interface that permits inbound SSH/HTTPS.
-- **Disk is stateful** — no impermanence. Data survives reboots naturally.
+- **Disk is stateful** — no impermanence or `/persist`. Data survives reboots naturally on root.
+- **GCE snapshots are not backups** — use them for fast rollback inside GCP; use restic/B2
+  for independent off-site application recovery.
 - **Off-site backup via B2** — `services.restic.backups.b2` uses the shared
   `backup.class = "critical"` policy from `modules/nixos/profiles/backup.nix`.

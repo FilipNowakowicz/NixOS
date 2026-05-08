@@ -9,6 +9,7 @@ let
 in
 {
   imports = [
+    ./alerts.nix
     ./backends.nix
     ./collectors.nix
     ./dashboards.nix
@@ -46,6 +47,11 @@ in
         type = with lib.types; nullOr path;
         default = null;
         description = "Password file for authenticated ingest";
+      };
+      group = lib.mkOption {
+        type = with lib.types; nullOr str;
+        default = null;
+        description = "Supplementary group allowed to read authenticated ingest credentials.";
       };
       serviceEnvironmentFile = lib.mkOption {
         type = with lib.types; nullOr path;

@@ -20,9 +20,22 @@ in
       default = "telemetry";
       description = "Username for authenticated push; must match the server htpasswd entry";
     };
+
+    ingestAuth.group = lib.mkOption {
+      type = lib.types.str;
+      default = "telemetry-ingest";
+      description = "Local group allowed to read the ingest password secret.";
+    };
   };
 
   config = lib.mkIf cfg.enable {
+    users.groups.${cfg.ingestAuth.group} = { };
+
+    sops.secrets.observability_ingest_password = {
+      inherit (cfg.ingestAuth) group;
+      mode = "0440";
+    };
+
     sops.templates."otel-env" = {
       content = "BASICAUTH_PASSWORD=${config.sops.placeholder.observability_ingest_password}";
       mode = "0400";
@@ -45,7 +58,7 @@ in
         };
       };
       ingestAuth = {
-        inherit (cfg.ingestAuth) username;
+        inherit (cfg.ingestAuth) username group;
         passwordFile = config.sops.secrets.observability_ingest_password.path;
         serviceEnvironmentFile = config.sops.templates."otel-env".path;
       };

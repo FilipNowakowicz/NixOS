@@ -1,0 +1,102 @@
+# Mimir ruler alert rules and minimal Alertmanager config.
+# Rules are provisioned declaratively via systemd-tmpfiles (C+ copy from nix store).
+# Mimir's ruler polls ruler_storage for changes; rules take effect after the next
+# poll cycle without a restart.
+#
+# Thresholds:
+#   DiskUsageHigh     — filesystem > 80% for 5 min (excludes tmpfs/overlay/squashfs)
+#   SystemdUnitFailed — any unit in failed state for > 2 min
+#   ResticBackupStale — backup older than 26 h (daily + 2 h buffer)
+#   ResticCheckStale  — integrity check older than 8 d (weekly + 1 d buffer)
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+let
+  cfg = config.profiles.observability;
+  mkYaml = name: data: (pkgs.formats.yaml { }).generate name data;
+
+  rulesFile = mkYaml "infrastructure-alerts.yaml" {
+    groups = [
+      {
+        name = "infrastructure";
+        interval = "1m";
+        rules = [
+          {
+            alert = "DiskUsageHigh";
+            expr = ''(1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|efivarfs|squashfs|devtmpfs"} / node_filesystem_size_bytes) * 100 > 80'';
+            for = "5m";
+            labels.severity = "warning";
+            annotations = {
+              summary = "High disk usage on {{ $labels.instance }}";
+              description = "{{ $labels.mountpoint }} on {{ $labels.instance }} is {{ $value | printf \"%.1f\" }}% full (threshold: 80%).";
+            };
+          }
+          {
+            alert = "SystemdUnitFailed";
+            expr = ''node_systemd_unit_state{state="failed"} > 0'';
+            for = "2m";
+            labels.severity = "critical";
+            annotations = {
+              summary = "Systemd unit failed on {{ $labels.instance }}";
+              description = "Unit {{ $labels.name }} has been in a failed state for >2 minutes.";
+            };
+          }
+          {
+            alert = "ResticBackupStale";
+            expr = "(time() - restic_last_backup_timestamp_seconds) / 3600 > 26";
+            for = "0m";
+            labels.severity = "critical";
+            annotations = {
+              summary = "Restic backup stale on {{ $labels.instance }}";
+              description = "Last backup {{ $value | printf \"%.1f\" }}h ago (threshold: 26h).";
+            };
+          }
+          {
+            alert = "ResticCheckStale";
+            expr = "(time() - restic_last_check_timestamp_seconds) / 86400 > 8";
+            for = "0m";
+            labels.severity = "warning";
+            annotations = {
+              summary = "Restic integrity check stale on {{ $labels.instance }}";
+              description = "Last check {{ $value | printf \"%.1f\" }}d ago (threshold: 8d).";
+            };
+          }
+        ];
+      }
+    ];
+  };
+
+  # Minimal Alertmanager config — null receiver so the ruler has somewhere to
+  # send alerts without erroring. Wire a real receiver (email, PagerDuty, etc.)
+  # by replacing this in the host config via lib.mkForce or a follow-up module.
+  alertmanagerFile = mkYaml "alertmanager.yaml" {
+    route = {
+      receiver = "null";
+      group_by = [
+        "alertname"
+        "instance"
+      ];
+      group_wait = "30s";
+      group_interval = "5m";
+      repeat_interval = "4h";
+    };
+    receivers = [ { name = "null"; } ];
+  };
+in
+{
+  config = lib.mkIf (cfg.enable && cfg.mimir.enable) {
+    services.mimir.configuration.ruler = {
+      alertmanager_url = "http://127.0.0.1:9009/alertmanager";
+    };
+
+    systemd.tmpfiles.rules = [
+      "d /var/lib/mimir/rules/anonymous 0750 mimir mimir -"
+      "d /var/lib/mimir/alertmanager/anonymous 0750 mimir mimir -"
+      "C+ /var/lib/mimir/rules/anonymous/infrastructure-alerts.yaml 0640 mimir mimir - ${rulesFile}"
+      "C+ /var/lib/mimir/alertmanager/anonymous/alertmanager.yaml 0640 mimir mimir - ${alertmanagerFile}"
+    ];
+  };
+}

@@ -8,3 +8,8 @@ gcp_project = "your-gcp-project-id"
 # zone         = "us-central1-a"
 # machine_type = "e2-medium"
 # disk_size_gb = 50
+
+# Daily GCE boot disk snapshots are provider-local fast rollback, not a restic replacement.
+# snapshot_retention_days    = 7
+# snapshot_start_time        = "03:00"
+# snapshot_storage_locations = ["europe-west2"]

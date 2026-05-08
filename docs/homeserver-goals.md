@@ -17,23 +17,23 @@ through `scripts/deploy-gcp.sh`.
 
 ## Recommended Order
 
-| Order | Goal                                  | Difficulty | Status   | Why this order                                                                                     |
-| :---- | :------------------------------------ | :--------- | :------- | :------------------------------------------------------------------------------------------------- |
-| 1     | Backup verification and restore drill | Medium     | Next     | Backups already run; prove they restore before adding more state.                                  |
-| 2     | Live endpoint smoke tests             | Medium     | Next     | Gives a fast safety net for later changes to Nginx, Vaultwarden, Grafana, and ingest paths.        |
-| 3     | LGTM alert tuning                     | Medium     | Next     | The stack is live; make it detect disk, service, and backup failures before expanding scope.       |
-| 4     | Vaultwarden websocket notifications   | Easy       | Next     | Small user-facing improvement with limited blast radius.                                           |
-| 5     | Disk layout decision                  | Medium     | Next     | Decide root-only vs separate data partition before adding DNS and more observability data.         |
-| 6     | GCE disk snapshots                    | Medium     | Next     | Adds fast VM-level rollback alongside restic before more services land.                            |
-| 7     | Local DNS and ad-blocking             | Medium     | Next     | First new service; depends on backup, smoke, alert, and disk posture being clear.                  |
-| 8     | Secret rotation ritual                | Medium     | Next     | Valuable once deploy/smoke paths can prove rotation did not break the server.                      |
-| 9     | ACL drift detection                   | Medium     | Later    | The ACL package exists; live API comparison is useful but not a blocker for new services.          |
-| 10    | Vulnix/CVE dashboard                  | Medium     | Later    | Security visibility is useful after alerting conventions are settled.                              |
-| 11    | Automated deploy pipeline             | Hard       | Later    | High leverage, but design depends on runner placement, KVM needs, and smoke-test coverage.         |
-| 12    | Tailscale-aware Grafana SSO           | Hard       | Later    | Removes a secret, but authentication mistakes can lock out observability.                          |
-| 13    | Host introspection into LGTM          | Medium     | Later    | Adds useful audit signals after retention/cardinality limits are tuned.                            |
-| 14    | Typed Nginx/timer generators          | Medium     | Later    | Refactor after enough repeated service patterns exist.                                             |
-| 15    | Service composition DSL               | Hard       | Deferred | Worth doing only after Vaultwarden plus at least one more service show the real abstraction shape. |
+| Order | Goal                                  | Difficulty | Status   | Why this order                                                                                      |
+| :---- | :------------------------------------ | :--------- | :------- | :-------------------------------------------------------------------------------------------------- |
+| 1     | Backup verification and restore drill | Medium     | Done     | Backups already run; prove they restore before adding more state.                                   |
+| 2     | Live endpoint smoke tests             | Medium     | Done     | Gives a fast safety net for later changes to Nginx, Vaultwarden, Grafana, and ingest paths.         |
+| 3     | LGTM alert tuning                     | Medium     | Done     | The stack is live; make it detect disk, service, and backup failures before expanding scope.        |
+| 4     | Vaultwarden websocket notifications   | Easy       | Done     | Small user-facing improvement with limited blast radius.                                            |
+| 5     | Disk layout decision                  | Medium     | Done     | Root-only layout is intentional; split storage only when a concrete retention or quota need exists. |
+| 6     | GCE disk snapshots                    | Medium     | Done     | Daily 7-day provider-local boot disk snapshots are attached for fast rollback alongside restic.     |
+| 7     | Local DNS and ad-blocking             | Medium     | Next     | First new service; depends on backup, smoke, alert, and disk posture being clear.                   |
+| 8     | Secret rotation ritual                | Medium     | Next     | Valuable once deploy/smoke paths can prove rotation did not break the server.                       |
+| 9     | ACL drift detection                   | Medium     | Later    | The ACL package exists; live API comparison is useful but not a blocker for new services.           |
+| 10    | Vulnix/CVE dashboard                  | Medium     | Later    | Security visibility is useful after alerting conventions are settled.                               |
+| 11    | Automated deploy pipeline             | Hard       | Later    | High leverage, but design depends on runner placement, KVM needs, and smoke-test coverage.          |
+| 12    | Tailscale-aware Grafana SSO           | Hard       | Later    | Removes a secret, but authentication mistakes can lock out observability.                           |
+| 13    | Host introspection into LGTM          | Medium     | Later    | Adds useful audit signals after retention/cardinality limits are tuned.                             |
+| 14    | Typed Nginx/timer generators          | Medium     | Later    | Refactor after enough repeated service patterns exist.                                              |
+| 15    | Service composition DSL               | Hard       | Deferred | Worth doing only after Vaultwarden plus at least one more service show the real abstraction shape.  |
 
 ## Goal Details
 
@@ -108,15 +108,20 @@ Acceptance:
 Resolve storage layout before adding services that create durable state or high
 write volume.
 
-Recommended decision: keep the current root-only layout unless a concrete need
-for isolated retention emerges. A separate filesystem is useful only if Loki,
-Mimir, or restic cache need independent quotas or lifecycle management.
+Decision: keep the current root-only layout unless a concrete need for isolated
+retention emerges. `hosts/homeserver-gcp/disko.nix` allocates one 512 MB EFI
+system partition and one ext4 root filesystem that consumes the rest of the GCE
+boot disk. There is no `/persist` volume or unused data partition.
+
+A separate filesystem is useful only if Loki, Mimir, or restic cache need
+independent quotas or lifecycle management. If that need appears later, split
+only the specific high-churn paths and document how those mounts are restored.
 
 Implementation:
 
-- Verify `hosts/homeserver-gcp/disko.nix` matches the intended root allocation.
-- If keeping root-only, remove stale `/persist` comments or leftovers.
-- If splitting data, mount only specific high-churn paths and document restore behavior.
+- Verified `hosts/homeserver-gcp/disko.nix` matches the intended root allocation.
+- Keeping root-only; stale `/persist` wording has been scoped away from `homeserver-gcp`.
+- No split data mounts are configured.
 
 Acceptance:
 
@@ -130,9 +135,9 @@ for restic because snapshots are provider-local and VM-shaped.
 
 Implementation:
 
-- Add an OpenTofu snapshot schedule for the homeserver boot disk.
-- Retain 7 daily snapshots.
-- Document when to use snapshots vs restic restores.
+- Added an OpenTofu snapshot schedule for the homeserver boot disk.
+- Retain 7 daily snapshots by default.
+- Documented when to use snapshots vs restic restores.
 
 Acceptance:
 
