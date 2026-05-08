@@ -265,7 +265,7 @@
   {
     id = "acl-drift-detection";
     title = "ACL drift detection";
-    status = "later";
+    status = "done";
     priority = "p3";
     area = "security";
     summary = "Compare the rendered Tailscale ACL package against the live tailnet policy and fail CI on drift.";
@@ -275,9 +275,9 @@
     ];
     services = [
       "tailscale"
-      "ci"
+      "github-actions"
     ];
-    blockedBy = [ "gcp-homeserver" ];
+    blockedBy = [ ];
     unlocks = [ ];
     docs = [ "docs/homeserver-goals.md" ];
   }

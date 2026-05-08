@@ -1,0 +1,32 @@
+name: Tailscale ACL drift
+
+on:
+  schedule:
+    # Daily 6 AM UTC — detects out-of-band edits to the live Tailscale policy
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tailscale-acl-drift
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  acl-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: ./.github/actions/setup-nix
+
+      - name: Check ACL drift
+        # TAILSCALE_API_KEY: created 2026-05-08, expires ~2026-08-06. Rotate before then.
+        env:
+          TAILSCALE_API_KEY: ${{ secrets.TAILSCALE_API_KEY }}
+          TAILSCALE_TAILNET: ${{ secrets.TAILSCALE_TAILNET }}
+        run: bash scripts/check-tailscale-acl-drift.sh
