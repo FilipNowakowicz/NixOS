@@ -223,6 +223,11 @@ in
           serviceConfig.SupplementaryGroups = ingestAuthGroups;
         };
 
+        prometheus-node-exporter = lib.mkIf cfg.collectors.metrics.enable {
+          after = [ "systemd-tmpfiles-setup.service" ];
+          wants = [ "systemd-tmpfiles-setup.service" ];
+        };
+
         alloy = lib.mkIf cfg.collectors.logs.enable {
           after = lib.optionals cfg.loki.enable [ "loki.service" ];
           requires = lib.optionals cfg.loki.enable [ "loki.service" ];

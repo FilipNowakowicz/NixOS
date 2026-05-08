@@ -212,16 +212,17 @@ cve = "CVE-2022-40898"
 comment = "Python packaging bootstrap tool; never run at runtime"
 
 # ─────────────────────────────────────────────────────────────
-# SECTION 3: Jenkins Git Plugin CVEs misattributed to git
+# SECTION 3: Git / SCM name-collision false positives
 #
-# NVD CPE matching attributes Jenkins Git Client Plugin CVEs to the 'git' pname.
-# CVE-2025-66413 (actual git SCM CVE) is intentionally left unwhitelisted.
+# NVD CPE matching attributes unrelated Git-branded products to the `git` pname.
+# The entries below are not upstream git(1) vulnerabilities on this Linux host.
 # ─────────────────────────────────────────────────────────────
 
 ["git-2.53.0"]
 cve = [ "CVE-2021-21684", "CVE-2022-30947", "CVE-2022-36882",
-        "CVE-2022-36883", "CVE-2022-36884", "CVE-2022-38663" ]
-comment = "Jenkins Git Client Plugin CVEs misattributed to git SCM via NVD CPE matching"
+        "CVE-2022-36883", "CVE-2022-36884", "CVE-2022-38663",
+        "CVE-2025-66413" ]
+comment = "Jenkins Git Client Plugin and Git for Windows CVEs misattributed to upstream git SCM via NVD CPE matching"
 
 # ─────────────────────────────────────────────────────────────
 # SECTION 4: More Haskell / product name-collision false positives
@@ -262,6 +263,36 @@ comment = "CVE for Dash macOS documentation browser; dash-0.5.13 is the POSIX sh
 ["ed-1.22.5"]
 cve = "CVE-2015-2987"
 comment = "CVE for unrelated product (Sheppard Software A-Map); ed is the standard POSIX line editor"
+
+# Ada is a parser-combinator library, not Ada.cx.
+["ada-3.4.3"]
+cve = "CVE-2024-9410"
+comment = "CVE for Ada.cx Sentry configuration; ada-3.4.3 is an unrelated parsing library"
+
+# kitty terminal emulator. Reported CVEs are for KiTTY/PuTTY products.
+["kitty-0.46.2"]
+cve = [ "CVE-2016-2563", "CVE-2023-48795", "CVE-2024-23749",
+        "CVE-2024-25003", "CVE-2024-25004" ]
+comment = "KiTTY/PuTTY CVEs misattributed to kitty terminal via name collision"
+
+# memcached server. Reported CVE is for the PHP-Memcached extension.
+["memcached-1.6.40"]
+cve = "CVE-2022-26635"
+comment = "CVE for PHP-Memcached extension; memcached server itself is not the affected product"
+
+# CPython runtime. These two CVEs are for the VS Code Python extension.
+["python-3.14.2"]
+cve = [ "CVE-2024-49050", "CVE-2025-49714" ]
+comment = "CVEs for the Visual Studio Code Python extension; CPython itself is not the affected product"
+
+# Upstream zlib. CVE-2023-6992 is for Cloudflare zlib, not upstream zlib.
+["zlib-1.3.1"]
+cve = "CVE-2023-6992"
+comment = "CVE for Cloudflare zlib fork; upstream zlib 1.3.1 is not the affected product"
+
+["zlib-1.3.2"]
+cve = "CVE-2023-6992"
+comment = "CVE for Cloudflare zlib fork; upstream zlib 1.3.2 is not the affected product"
 
 # ─────────────────────────────────────────────────────────────
 # SECTION 5: Build-time transitive deps not in runtime closure
