@@ -16,7 +16,6 @@
     zip
 
     # Utilities
-    yazi
     nix-output-monitor
     nh
   ];
