@@ -274,6 +274,8 @@ in
     };
   };
 
+  environment.enableAllTerminfo = true;
+
   networking = {
     hostName = "homeserver-gcp";
     firewall = {
