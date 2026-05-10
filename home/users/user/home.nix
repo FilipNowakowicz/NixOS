@@ -229,6 +229,7 @@ in
         gnumake
         gcc
         yt-dlp
+        ffmpeg
         claude-code
         codex
         gemini-cli
