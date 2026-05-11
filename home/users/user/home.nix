@@ -135,6 +135,18 @@ in
       })
 
       (writeShellApplication {
+        name = "waybar-preview";
+        runtimeInputs = with pkgs; [ waybar ];
+        text = ''
+          config_dir="''${XDG_CONFIG_HOME:-$HOME/.config}/waybar"
+          exec waybar \
+            -c "$config_dir/preview-config" \
+            -s "$config_dir/preview-style.css" \
+            "$@"
+        '';
+      })
+
+      (writeShellApplication {
         name = "clipboard-pick";
         runtimeInputs = with pkgs; [
           cliphist
@@ -329,6 +341,8 @@ in
       # Waybar
       "waybar/config".source = ../../files/waybar/config;
       "waybar/style.css".source = ../../files/waybar/style.css;
+      "waybar/preview-config".source = ../../files/waybar/preview-config;
+      "waybar/preview-style.css".source = ../../files/waybar/preview-style.css;
 
       "hypr/hypridle.conf" = {
         force = true;

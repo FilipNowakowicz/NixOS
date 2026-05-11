@@ -3,10 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Launcher Pill — Preview</title>
+    <title>Desktop UI Preview</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -24,39 +25,53 @@
         --orange: #888888;
         --amber: #cccccc;
         --text: #e8e8e8;
+        --bg-rgb: 10, 10, 10;
+        --brown-rgb: 42, 42, 42;
+        --orange-rgb: 136, 136, 136;
+        --amber-rgb: 204, 204, 204;
+        --text-rgb: 232, 232, 232;
       }
 
       body {
         font-family: "Inter", sans-serif;
         font-size: 12px;
+        min-height: 100vh;
+        color: var(--text);
+        overflow: hidden;
         background:
           radial-gradient(
-            ellipse at 30% 60%,
-            rgba(40, 35, 25, 0.4) 0%,
-            transparent 60%
+            ellipse at 24% 28%,
+            rgba(var(--amber-rgb), 0.08) 0%,
+            transparent 45%
           ),
           radial-gradient(
-            ellipse at 75% 30%,
-            rgba(20, 25, 35, 0.4) 0%,
+            ellipse at 78% 32%,
+            rgba(var(--orange-rgb), 0.11) 0%,
+            transparent 40%
+          ),
+          radial-gradient(
+            ellipse at 52% 100%,
+            rgba(var(--text-rgb), 0.04) 0%,
             transparent 55%
           ),
           #111013;
-        min-height: 100vh;
-        color: var(--text);
-        overflow-x: hidden;
       }
 
-      /* ── Wallpaper noise overlay ───────────────────────────── */
       body::before {
         content: "";
         position: fixed;
         inset: 0;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
         pointer-events: none;
         z-index: 0;
       }
 
-      /* ── Bar ──────────────────────────────────────────────── */
+      .shell {
+        position: relative;
+        min-height: 100vh;
+        z-index: 1;
+      }
+
       #waybar {
         position: fixed;
         top: 6px;
@@ -67,6 +82,7 @@
         align-items: stretch;
         z-index: 100;
         pointer-events: none;
+        animation: fade-down 320ms ease both;
       }
 
       .bar-section {
@@ -74,358 +90,766 @@
         align-items: center;
         pointer-events: all;
       }
+
       .bar-left {
         flex: 0 0 auto;
       }
+
       .bar-center {
         flex: 1;
         justify-content: center;
         gap: 4px;
       }
+
       .bar-right {
         flex: 0 0 auto;
         margin-left: auto;
       }
 
-      /* ── Pill base ────────────────────────────────────────── */
       .pill {
-        background: rgba(var(--bg-rgb, 10, 10, 10), 0.82);
-        border-radius: 12px;
-        margin: 6px 3px;
-        border: 1px solid rgba(var(--orange-rgb, 136, 136, 136), 0.28);
         display: flex;
         align-items: center;
         height: calc(100% - 12px);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        margin: 6px 3px;
+        border-radius: 12px;
+        border: 1px solid rgba(var(--orange-rgb), 0.28);
+        background: rgba(var(--bg-rgb), 0.82);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.02),
+          0 10px 30px rgba(0, 0, 0, 0.18);
       }
 
-      /* ── Workspaces ───────────────────────────────────────── */
       #workspaces {
-        padding: 0 10px;
         gap: 2px;
+        padding: 0 10px;
       }
+
       .ws-dot {
-        font-size: 9px;
         padding: 0 4px;
-        color: rgba(var(--text-rgb, 232, 232, 232), 0.25);
+        color: rgba(var(--text-rgb), 0.23);
+        font-size: 9px;
         line-height: 1;
         transition: color 150ms ease;
       }
+
+      .ws-dot.used {
+        color: rgba(var(--text-rgb), 0.82);
+      }
+
       .ws-dot.active {
         color: var(--amber);
       }
-      .ws-dot.used {
-        color: var(--text);
-      }
 
-      /* ── Clock ────────────────────────────────────────────── */
       #clock {
         padding: 0 18px;
         font-size: 13px;
         font-weight: 500;
-        white-space: nowrap;
-        color: var(--text);
         letter-spacing: 0.01em;
+        white-space: nowrap;
       }
+
       #clock .dim {
-        opacity: 0.5;
+        opacity: 0.48;
       }
 
-      /* ── Right modules ────────────────────────────────────── */
-      #right-pill {
-        padding: 0 4px 0 10px;
-        gap: 0;
-      }
-      .rm {
-        padding: 0 10px;
-        opacity: 0.75;
-        font-size: 13px;
-      }
-      .rm.chevron {
-        padding: 0 6px 0 10px;
-        opacity: 0.4;
-        font-size: 13px;
-      }
-      .rm.bt-connected {
-        opacity: 1;
-      }
-
-      /* ── Launcher pill ────────────────────────────────────── */
       #launcher-pill {
         position: relative;
-        min-width: 0px;
+        min-width: 0;
+        width: 154px;
         max-width: 220px;
-        width: 0px;
-        padding: 0;
-        border: none !important;
-        transition:
-          width 220ms cubic-bezier(0.4, 0, 0.2, 1),
-          border-color 220ms ease,
-          background 220ms ease,
-          padding 220ms ease,
-          border-width 0ms ease;
-        overflow: hidden;
-        cursor: text;
+        justify-content: center;
+        color: rgba(var(--text-rgb), 0.4);
+        border-style: dashed;
+        cursor: default;
       }
 
-      #launcher-pill.active {
-        width: 200px;
-        padding: inherit;
-        border: 1px solid rgba(var(--orange-rgb, 136, 136, 136), 0.55) !important;
+      #launcher-pill .launcher-label {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
       }
 
-      #launcher-pill.launched {
-        border-color: rgba(var(--amber-rgb, 204, 204, 204), 0.6) !important;
-        background: rgba(var(--amber-rgb, 204, 204, 204), 0.07);
+      #right-pill {
+        gap: 0;
+        padding: 0 4px 0 8px;
       }
 
-      /* ghost text container */
-      #launcher-input-wrap {
+      .bar-module {
         position: relative;
-        width: 100%;
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        opacity: 0;
-        transition: opacity 150ms ease 60ms;
+        gap: 8px;
+        min-height: 100%;
+        padding: 0 11px;
+        color: rgba(var(--text-rgb), 0.76);
+        font-size: 13px;
+        transition:
+          color 140ms ease,
+          background 140ms ease,
+          opacity 140ms ease;
+        cursor: pointer;
       }
-      #launcher-pill.active #launcher-input-wrap {
+
+      button {
+        appearance: none;
+        -webkit-appearance: none;
+        border: none;
+        outline: none;
+      }
+
+      .bar-module:hover {
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.035);
+      }
+
+      .bar-module.open {
+        color: var(--amber);
+        background: rgba(var(--amber-rgb), 0.08);
+      }
+
+      .bar-module.dim {
+        opacity: 0.55;
+      }
+
+      .bar-module.strong {
         opacity: 1;
       }
 
-      /* invisible ruler — measures typed text pixel width */
-      #text-ruler {
-        position: absolute;
-        visibility: hidden;
-        white-space: pre;
-        font-family: "Inter", sans-serif;
+      .bar-module .module-text {
         font-size: 12px;
-        font-weight: 400;
-        letter-spacing: 0;
-        pointer-events: none;
+        white-space: nowrap;
       }
 
-      /* ghost completion — positioned by JS right after typed text */
-      #ghost-completion {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        white-space: pre;
-        pointer-events: none;
-        font-family: "Inter", sans-serif;
-        font-size: 12px;
-        font-weight: 400;
-        color: var(--text);
-        opacity: 0.32;
-        letter-spacing: 0;
-        line-height: 1;
+      .chevron {
+        padding-right: 8px;
+        color: rgba(var(--text-rgb), 0.34);
       }
 
-      #launcher-input {
-        background: transparent;
-        border: none;
-        outline: none;
-        font-family: "Inter", sans-serif;
-        font-size: 12px;
-        font-weight: 400;
-        color: var(--text);
-        width: 100%;
-        padding: 0 12px;
-        text-align: center;
-        caret-color: var(--amber);
-        position: relative;
-        z-index: 1;
-        letter-spacing: 0;
-      }
-
-      /* ── Controls panel ───────────────────────────────────── */
-      #controls {
+      .panel-area {
         position: fixed;
-        bottom: 32px;
-        left: 50%;
-        transform: translateX(-50%);
+        top: 60px;
+        right: 15px;
+        z-index: 120;
         display: flex;
         flex-direction: column;
-        align-items: center;
-        gap: 16px;
-        z-index: 200;
-        pointer-events: all;
+        gap: 10px;
+        pointer-events: none;
       }
 
-      .ctrl-row {
+      .panel {
+        width: 336px;
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(var(--orange-rgb), 0.28);
+        background: linear-gradient(
+          180deg,
+          rgba(var(--bg-rgb), 0.94) 0%,
+          rgba(var(--brown-rgb), 0.88) 100%
+        );
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        box-shadow:
+          0 20px 50px rgba(0, 0, 0, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        pointer-events: all;
+        display: none;
+        animation: panel-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+
+      .panel.visible {
+        display: block;
+      }
+
+      .panel-header {
         display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+
+      .panel-title {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+      }
+
+      .panel-meta {
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(var(--text-rgb), 0.42);
+      }
+
+      .panel-stack {
+        display: grid;
+        gap: 10px;
+      }
+
+      .surface {
+        border-radius: 14px;
+        border: 1px solid rgba(var(--orange-rgb), 0.18);
+        background: rgba(255, 255, 255, 0.03);
+        padding: 10px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .hero-icon {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        border-radius: 11px;
+        background: rgba(var(--amber-rgb), 0.08);
+        color: var(--amber);
+        font-size: 16px;
+      }
+
+      .hero-copy {
+        display: grid;
+        gap: 3px;
+      }
+
+      .hero-title {
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .hero-subtitle {
+        font-size: 11px;
+        color: rgba(var(--text-rgb), 0.55);
+      }
+
+      .toggle {
+        position: relative;
+        width: 42px;
+        height: 24px;
+        border-radius: 999px;
+        border: 1px solid rgba(var(--orange-rgb), 0.28);
+        background: rgba(255, 255, 255, 0.06);
+        flex: 0 0 auto;
+      }
+
+      .toggle::after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: rgba(var(--text-rgb), 0.92);
+      }
+
+      .toggle.on {
+        background: rgba(var(--amber-rgb), 0.24);
+        border-color: rgba(var(--amber-rgb), 0.4);
+      }
+
+      .toggle.on::after {
+        left: 20px;
+        background: var(--amber);
+      }
+
+      .slider-block {
+        display: grid;
+        gap: 8px;
+      }
+
+      .slider-row {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
         align-items: center;
         gap: 10px;
       }
 
-      .ctrl-label {
+      .slider-track {
+        position: relative;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+      }
+
+      .slider-fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        border-radius: inherit;
+        background: linear-gradient(
+          90deg,
+          rgba(var(--amber-rgb), 0.72),
+          rgba(var(--text-rgb), 0.92)
+        );
+      }
+
+      .slider-knob {
+        position: absolute;
+        top: 50%;
+        right: -6px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--text);
+        transform: translateY(-50%);
+        box-shadow: 0 0 0 4px rgba(var(--text-rgb), 0.08);
+      }
+
+      .section-label {
         font-size: 10px;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
+        color: rgba(var(--text-rgb), 0.42);
+        margin-bottom: 8px;
+      }
+
+      .list {
+        display: grid;
+        gap: 6px;
+      }
+
+      .item {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 11px;
+        border-radius: 12px;
+        color: rgba(var(--text-rgb), 0.86);
+        background: rgba(255, 255, 255, 0.02);
+        transition: background 120ms ease;
+      }
+
+      .item.selected {
+        background: rgba(var(--amber-rgb), 0.09);
+      }
+
+      .item.subtle {
+        color: rgba(var(--text-rgb), 0.56);
+      }
+
+      .item-left {
+        width: 24px;
+        text-align: center;
+        color: rgba(var(--text-rgb), 0.78);
+      }
+
+      .item-copy {
+        display: grid;
+        gap: 2px;
+      }
+
+      .item-title {
+        font-size: 12px;
+      }
+
+      .item-subtitle {
+        font-size: 10px;
+        color: rgba(var(--text-rgb), 0.46);
+      }
+
+      .item-right {
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(var(--text-rgb), 0.4);
+      }
+
+      .button-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .ghost-btn,
+      .solid-btn,
+      .theme-btn,
+      .panel-btn {
+        border: 1px solid rgba(var(--orange-rgb), 0.2);
+        border-radius: 11px;
+        font-family: "Inter", sans-serif;
+        cursor: pointer;
+        transition:
+          border-color 120ms ease,
+          background 120ms ease,
+          color 120ms ease;
+      }
+
+      .ghost-btn,
+      .solid-btn,
+      .panel-btn {
+        padding: 9px 12px;
+        font-size: 11px;
+      }
+
+      .ghost-btn {
+        color: rgba(var(--text-rgb), 0.74);
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .solid-btn {
+        color: var(--bg);
+        background: var(--amber);
+        border-color: rgba(var(--amber-rgb), 0.55);
+      }
+
+      .panel-btn {
+        min-width: 104px;
+        color: rgba(var(--text-rgb), 0.68);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .panel-btn.active {
+        color: var(--amber);
+        border-color: rgba(var(--amber-rgb), 0.5);
+        background: rgba(var(--amber-rgb), 0.08);
+      }
+
+      #controls {
+        position: fixed;
+        left: 24px;
+        bottom: 24px;
+        display: grid;
+        gap: 14px;
+        z-index: 220;
+      }
+
+      .control-card {
+        width: 360px;
+        padding: 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(var(--orange-rgb), 0.22);
+        background: rgba(var(--bg-rgb), 0.8);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+      }
+
+      .control-title {
+        margin-bottom: 10px;
+        font-size: 10px;
         letter-spacing: 0.1em;
-        opacity: 0.4;
-        margin-right: 4px;
+        text-transform: uppercase;
+        color: rgba(var(--text-rgb), 0.42);
+      }
+
+      .theme-row,
+      .panel-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
       }
 
       .theme-btn {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        color: rgba(255, 255, 255, 0.55);
-        font-family: "Inter", sans-serif;
+        padding: 8px 11px;
+        color: rgba(var(--text-rgb), 0.6);
+        background: rgba(255, 255, 255, 0.035);
         font-size: 11px;
-        padding: 6px 14px;
-        cursor: pointer;
-        transition: all 150ms ease;
-        letter-spacing: 0.03em;
       }
-      .theme-btn:hover {
-        background: rgba(255, 255, 255, 0.09);
-        color: rgba(255, 255, 255, 0.85);
-        border-color: rgba(255, 255, 255, 0.2);
-      }
+
       .theme-btn.active-theme {
-        border-color: var(--amber);
         color: var(--amber);
-        background: rgba(var(--amber-rgb, 204, 204, 204), 0.07);
+        border-color: rgba(var(--amber-rgb), 0.5);
+        background: rgba(var(--amber-rgb), 0.08);
       }
 
-      .trigger-btn {
-        background: rgba(var(--amber-rgb, 204, 204, 204), 0.08);
-        border: 1px solid rgba(var(--amber-rgb, 204, 204, 204), 0.35);
-        border-radius: 8px;
-        color: var(--amber);
-        font-family: "Inter", sans-serif;
-        font-size: 11px;
-        padding: 6px 18px;
-        cursor: pointer;
-        transition: all 150ms ease;
-        letter-spacing: 0.04em;
-      }
-      .trigger-btn:hover {
-        background: rgba(var(--amber-rgb, 204, 204, 204), 0.14);
-        border-color: rgba(var(--amber-rgb, 204, 204, 204), 0.6);
+      .control-note {
+        margin-top: 10px;
+        line-height: 1.45;
+        color: rgba(var(--text-rgb), 0.5);
       }
 
-      .hint {
-        font-size: 10px;
-        opacity: 0.25;
-        letter-spacing: 0.05em;
-        text-align: center;
-      }
-
-      /* ── Launch flash ─────────────────────────────────────── */
-      @keyframes launch-flash {
-        0% {
-          opacity: 1;
-        }
-        40% {
-          opacity: 0.6;
-        }
-        100% {
-          opacity: 0;
-        }
-      }
-      .launch-flash {
-        animation: launch-flash 400ms ease forwards;
-      }
-
-      /* ── Clock tick ───────────────────────────────────────── */
-      @keyframes subtle-appear {
+      @keyframes fade-down {
         from {
           opacity: 0;
-          transform: translateY(-2px);
+          transform: translateY(-4px);
         }
         to {
           opacity: 1;
           transform: translateY(0);
         }
       }
-      #waybar {
-        animation: subtle-appear 350ms ease both;
+
+      @keyframes panel-in {
+        from {
+          opacity: 0;
+          transform: translateY(-8px) scale(0.985);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
       }
     </style>
   </head>
   <body>
-    <!-- ── Waybar simulation ─────────────────────────────────── -->
-    <div id="waybar">
-      <!-- Left: workspaces -->
-      <div class="bar-section bar-left">
-        <div class="pill" id="workspaces">
-          <span class="ws-dot used">●</span>
-          <span class="ws-dot active">●</span>
-          <span class="ws-dot">○</span>
-          <span class="ws-dot">○</span>
-          <span class="ws-dot">○</span>
-          <span class="ws-dot">○</span>
-          <span class="ws-dot">○</span>
-          <span class="ws-dot">○</span>
-          <span class="ws-dot">○</span>
-          <span class="ws-dot">○</span>
-        </div>
-      </div>
-
-      <!-- Center: launcher + clock -->
-      <div class="bar-section bar-center">
-        <!-- Launcher pill -->
-        <div class="pill" id="launcher-pill" title="click or press trigger">
-          <div id="launcher-input-wrap">
-            <span id="text-ruler" aria-hidden="true"></span>
-            <span id="ghost-completion" aria-hidden="true"></span>
-            <input
-              id="launcher-input"
-              type="text"
-              autocomplete="off"
-              autocorrect="off"
-              autocapitalize="off"
-              spellcheck="false"
-            />
+    <div class="shell">
+      <div id="waybar">
+        <div class="bar-section bar-left">
+          <div class="pill" id="workspaces">
+            <span class="ws-dot used">●</span>
+            <span class="ws-dot active">●</span>
+            <span class="ws-dot">○</span>
+            <span class="ws-dot">○</span>
+            <span class="ws-dot">○</span>
+            <span class="ws-dot">○</span>
+            <span class="ws-dot">○</span>
+            <span class="ws-dot">○</span>
+            <span class="ws-dot">○</span>
+            <span class="ws-dot">○</span>
           </div>
         </div>
 
-        <!-- Clock -->
-        <div class="pill" id="clock">
-          <span id="clock-time">14:32</span>&nbsp;<span class="dim"
-            >· <span id="clock-date">Wed 06</span></span
-          >
+        <div class="bar-section bar-center">
+          <div class="pill" id="launcher-pill">
+            <span class="launcher-label">Launcher Surface</span>
+          </div>
+
+          <div class="pill" id="clock">
+            <span id="clock-time">14:32</span>&nbsp;<span class="dim"
+              >· <span id="clock-date">Wed 06</span></span
+            >
+          </div>
+        </div>
+
+        <div class="bar-section bar-right">
+          <div class="pill" id="right-pill">
+            <span class="bar-module chevron">‹</span>
+            <button class="bar-module strong" data-panel="bluetooth-panel">
+              <span>󰂱</span>
+              <span class="module-text">headphones</span>
+            </button>
+            <button class="bar-module strong" data-panel="wifi-panel">
+              <span>󰤨</span>
+            </button>
+            <button class="bar-module open" data-panel="audio-panel">
+              <span>󰕾</span>
+            </button>
+            <span class="bar-module strong">
+              <span>󰂂</span>
+              <span class="module-text">85%</span>
+            </span>
+          </div>
         </div>
       </div>
 
-      <!-- Right: status modules -->
-      <div class="bar-section bar-right">
-        <div class="pill" id="right-pill">
-          <span class="rm chevron">‹</span>
-          <span class="rm bt-connected">󰂱&nbsp; headphones</span>
-          <span class="rm">󰤨</span>
-          <span class="rm">󰕾</span>
-          <span class="rm">⚡ 85%</span>
-        </div>
-      </div>
-    </div>
+      <div class="panel-area">
+        <section class="panel" id="wifi-panel">
+          <div class="panel-header">
+            <div class="panel-title">Wi-Fi</div>
+            <div class="panel-meta">Click Widget</div>
+          </div>
+          <div class="panel-stack">
+            <div class="surface hero">
+              <div class="hero-icon">󰤨</div>
+              <div class="hero-copy">
+                <div class="hero-title">Home Fiber 5G</div>
+                <div class="hero-subtitle">
+                  Connected · Strong signal · Secure
+                </div>
+              </div>
+              <div class="toggle on"></div>
+            </div>
 
-    <!-- ── Controls ──────────────────────────────────────────── -->
-    <div id="controls">
-      <div class="ctrl-row">
-        <span class="ctrl-label">Theme</span>
-        <button class="theme-btn active-theme" data-theme="mono-mesh">
-          mono-mesh
-        </button>
-        <button class="theme-btn" data-theme="desert-dusk">desert-dusk</button>
-        <button class="theme-btn" data-theme="acid-statue">acid-statue</button>
-        <button class="theme-btn" data-theme="nighthawks">nighthawks</button>
+            <div class="surface">
+              <div class="section-label">Available Networks</div>
+              <div class="list">
+                <div class="item selected">
+                  <div class="item-left">󰤨</div>
+                  <div class="item-copy">
+                    <div class="item-title">Home Fiber 5G</div>
+                    <div class="item-subtitle">Connected automatically</div>
+                  </div>
+                  <div class="item-right">Active</div>
+                </div>
+                <div class="item">
+                  <div class="item-left">󰤥</div>
+                  <div class="item-copy">
+                    <div class="item-title">Studio Backup</div>
+                    <div class="item-subtitle">Saved network</div>
+                  </div>
+                  <div class="item-right">Connect</div>
+                </div>
+                <div class="item">
+                  <div class="item-left">󰤯</div>
+                  <div class="item-copy">
+                    <div class="item-title">Guest</div>
+                    <div class="item-subtitle">Open network</div>
+                  </div>
+                  <div class="item-right">Join</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="button-row">
+              <button class="ghost-btn">Rescan</button>
+              <button class="solid-btn">Network Settings</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" id="bluetooth-panel">
+          <div class="panel-header">
+            <div class="panel-title">Bluetooth</div>
+            <div class="panel-meta">Click Widget</div>
+          </div>
+          <div class="panel-stack">
+            <div class="surface hero">
+              <div class="hero-icon">󰂱</div>
+              <div class="hero-copy">
+                <div class="hero-title">WH-1000XM5</div>
+                <div class="hero-subtitle">
+                  Connected for audio · 76% battery
+                </div>
+              </div>
+              <div class="toggle on"></div>
+            </div>
+
+            <div class="surface">
+              <div class="section-label">Paired Devices</div>
+              <div class="list">
+                <div class="item selected">
+                  <div class="item-left">󰋋</div>
+                  <div class="item-copy">
+                    <div class="item-title">WH-1000XM5</div>
+                    <div class="item-subtitle">Audio output</div>
+                  </div>
+                  <div class="item-right">Connected</div>
+                </div>
+                <div class="item">
+                  <div class="item-left">󰄜</div>
+                  <div class="item-copy">
+                    <div class="item-title">MX Master 3S</div>
+                    <div class="item-subtitle">Mouse</div>
+                  </div>
+                  <div class="item-right">Ready</div>
+                </div>
+                <div class="item subtle">
+                  <div class="item-left">󰂲</div>
+                  <div class="item-copy">
+                    <div class="item-title">Add New Device</div>
+                    <div class="item-subtitle">Scan for nearby devices</div>
+                  </div>
+                  <div class="item-right">Open</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel visible" id="audio-panel">
+          <div class="panel-header">
+            <div class="panel-title">Volume</div>
+            <div class="panel-meta">Starter Design</div>
+          </div>
+          <div class="panel-stack">
+            <div class="surface hero">
+              <div class="hero-icon">󰕾</div>
+              <div class="hero-copy">
+                <div class="hero-title">Speakers</div>
+                <div class="hero-subtitle">Default output · Balanced</div>
+              </div>
+              <div class="toggle on"></div>
+            </div>
+
+            <div class="surface slider-block">
+              <div class="slider-row">
+                <span>󰕾</span>
+                <div class="slider-track">
+                  <div class="slider-fill" style="width: 72%">
+                    <div class="slider-knob"></div>
+                  </div>
+                </div>
+                <span>72</span>
+              </div>
+              <div class="slider-row">
+                <span>󰍬</span>
+                <div class="slider-track">
+                  <div class="slider-fill" style="width: 38%">
+                    <div class="slider-knob"></div>
+                  </div>
+                </div>
+                <span>38</span>
+              </div>
+            </div>
+
+            <div class="surface">
+              <div class="section-label">Output Devices</div>
+              <div class="list">
+                <div class="item selected">
+                  <div class="item-left">󰓃</div>
+                  <div class="item-copy">
+                    <div class="item-title">Built-in Speakers</div>
+                    <div class="item-subtitle">Analog Stereo</div>
+                  </div>
+                  <div class="item-right">Active</div>
+                </div>
+                <div class="item">
+                  <div class="item-left">󰋋</div>
+                  <div class="item-copy">
+                    <div class="item-title">WH-1000XM5</div>
+                    <div class="item-subtitle">Bluetooth audio</div>
+                  </div>
+                  <div class="item-right">Switch</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="button-row">
+              <button class="ghost-btn">Mute</button>
+              <button class="solid-btn">Sound Settings</button>
+            </div>
+          </div>
+        </section>
       </div>
-      <div class="ctrl-row">
-        <button class="trigger-btn" id="trigger-btn">
-          ⌨ Trigger launcher
-        </button>
-      </div>
-      <div class="hint">
-        Tab / → &nbsp;·&nbsp; accept ghost &nbsp;·&nbsp; Enter &nbsp;·&nbsp;
-        launch &nbsp;·&nbsp; Esc &nbsp;·&nbsp; dismiss
+
+      <div id="controls">
+        <div class="control-card">
+          <div class="control-title">Theme</div>
+          <div class="theme-row">
+            <button class="theme-btn active-theme" data-theme="mono-mesh">
+              mono-mesh
+            </button>
+            <button class="theme-btn" data-theme="desert-dusk">
+              desert-dusk
+            </button>
+            <button class="theme-btn" data-theme="acid-statue">
+              acid-statue
+            </button>
+            <button class="theme-btn" data-theme="nighthawks">
+              nighthawks
+            </button>
+          </div>
+        </div>
+
+        <div class="control-card">
+          <div class="control-title">Open Panel</div>
+          <div class="panel-row">
+            <button class="panel-btn" data-panel-target="wifi-panel">
+              Wi-Fi
+            </button>
+            <button class="panel-btn" data-panel-target="bluetooth-panel">
+              Bluetooth
+            </button>
+            <button class="panel-btn active" data-panel-target="audio-panel">
+              Audio
+            </button>
+          </div>
+          <div class="control-note">
+            Initial direction: Waybar icons act as triggers, while the actual
+            widget lives in a separate popup surface. This keeps the preview
+            aligned with an eventual GTK layer-shell implementation.
+          </div>
+        </div>
       </div>
     </div>
 
     <script>
-      // ── Theme definitions ────────────────────────────────────
       const THEMES = {
         "mono-mesh": {
           bg: [10, 10, 10],
@@ -457,194 +881,84 @@
         },
       };
 
+      const panelButtons = document.querySelectorAll("[data-panel-target]");
+      const barModules = document.querySelectorAll("[data-panel]");
+      const panels = document.querySelectorAll(".panel");
+
       function applyTheme(name) {
         const t = THEMES[name];
         if (!t) return;
-        const r = document.documentElement;
+
+        const root = document.documentElement;
         const hex = (rgb) =>
           "#" + rgb.map((v) => v.toString(16).padStart(2, "0")).join("");
-        r.style.setProperty("--bg", hex(t.bg));
-        r.style.setProperty("--brown", hex(t.brown));
-        r.style.setProperty("--orange", hex(t.orange));
-        r.style.setProperty("--amber", hex(t.amber));
-        r.style.setProperty("--text", hex(t.text));
-        r.style.setProperty("--bg-rgb", t.bg.join(","));
-        r.style.setProperty("--orange-rgb", t.orange.join(","));
-        r.style.setProperty("--amber-rgb", t.amber.join(","));
-        r.style.setProperty("--text-rgb", t.text.join(","));
 
-        document.querySelectorAll(".theme-btn").forEach((b) => {
-          b.classList.toggle("active-theme", b.dataset.theme === name);
+        root.style.setProperty("--bg", hex(t.bg));
+        root.style.setProperty("--brown", hex(t.brown));
+        root.style.setProperty("--orange", hex(t.orange));
+        root.style.setProperty("--amber", hex(t.amber));
+        root.style.setProperty("--text", hex(t.text));
+        root.style.setProperty("--bg-rgb", t.bg.join(", "));
+        root.style.setProperty("--brown-rgb", t.brown.join(", "));
+        root.style.setProperty("--orange-rgb", t.orange.join(", "));
+        root.style.setProperty("--amber-rgb", t.amber.join(", "));
+        root.style.setProperty("--text-rgb", t.text.join(", "));
+
+        document.querySelectorAll(".theme-btn").forEach((btn) => {
+          btn.classList.toggle("active-theme", btn.dataset.theme === name);
         });
       }
 
-      document.querySelectorAll(".theme-btn").forEach((b) => {
-        b.addEventListener("click", () => applyTheme(b.dataset.theme));
+      function setOpenPanel(id) {
+        panels.forEach((panel) => {
+          panel.classList.toggle("visible", panel.id === id);
+        });
+
+        panelButtons.forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.panelTarget === id);
+        });
+
+        barModules.forEach((module) => {
+          module.classList.toggle("open", module.dataset.panel === id);
+        });
+      }
+
+      document.querySelectorAll(".theme-btn").forEach((btn) => {
+        btn.addEventListener("click", () => applyTheme(btn.dataset.theme));
       });
 
-      // ── App list ─────────────────────────────────────────────
-      const APPS = [
-        "alacritty",
-        "blueman-manager",
-        "btop",
-        "chromium",
-        "code",
-        "discord",
-        "firefox",
-        "foot",
-        "ghostty",
-        "gimp",
-        "heroic",
-        "htop",
-        "inkscape",
-        "kitty",
-        "lutris",
-        "mpv",
-        "nautilus",
-        "nvim",
-        "obsidian",
-        "pavucontrol",
-        "signal-desktop",
-        "spotify",
-        "steam",
-        "telegram-desktop",
-        "thunar",
-        "vlc",
-        "wezterm",
-        "zed",
-      ];
-
-      // ── Launcher state ────────────────────────────────────────
-      const pill = document.getElementById("launcher-pill");
-      const input = document.getElementById("launcher-input");
-      const ruler = document.getElementById("text-ruler");
-      const ghostComp = document.getElementById("ghost-completion");
-
-      let currentMatch = "";
-
-      function bestMatch(query) {
-        if (!query) return "";
-        const q = query.toLowerCase();
-        return APPS.find((a) => a.startsWith(q) && a !== q) || "";
-      }
-
-      function updateGhost() {
-        const val = input.value;
-        currentMatch = bestMatch(val);
-
-        if (currentMatch && val) {
-          // Measure typed text with the hidden ruler (identical font)
-          ruler.textContent = val;
-          const typedPx = ruler.offsetWidth;
-
-          // With text-align:center, typed text center = input center
-          // typed text ends at: center + typedPx/2
-          const inputCenter = input.offsetWidth / 2;
-          const ghostLeft = inputCenter + typedPx / 2;
-
-          ghostComp.textContent = currentMatch.slice(val.length);
-          ghostComp.style.left = ghostLeft + "px";
-        } else {
-          ghostComp.textContent = "";
-        }
-      }
-
-      function activateLauncher() {
-        pill.classList.add("active");
-        input.focus();
-        updateGhost();
-      }
-
-      function dismissLauncher() {
-        input.value = "";
-        ghostComp.textContent = "";
-        currentMatch = "";
-        pill.classList.remove("active", "launched");
-        input.blur();
-      }
-
-      function acceptGhost() {
-        if (currentMatch) {
-          input.value = currentMatch;
-          ghostComp.textContent = "";
-          currentMatch = "";
-        }
-      }
-
-      function launch() {
-        const app = input.value.trim() || currentMatch;
-        if (!app) {
-          dismissLauncher();
-          return;
-        }
-        input.value = app;
-        ghostComp.textContent = "";
-
-        pill.classList.add("launched");
-        input.blur();
-
-        // brief confirmation flash then dismiss
-        setTimeout(() => {
-          pill.classList.remove("launched");
-          dismissLauncher();
-        }, 500);
-      }
-
-      // Input events
-      input.addEventListener("input", updateGhost);
-
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Tab" || e.key === "ArrowRight") {
-          if (currentMatch && input.selectionStart === input.value.length) {
-            e.preventDefault();
-            acceptGhost();
-          }
-        } else if (e.key === "Enter") {
-          e.preventDefault();
-          launch();
-        } else if (e.key === "Escape") {
-          e.preventDefault();
-          dismissLauncher();
-        }
+      panelButtons.forEach((btn) => {
+        btn.addEventListener("click", () =>
+          setOpenPanel(btn.dataset.panelTarget),
+        );
       });
 
-      input.addEventListener("blur", () => {
-        // small delay so trigger-btn click can re-focus
-        setTimeout(() => {
-          if (document.activeElement !== input) {
-            dismissLauncher();
-          }
-        }, 120);
+      barModules.forEach((module) => {
+        module.addEventListener("click", () =>
+          setOpenPanel(module.dataset.panel),
+        );
       });
 
-      // Click on pill to activate
-      pill.addEventListener("click", activateLauncher);
-
-      // Trigger button
-      document.getElementById("trigger-btn").addEventListener("click", () => {
-        if (pill.classList.contains("active")) {
-          dismissLauncher();
-        } else {
-          activateLauncher();
-        }
-      });
-
-      // ── Live clock ────────────────────────────────────────────
-      function updateClock() {
+      function tickClock() {
         const now = new Date();
-        const hh = String(now.getHours()).padStart(2, "0");
-        const mm = String(now.getMinutes()).padStart(2, "0");
-        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-        const day = days[now.getDay()];
-        const dd = String(now.getDate()).padStart(2, "0");
-        document.getElementById("clock-time").textContent = `${hh}:${mm}`;
-        document.getElementById("clock-date").textContent = `${day} ${dd}`;
-      }
-      updateClock();
-      setInterval(updateClock, 10000);
+        const time = now.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        });
+        const date = now.toLocaleDateString([], {
+          weekday: "short",
+          day: "2-digit",
+        });
 
-      // ── Init ──────────────────────────────────────────────────
+        document.getElementById("clock-time").textContent = time;
+        document.getElementById("clock-date").textContent = date;
+      }
+
       applyTheme("mono-mesh");
+      setOpenPanel("audio-panel");
+      tickClock();
+      setInterval(tickClock, 1000);
     </script>
   </body>
 </html>

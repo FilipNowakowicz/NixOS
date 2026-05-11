@@ -1,0 +1,102 @@
+@import "colors.css";
+
+* {
+  font-family: "Inter", "JetBrainsMono Nerd Font", sans-serif;
+  font-size: 12px;
+  min-height: 0;
+}
+
+window#waybar {
+  background: transparent;
+  color: @text;
+}
+
+#workspaces,
+#clock,
+#custom-preview-mode,
+.modules-right {
+  background: alpha(@bg, 0.8);
+  border-radius: 14px;
+  margin: 6px 3px;
+  border: 1px solid alpha(@orange, 0.28);
+}
+
+#workspaces {
+  padding: 0 4px;
+}
+
+#workspaces button {
+  padding: 0 5px;
+  color: @text;
+  background: transparent;
+  font-size: 10px;
+  transition: color 150ms ease;
+  box-shadow: none;
+}
+
+#workspaces button.empty {
+  color: alpha(@text, 0.25);
+}
+
+#workspaces button.active {
+  color: @amber;
+}
+
+#workspaces button:hover {
+  color: @text;
+  background: transparent;
+  box-shadow: none;
+}
+
+#custom-preview-mode {
+  padding: 0 16px;
+  color: @amber;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+}
+
+#clock {
+  padding: 0 18px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+#network,
+#bluetooth,
+#pulseaudio,
+#custom-battery-status {
+  padding: 0 12px;
+}
+
+#custom-battery-status.performance {
+  color: @amber;
+}
+
+#custom-battery-status.warning {
+  color: @orange;
+}
+
+#custom-battery-status.critical {
+  color: @amber;
+  font-weight: bold;
+}
+
+#custom-chevron {
+  padding: 0 6px 0 10px;
+  color: @text;
+  opacity: 0.4;
+  font-size: 13px;
+}
+
+#tray {
+  padding: 0 8px 0 4px;
+}
+
+#bluetooth {
+  opacity: 0.4;
+}
+
+#bluetooth.connected {
+  opacity: 1;
+}
