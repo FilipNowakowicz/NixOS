@@ -213,7 +213,7 @@ in
           profile=$(mktemp -d)
           trap 'rm -rf "$profile"' EXIT
           cp ${privateUserJs} "$profile/user.js"
-          exec firefox --profile "$profile" --no-remote "$@"
+          firefox --profile "$profile" --no-remote "$@"
         '';
       })
 

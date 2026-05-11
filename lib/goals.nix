@@ -23,6 +23,23 @@
     ];
   }
   {
+    id = "tailscale-aware-grafana-sso";
+    title = "Tailscale-aware Grafana SSO";
+    status = "later";
+    priority = "p2";
+    area = "security";
+    summary = "Replace Grafana local admin login with tailnet identity after the proxy and break-glass story are clear.";
+    hosts = [ "homeserver-gcp" ];
+    services = [
+      "tailscale"
+      "grafana"
+      "nginx"
+    ];
+    blockedBy = [ ];
+    unlocks = [ ];
+    docs = [ "docs/homeserver-goals.md" ];
+  }
+  {
     id = "config-dashboard-wave-2";
     title = "Config dashboard wave 2";
     status = "later";
@@ -48,7 +65,7 @@
   {
     id = "service-composition-dsl";
     title = "Service composition DSL";
-    status = "later";
+    status = "deferred";
     priority = "p3";
     area = "platform";
     summary = "Create a declarative app module that auto-wires hardening, observability, backup, and port plumbing for new services.";
@@ -87,7 +104,7 @@
   {
     id = "secret-rotation";
     title = "Secret rotation ritual";
-    status = "later";
+    status = "deferred";
     priority = "p3";
     area = "security";
     summary = "Define a repeatable secret rotation checklist and expose age or rotation health through observability signals.";

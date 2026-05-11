@@ -234,6 +234,7 @@ in
         "/home/user/.gnupg"
         "/home/user/nix"
         "/home/user/.mozilla/firefox"
+        "/home/user/.config/mozilla/firefox"
         "/home/user/.config/spotify"
         "/home/user/.config/discord"
         "/home/user/.config/gh"

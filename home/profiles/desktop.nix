@@ -63,15 +63,11 @@
         # Hardware acceleration (video decoding)
         "media.ffmpeg.vaapi.enabled" = true;
         "media.hardware-video-decoding.force-enabled" = true;
-        "gfx.webrender.all" = true;
         "widget.wayland-dmabuf-vaapi.enabled" = true;
 
-        # CPU optimizations
-        "dom.max_script_run_time" = 30;
+        # Keep memory pressure behavior explicit; avoid legacy CPU/rendering tweaks.
         "browser.tabs.unloadOnLowMemory" = true;
-        "dom.ipc.processCount" = 4;
         "browser.sessionstore.unload_tabs_on_low_memory" = true;
-        "nglayout.initialpaint.delay" = 0;
         "privacy.resistFingerprinting" = false;
       };
     };

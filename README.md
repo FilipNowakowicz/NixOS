@@ -83,7 +83,7 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 - **Disk Encryption**: LUKS encrypts the entire disk.
 - **TPM Unlocking**: The system's TPM 2.0 is used to automatically unlock the LUKS-encrypted disk on boot.
 - **Hardware Pass-through**: IOMMU is enabled (`intel_iommu=on iommu=force`) for potential VM GPU pass-through.
-- **Graphics Drivers**: The configuration uses stable by-path device paths for `AQ_DRM_DEVICES` to ensure stable multi-GPU / monitor performance.
+- **Graphics Drivers**: The configuration pins `AQ_DRM_DEVICES` to a stable udev symlink for the Intel iGPU to keep multi-GPU / monitor behavior predictable.
 - **Initrd SSH Recovery**: In case of TPM failure, an initrd SSH server (port 2222) is available for remote LUKS unlocking using the dedicated recovery key stored in `lib/recovery-pubkeys.nix`.
   - **Recovery Procedure**:
     1. Retrieve the `id_ed25519_recovery` private key from offline storage.
