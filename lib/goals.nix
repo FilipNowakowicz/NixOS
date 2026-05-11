@@ -1,31 +1,8 @@
 [
   {
-    id = "deploy-pipeline";
-    title = "Automated deploy pipeline";
-    status = "later";
-    priority = "p2";
-    area = "deploy";
-    summary = "Add a self-hosted Actions runner, extend smoke coverage, and automate homeserver-gcp then main deployment after passing checks.";
-    hosts = [
-      "homeserver-gcp"
-      "main"
-    ];
-    services = [
-      "deploy-rs"
-      "github-actions"
-      "smoke-tests"
-    ];
-    blockedBy = [ ];
-    unlocks = [ "secret-rotation" ];
-    docs = [
-      "docs/goals.md"
-      "docs/homeserver-goals.md"
-    ];
-  }
-  {
     id = "tailscale-aware-grafana-sso";
     title = "Tailscale-aware Grafana SSO";
-    status = "later";
+    status = "done";
     priority = "p2";
     area = "security";
     summary = "Replace Grafana local admin login with tailnet identity after the proxy and break-glass story are clear.";
@@ -84,10 +61,10 @@
   {
     id = "typed-generators";
     title = "Expand typed generators";
-    status = "later";
+    status = "done";
     priority = "p3";
     area = "platform";
-    summary = "Extend the typed generator approach beyond Alloy and Grafana into other declarative domains such as nginx vhosts and timers.";
+    summary = "Extend the typed generator approach with narrow helpers for repeated nginx proxy locations and systemd timers.";
     hosts = [
       "main"
       "homeserver-gcp"
@@ -96,31 +73,10 @@
       "alloy"
       "grafana"
       "nginx"
+      "systemd"
     ];
     blockedBy = [ ];
     unlocks = [ ];
     docs = [ "docs/homeserver-goals.md" ];
-  }
-  {
-    id = "secret-rotation";
-    title = "Secret rotation ritual";
-    status = "deferred";
-    priority = "p3";
-    area = "security";
-    summary = "Define a repeatable secret rotation checklist and expose age or rotation health through observability signals.";
-    hosts = [
-      "main"
-      "homeserver-gcp"
-    ];
-    services = [
-      "sops"
-      "age"
-    ];
-    blockedBy = [ "deploy-pipeline" ];
-    unlocks = [ ];
-    docs = [
-      "docs/goals.md"
-      "docs/homeserver-goals.md"
-    ];
   }
 ]

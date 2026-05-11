@@ -1,8 +1,10 @@
 { config, lib, ... }:
 let
   cfg = config.profiles.homeserverGcpNginx;
+  gen = import ../../lib/generators.nix { inherit lib; };
   certDir = "/var/lib/nginx/certs";
   homepageDir = "/var/lib/homepage/public";
+  proxy = gen.nginx.proxyLocation;
 in
 {
   options.profiles.homeserverGcpNginx = {
@@ -46,19 +48,19 @@ in
         sslCertificateKey = "${certDir}/homeserver-gcp.key";
 
         locations = {
-          "/" = {
-            proxyPass = "http://127.0.0.1:8222";
-            proxyWebsockets = true;
+          "/" = proxy {
+            target = "http://127.0.0.1:8222";
+            websockets = true;
           };
 
-          "= /notifications/hub" = {
-            proxyPass = "http://127.0.0.1:8222";
-            proxyWebsockets = true;
+          "= /notifications/hub" = proxy {
+            target = "http://127.0.0.1:8222";
+            websockets = true;
           };
 
-          "/grafana/" = {
-            proxyPass = "http://127.0.0.1:3000";
-            proxyWebsockets = true;
+          "/grafana/" = proxy {
+            target = "http://127.0.0.1:3000";
+            websockets = true;
             extraConfig = lib.optionalString (cfg.grafanaAuthRequestUrl != null) ''
               auth_request /_grafana_auth;
               auth_request_set $grafana_user $upstream_http_x_auth_request_user;
@@ -98,18 +100,18 @@ in
             '';
           };
 
-          "/obs/loki/" = {
-            proxyPass = "http://127.0.0.1:3100/";
+          "/obs/loki/" = proxy {
+            target = "http://127.0.0.1:3100/";
             basicAuthFile = cfg.ingestHtpasswdFile;
           };
 
-          "/obs/mimir/" = {
-            proxyPass = "http://127.0.0.1:9009/";
+          "/obs/mimir/" = proxy {
+            target = "http://127.0.0.1:9009/";
             basicAuthFile = cfg.ingestHtpasswdFile;
           };
 
-          "/obs/otlp/" = {
-            proxyPass = "http://127.0.0.1:14318/";
+          "/obs/otlp/" = proxy {
+            target = "http://127.0.0.1:14318/";
             basicAuthFile = cfg.ingestHtpasswdFile;
           };
         };

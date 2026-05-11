@@ -55,6 +55,28 @@ let
     }:
     "${type} \"${label}\" {\n${renderBody 1 body}\n}";
 
+  mkNginxProxyLocation =
+    {
+      target,
+      websockets ? false,
+      basicAuthFile ? null,
+      extraConfig ? "",
+      extraOptions ? { },
+    }:
+    {
+      proxyPass = target;
+    }
+    // lib.optionalAttrs websockets {
+      proxyWebsockets = true;
+    }
+    // lib.optionalAttrs (basicAuthFile != null) {
+      inherit basicAuthFile;
+    }
+    // lib.optionalAttrs (extraConfig != "") {
+      inherit extraConfig;
+    }
+    // extraOptions;
+
 in
 {
   # Convert a list of Alloy component definitions to River config text.
@@ -68,4 +90,33 @@ in
 
   # Nested block (rendered as `name { ... }` not `name = { ... }`)
   nestedBlock = body: { __alloyBlock = true; } // body;
+
+  nginx = {
+    # Normal reverse-proxy location. Keep one-off nginx behavior in extraConfig
+    # or hand-written locations instead of expanding this into a routing DSL.
+    proxyLocation = mkNginxProxyLocation;
+  };
+
+  systemd = {
+    # Timer shape used by recurring homeserver maintenance jobs.
+    timer =
+      {
+        schedule,
+        jitter ? null,
+        persistent ? true,
+        wantedBy ? [ "timers.target" ],
+        extraTimerConfig ? { },
+      }:
+      {
+        inherit wantedBy;
+        timerConfig = {
+          OnCalendar = schedule;
+          Persistent = persistent;
+        }
+        // lib.optionalAttrs (jitter != null) {
+          RandomizedDelaySec = jitter;
+        }
+        // extraTimerConfig;
+      };
+  };
 }

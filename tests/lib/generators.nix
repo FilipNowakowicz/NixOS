@@ -118,6 +118,69 @@ let
       ];
       expected = "loki.write \"target\" {\n  endpoint {\n    basic_auth {\n      password_file = \"/run/secrets/pw\"\n      username = \"user\"\n    }\n    url = \"http://loki\"\n  }\n}";
     };
+
+    testNginxProxyLocationMinimal = {
+      expr = gen.nginx.proxyLocation {
+        target = "http://127.0.0.1:8222";
+      };
+      expected = {
+        proxyPass = "http://127.0.0.1:8222";
+      };
+    };
+
+    testNginxProxyLocationWithWebsocketsAndAuth = {
+      expr = gen.nginx.proxyLocation {
+        target = "http://127.0.0.1:3000";
+        websockets = true;
+        basicAuthFile = "/run/secrets/htpasswd";
+        extraConfig = ''
+          proxy_set_header X-Test true;
+        '';
+      };
+      expected = {
+        proxyPass = "http://127.0.0.1:3000";
+        proxyWebsockets = true;
+        basicAuthFile = "/run/secrets/htpasswd";
+        extraConfig = ''
+          proxy_set_header X-Test true;
+        '';
+      };
+    };
+
+    testSystemdTimerWithJitter = {
+      expr = gen.systemd.timer {
+        schedule = "daily";
+        jitter = "1h";
+      };
+      expected = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = "daily";
+          Persistent = true;
+          RandomizedDelaySec = "1h";
+        };
+      };
+    };
+
+    testSystemdTimerEscapeHatch = {
+      expr = gen.systemd.timer {
+        schedule = "weekly";
+        jitter = "2h";
+        persistent = false;
+        extraTimerConfig = {
+          AccuracySec = "15m";
+        };
+      };
+      expected = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = "weekly";
+          Persistent = false;
+          RandomizedDelaySec = "2h";
+          AccuracySec = "15m";
+        };
+      };
+    };
   };
 in
 if failures == [ ] then

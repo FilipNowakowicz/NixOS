@@ -9,6 +9,8 @@
 let
   inherit (hostMeta) tailnetFQDN;
   dash = import ../../lib/dashboards.nix;
+  gen = import ../../lib/generators.nix { inherit lib; };
+  inherit (gen.systemd) timer;
   textfileDir = "/var/lib/node-exporter-textfiles";
   homepageDir = "/var/lib/homepage/public";
   grafanaTailscaleRoleMap = { };
@@ -361,6 +363,8 @@ in
           Restart = "on-failure";
           RestartSec = 2;
           DynamicUser = true;
+          ReadWritePaths = [ "/var/run/tailscale" ];
+          BindPaths = [ "/var/run/tailscale:/var/run/tailscale" ];
           NoNewPrivileges = true;
           PrivateTmp = true;
           ProtectSystem = "strict";
@@ -386,31 +390,19 @@ in
     };
 
     timers = {
-      lynis-audit = {
-        wantedBy = [ "timers.target" ];
-        timerConfig = {
-          OnCalendar = "daily";
-          Persistent = true;
-          RandomizedDelaySec = "1h";
-        };
+      lynis-audit = timer {
+        schedule = "daily";
+        jitter = "1h";
       };
 
-      vulnix-scan = {
-        wantedBy = [ "timers.target" ];
-        timerConfig = {
-          OnCalendar = "daily";
-          Persistent = true;
-          RandomizedDelaySec = "1h";
-        };
+      vulnix-scan = timer {
+        schedule = "daily";
+        jitter = "1h";
       };
 
-      restic-check-b2 = {
-        wantedBy = [ "timers.target" ];
-        timerConfig = {
-          OnCalendar = "weekly";
-          Persistent = true;
-          RandomizedDelaySec = "2h";
-        };
+      restic-check-b2 = timer {
+        schedule = "weekly";
+        jitter = "2h";
       };
 
       homepage-status = {
@@ -422,13 +414,9 @@ in
         };
       };
 
-      tailscale-cert = {
-        wantedBy = [ "timers.target" ];
-        timerConfig = {
-          OnCalendar = "daily";
-          Persistent = true;
-          RandomizedDelaySec = "1h";
-        };
+      tailscale-cert = timer {
+        schedule = "daily";
+        jitter = "1h";
       };
     };
   };

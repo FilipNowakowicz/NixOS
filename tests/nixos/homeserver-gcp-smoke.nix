@@ -157,6 +157,16 @@ in
         " | grep -q '^200'",
         timeout=30,
       )
+
+      # Vaultwarden notification websocket route is explicit and reaches the upstream.
+      server.succeed(
+        "config=$(systemctl cat nginx.service"
+        " | sed -n \"s#.*-c \\([^ ]*nginx\\.conf\\).*#\\1#p\""
+        " | tr -d \"'\\\"\""
+        " | head -n 1)"
+        " && grep -q 'location = /notifications/hub' \"$config\""
+      )
+
       # /obs/* → 401 without credentials (auth boundary enforced, not 404/502)
       for path in ["/obs/loki/", "/obs/mimir/", "/obs/otlp/"]:
           server.succeed(
