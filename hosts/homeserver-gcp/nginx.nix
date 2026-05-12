@@ -92,6 +92,7 @@ in
           "/home/" = {
             alias = "${homepageDir}/";
             extraConfig = ''
+              add_header Cache-Control "no-store" always;
               try_files $uri $uri/ /home/index.html;
             '';
           };
