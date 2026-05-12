@@ -36,7 +36,7 @@ let
       <body>
         <main>
           <h1>Homepage assets not deployed yet</h1>
-          <p>Build the dashboard with <code>nix build '.#packages.x86_64-linux.inventory'</code>, then copy the result contents into <code>/var/lib/homepage/public</code>.</p>
+          <p>Deploy the homepage site into <code>/var/lib/homepage/public</code>.</p>
           <p>The live status endpoint is still available at <code>/home/status.json</code>.</p>
         </main>
       </body>

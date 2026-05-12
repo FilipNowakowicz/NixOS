@@ -629,20 +629,6 @@
 
           # ── Packages ────────────────────────────────────────────────────────
           packages = {
-            inventory = import ./packages/inventory.nix {
-              inherit
-                lib
-                pkgs
-                hostRegistry
-                ;
-              # Use ciNixosConfigs (filtered to registry hosts) so the
-              # inventory's evaluation of homeserver-gcp's system.build.toplevel
-              # goes through the CI override that disables
-              # google-compute-config.nix (readFiles google-guest-configs at
-              # eval time). Filter excludes synthetic main-ci/vm-ci keys.
-              allNixosConfigs = lib.intersectAttrs hostRegistry ciNixosConfigs;
-            };
-
             inventory-data = import ./packages/inventory-data.nix {
               inherit
                 lib

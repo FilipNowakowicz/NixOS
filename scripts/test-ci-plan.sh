@@ -74,7 +74,7 @@ assert_contains "$homeserver_output" "tests=true"
 assert_contains "$homeserver_output" '{"name":"homeserver-gcp-smoke","command":"smoke-homeserver-gcp","target":""}'
 assert_not_contains "$homeserver_output" '{"name":"vm-smoke"'
 
-package_output="$(run_plan $'packages/inventory.nix')"
+package_output="$(run_plan $'packages/inventory-data.nix')"
 assert_contains "$package_output" "run_packages=true"
 assert_contains "$package_output" "hosts=false"
 assert_contains "$package_output" "tests=false"

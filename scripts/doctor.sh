@@ -20,6 +20,5 @@ run nix fmt -- --fail-on-change
 
 if [[ ${1:-} == "--with-builds" ]]; then
   run bash scripts/validate.sh light
-  run bash scripts/validate.sh package inventory
   run bash scripts/validate.sh package inventory-data
 fi

@@ -88,9 +88,6 @@ build_profile_test() {
 
 build_package() {
   case "$1" in
-  inventory)
-    build_attrs ".#packages.${system}.inventory"
-    ;;
   inventory-data)
     build_attrs ".#packages.${system}.inventory-data"
     ;;
