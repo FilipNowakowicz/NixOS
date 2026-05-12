@@ -285,7 +285,7 @@ in
                     online: $mainOnline
                   }
                 }
-              },
+              }
             }' > "$tmp"
           mv "$tmp" ${homepageDir}/status.json
           chmod 0644 ${homepageDir}/status.json

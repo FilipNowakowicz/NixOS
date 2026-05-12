@@ -85,6 +85,10 @@ in
             '';
           };
 
+          "= /home" = {
+            return = "301 /home/";
+          };
+
           "/home/" = {
             alias = "${homepageDir}/";
             extraConfig = ''
