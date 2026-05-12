@@ -80,14 +80,14 @@ let
                 c:
                 let
                   backup = c.services.restic.backups.local or null;
-                in
-                backup != null
-                &&
-                  (backup.paths or [ ]) == [
+                  expectedPaths = [
                     "/home/user/.ssh"
                     "/home/user/.gnupg"
                     "/home/user/nix"
-                  ]
+                  ];
+                in
+                backup != null
+                && builtins.all (path: builtins.elem path (backup.paths or [ ])) expectedPaths
                 && (backup.passwordFile or "") != ""
                 && lib.hasPrefix "/run/secrets/" (backup.passwordFile or "")
                 && backup.initialize
