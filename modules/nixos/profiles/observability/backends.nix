@@ -18,6 +18,7 @@ in
       loki = lib.mkIf cfg.loki.enable {
         enable = true;
         configuration = {
+          analytics.reporting_enabled = false;
           auth_enabled = false;
           server = {
             http_listen_address = "127.0.0.1";
@@ -48,6 +49,7 @@ in
       tempo = lib.mkIf cfg.tempo.enable {
         enable = true;
         settings = {
+          usage_report.reporting_enabled = false;
           server = {
             http_listen_address = "127.0.0.1";
             http_listen_port = 3200;
@@ -70,6 +72,7 @@ in
       mimir = lib.mkIf cfg.mimir.enable {
         enable = true;
         configuration = {
+          usage_stats.enabled = false;
           multitenancy_enabled = false;
           server = {
             http_listen_address = "127.0.0.1";
