@@ -643,6 +643,15 @@
               allNixosConfigs = lib.intersectAttrs hostRegistry ciNixosConfigs;
             };
 
+            inventory-data = import ./packages/inventory-data.nix {
+              inherit
+                lib
+                pkgs
+                hostRegistry
+                ;
+              allNixosConfigs = lib.intersectAttrs hostRegistry ciNixosConfigs;
+            };
+
             tailscale-acl =
               pkgs.runCommand "tailscale-acl"
                 {

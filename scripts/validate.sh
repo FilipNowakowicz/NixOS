@@ -91,6 +91,9 @@ build_package() {
   inventory)
     build_attrs ".#packages.${system}.inventory"
     ;;
+  inventory-data)
+    build_attrs ".#packages.${system}.inventory-data"
+    ;;
   *)
     echo "Unknown package target: $1" >&2
     exit 1
