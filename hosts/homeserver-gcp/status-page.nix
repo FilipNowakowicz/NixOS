@@ -119,6 +119,35 @@ in
         vulnix_packages="$(metric /var/lib/node-exporter-textfiles/vulnix.prom vulnix_affected_packages_total)"
         failed_units_json="$(systemctl --failed --plain --no-legend --no-pager | awk '{ print $1 }' | ${pkgs.jq}/bin/jq -R . | ${pkgs.jq}/bin/jq -s -c .)"
         tailscale_status_json="$(${pkgs.tailscale}/bin/tailscale status --json 2>/dev/null || printf '{}')"
+        tailnet_devices_json="$(printf '%s' "$tailscale_status_json" | ${pkgs.jq}/bin/jq -c '
+          def clean_dns:
+            if . == null then null else sub("[.]$"; "") end;
+
+          ([
+            {
+              name: (.Self.HostName // "homeserver-gcp"),
+              dnsName: ((.Self.DNSName // null) | clean_dns),
+              online: (.Self.Online // false),
+              os: (.Self.OS // null),
+              self: true
+            }
+          ] + (
+            (.Peer // {})
+            | to_entries
+            | map(.value)
+            | map({
+              name: (.HostName // (.DNSName // "unknown")),
+              dnsName: ((.DNSName // null) | clean_dns),
+              online: (.Online // false),
+              os: (.OS // null),
+              self: false,
+              lastSeen: (
+                if (.LastSeen // "") == "0001-01-01T00:00:00Z" then null else (.LastSeen // null) end
+              )
+            })
+          ))
+          | sort_by(.name | ascii_downcase)
+        ')"
         homeserver_online="$(tailscale_online_json homeserver-gcp)"
         main_online="$(tailscale_online_json main)"
 
@@ -150,9 +179,13 @@ in
           --argjson vulnixCves "$(number_json "$vulnix_cves")" \
           --argjson vulnixPackages "$(number_json "$vulnix_packages")" \
           --argjson failedUnits "$failed_units_json" \
+          --argjson tailnetDevices "$tailnet_devices_json" \
           '{
             generatedAt: $generatedAt,
             failedUnits: $failedUnits,
+            tailnet: {
+              devices: $tailnetDevices
+            },
             hosts: {
               "homeserver-gcp": {
                 fqdn: $fqdn,
