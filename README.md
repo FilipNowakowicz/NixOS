@@ -512,6 +512,6 @@ Examples:
 - Docs-only changes run lint and Markdown link checks, then skip eval/build-heavy jobs.
 - WSL-only changes skip expensive host and VM jobs; eval, lint, and light checks still run.
 
-The workflow uses a signed Cloudflare R2 binary cache. CI builds capture store paths during each job and push them to R2 after a successful build so later jobs can substitute them instead of rebuilding.
+The workflow uses a signed Cloudflare R2 binary cache. PR and merge-queue jobs substitute from that cache but do not publish to it, keeping slow full-closure uploads off the merge path. Cache publication runs after successful `push` or manual `workflow_dispatch` builds, so merged changes warm the cache for later CI runs.
 
 <!-- > **KVM Requirement**: NixOS integration tests require KVM virtualization. While GitHub-hosted `ubuntu-latest` runners provide `/dev/kvm` for public repositories, private or self-hosted runners must have KVM support enabled to prevent silent job timeouts. -->

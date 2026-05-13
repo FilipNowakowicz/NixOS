@@ -124,7 +124,7 @@ jobs:
           PRINT_PATHS=1 bash scripts/validate.sh light | tee "$PATHS_FILE" >/dev/null
 
       - name: Push to cache
-        if: success()
+        if: success() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         continue-on-error: true
         env:
           PATHS_FILE: ${{ runner.temp }}/checks-light-paths.txt
@@ -181,7 +181,7 @@ jobs:
           PRINT_PATHS=1 bash scripts/validate.sh package inventory | tee "$PATHS_FILE" >/dev/null
 
       - name: Push inventory package to cache
-        if: success()
+        if: success() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         continue-on-error: true
         env:
           PATHS_FILE: ${{ runner.temp }}/inventory-paths.txt
@@ -214,7 +214,7 @@ jobs:
           PRINT_PATHS=1 bash scripts/validate.sh host "$HOST" | tee "$PATHS_FILE" >/dev/null
 
       - name: Push ${{ matrix.name }} to cache
-        if: success()
+        if: success() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         continue-on-error: true
         env:
           HOST: ${{ matrix.name }}
@@ -259,7 +259,7 @@ jobs:
           PRINT_PATHS=1 bash scripts/validate.sh "$CMD" "$TARGET" | tee "$PATHS_FILE" >/dev/null
 
       - name: Push ${{ matrix.name }} to cache
-        if: success()
+        if: success() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         continue-on-error: true
         env:
           CMD: ${{ matrix.command }}
@@ -286,10 +286,6 @@ jobs:
           fetch-depth: 0
 
       - uses: ./.github/actions/setup-nix
-        with:
-          extra-nix-config: |
-            substituters = https://cache.nixos.org
-            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
 
       - name: Compute closure diffs
         id: diff
