@@ -110,7 +110,10 @@ in
         listenAddress = "127.0.0.1";
         port = 9090;
         retentionTime = "24h";
-        globalConfig.scrape_interval = "15s";
+        globalConfig = {
+          scrape_interval = "15s";
+          external_labels.host = config.networking.hostName;
+        };
 
         exporters.node = {
           enable = true;

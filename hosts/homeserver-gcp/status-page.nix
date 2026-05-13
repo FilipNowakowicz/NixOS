@@ -12,6 +12,7 @@ in
       description = "Generate read-only homepage status JSON";
       path = [
         pkgs.coreutils
+        pkgs.curl
         pkgs.gawk
         pkgs.gnugrep
         pkgs.jq
@@ -54,6 +55,20 @@ in
           else
             printf 'null'
           fi
+        }
+
+        prometheus_query_value() {
+          local expr="$1"
+          curl --silent --show-error --fail --get \
+            --data-urlencode "query=$expr" \
+            http://127.0.0.1:9009/prometheus/api/v1/query 2>/dev/null \
+            | ${pkgs.jq}/bin/jq -r '
+                if .status == "success" and (.data.result | length) > 0 then
+                  (.data.result[0].value[1] | tonumber | floor)
+                else
+                  empty
+                end
+              ' 2>/dev/null || true
         }
 
         service_state() {
@@ -111,6 +126,8 @@ in
 
         restic_backup_ts="$(metric /var/lib/node-exporter-textfiles/restic_backup.prom restic_last_backup_timestamp_seconds)"
         restic_check_ts="$(metric /var/lib/node-exporter-textfiles/restic_check.prom restic_last_check_timestamp_seconds)"
+        main_restic_backup_ts="$(prometheus_query_value 'max(restic_last_backup_timestamp_seconds{host="main"})')"
+        main_restic_check_ts="$(prometheus_query_value 'max(restic_last_check_timestamp_seconds{host="main"})')"
         lynis_ts="$(metric /var/lib/node-exporter-textfiles/lynis.prom lynis_scan_timestamp_seconds)"
         lynis_index="$(metric /var/lib/node-exporter-textfiles/lynis.prom lynis_hardening_index)"
         lynis_warnings="$(metric /var/lib/node-exporter-textfiles/lynis.prom lynis_warnings_total)"
@@ -172,6 +189,8 @@ in
           --argjson tempoActive "$(service_active_json tempo.service)" \
           --argjson backupAge "$(age_json "$restic_backup_ts")" \
           --argjson checkAge "$(age_json "$restic_check_ts")" \
+          --argjson mainBackupAge "$(age_json "$main_restic_backup_ts")" \
+          --argjson mainCheckAge "$(age_json "$main_restic_check_ts")" \
           --argjson lynisAge "$(age_json "$lynis_ts")" \
           --argjson lynisIndex "$(number_json "$lynis_index")" \
           --argjson lynisWarnings "$(number_json "$lynis_warnings")" \
@@ -229,7 +248,16 @@ in
               main: {
                 tailscale: {
                   online: $mainOnline
-                }
+                },
+                backups: [
+                  {
+                    name: "local",
+                    active: null,
+                    timerState: null,
+                    lastSuccessAgeSeconds: $mainBackupAge,
+                    lastCheckAgeSeconds: $mainCheckAge
+                  }
+                ]
               }
             }
           }' > "$tmp"

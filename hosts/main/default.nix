@@ -145,8 +145,8 @@ in
               for iface in /sys/class/net/*; do
                 iface=$(basename "$iface")
                 [ "$iface" = "lo" ] && continue
-                ip link set dev "$iface" down 2>/dev/null || true
-                ip addr flush dev "$iface" 2>/dev/null || true
+                ${pkgs.iproute2}/bin/ip link set dev "$iface" down 2>/dev/null || true
+                ${pkgs.iproute2}/bin/ip addr flush dev "$iface" 2>/dev/null || true
               done
             '';
           };
@@ -222,6 +222,7 @@ in
         # "prometheus"
         # "opentelemetry-collector"
         "restic-backups-local"
+        "restic-check-local"
         "thermald"
         "power-profiles-daemon"
       ];
@@ -351,60 +352,105 @@ in
   # };
 
   # NetworkManager manages networking; avoid boot blocking on online targets.
-  systemd.services = {
-    "systemd-networkd-wait-online".enable = lib.mkForce false;
-    "NetworkManager-wait-online".enable = lib.mkForce false;
+  systemd = {
+    services = {
+      "systemd-networkd-wait-online".enable = lib.mkForce false;
+      "NetworkManager-wait-online".enable = lib.mkForce false;
 
-    tailscale-bypass-routing = {
-      description = "Keep tailnet traffic off the Mullvad tunnel";
-      after = [
-        "tailscaled.service"
-        "mullvad-daemon.service"
-      ];
-      wants = [
-        "tailscaled.service"
-        "mullvad-daemon.service"
-      ];
-      wantedBy = [ "multi-user.target" ];
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = tailscaleBypassRules;
+      restic-backups-local.serviceConfig.ExecStartPost = pkgs.writeShellScript "restic-backup-metrics" ''
+        tmp=/var/lib/node-exporter-textfiles/restic_backup.prom.tmp
+        {
+          echo "# HELP restic_last_backup_timestamp_seconds Unix timestamp of last successful restic backup"
+          echo "# TYPE restic_last_backup_timestamp_seconds gauge"
+          echo "restic_last_backup_timestamp_seconds $(date +%s)"
+        } > "$tmp"
+        mv "$tmp" /var/lib/node-exporter-textfiles/restic_backup.prom
+      '';
+
+      restic-check-local = {
+        description = "Restic workstation repository integrity check";
+        after = [ "network-online.target" ];
+        wants = [ "network-online.target" ];
+        environment = {
+          RESTIC_REPOSITORY = "b2:filipnowakowicz-backup:/main";
+          RESTIC_PASSWORD_FILE = config.sops.secrets.restic_password.path;
+        };
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${pkgs.restic}/bin/restic check --read-data-subset=1G";
+          ExecStartPost = pkgs.writeShellScript "restic-check-metrics" ''
+            tmp=/var/lib/node-exporter-textfiles/restic_check.prom.tmp
+            {
+              echo "# HELP restic_last_check_timestamp_seconds Unix timestamp of last successful restic integrity check"
+              echo "# TYPE restic_last_check_timestamp_seconds gauge"
+              echo "restic_last_check_timestamp_seconds $(date +%s)"
+            } > "$tmp"
+            mv "$tmp" /var/lib/node-exporter-textfiles/restic_check.prom
+          '';
+          EnvironmentFile = config.sops.secrets.b2_credentials.path;
+        };
+      };
+
+      tailscale-bypass-routing = {
+        description = "Keep tailnet traffic off the Mullvad tunnel";
+        after = [
+          "tailscaled.service"
+          "mullvad-daemon.service"
+        ];
+        wants = [
+          "tailscaled.service"
+          "mullvad-daemon.service"
+        ];
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = tailscaleBypassRules;
+        };
+      };
+
+      tailscaled.postStart = lib.mkAfter "${tailscaleBypassRules}";
+      mullvad-daemon.postStart = lib.mkAfter "${tailscaleBypassRules}";
+
+      # Mullvad's lockdown mode installs an nftables killswitch (policy drop +
+      # `reject with tcp reset` on every output chain) that kills tailscale0
+      # traffic the same way it kills clearnet traffic — every TCP connection
+      # to a 100.64/10 peer gets an immediate RST.
+      #
+      # The bypass routing script above only fixes *routing*, not filtering, so
+      # it cannot rescue Tailscale on its own. Disable lockdown so that when
+      # Mullvad is disconnected (the default state) no killswitch firewall is
+      # active and Tailscale can use the normal NixOS firewall.
+      #
+      # Trade-off: while Mullvad is *actively connected* its in-tunnel firewall
+      # still blocks tailscale0. Use one VPN at a time — `mullvad disconnect`
+      # before relying on the tailnet.
+      mullvad-tailscale-coexist = {
+        description = "Disable Mullvad lockdown so Tailscale can coexist";
+        after = [ "mullvad-daemon.service" ];
+        bindsTo = [ "mullvad-daemon.service" ];
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
+        script = ''
+          for _ in $(${pkgs.coreutils}/bin/seq 1 30); do
+            ${pkgs.mullvad-vpn}/bin/mullvad status >/dev/null 2>&1 && break
+            ${pkgs.coreutils}/bin/sleep 1
+          done
+          ${pkgs.mullvad-vpn}/bin/mullvad lockdown-mode set off
+          ${pkgs.mullvad-vpn}/bin/mullvad auto-connect set off
+        '';
       };
     };
 
-    tailscaled.postStart = lib.mkAfter "${tailscaleBypassRules}";
-    mullvad-daemon.postStart = lib.mkAfter "${tailscaleBypassRules}";
-
-    # Mullvad's lockdown mode installs an nftables killswitch (policy drop +
-    # `reject with tcp reset` on every output chain) that kills tailscale0
-    # traffic the same way it kills clearnet traffic — every TCP connection
-    # to a 100.64/10 peer gets an immediate RST.
-    #
-    # The bypass routing script above only fixes *routing*, not filtering, so
-    # it cannot rescue Tailscale on its own. Disable lockdown so that when
-    # Mullvad is disconnected (the default state) no killswitch firewall is
-    # active and Tailscale can use the normal NixOS firewall.
-    #
-    # Trade-off: while Mullvad is *actively connected* its in-tunnel firewall
-    # still blocks tailscale0. Use one VPN at a time — `mullvad disconnect`
-    # before relying on the tailnet.
-    mullvad-tailscale-coexist = {
-      description = "Disable Mullvad lockdown so Tailscale can coexist";
-      after = [ "mullvad-daemon.service" ];
-      bindsTo = [ "mullvad-daemon.service" ];
-      wantedBy = [ "multi-user.target" ];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
+    timers.restic-check-local = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "weekly";
+        RandomizedDelaySec = "2h";
+        Persistent = true;
       };
-      script = ''
-        for _ in $(${pkgs.coreutils}/bin/seq 1 30); do
-          ${pkgs.mullvad-vpn}/bin/mullvad status >/dev/null 2>&1 && break
-          ${pkgs.coreutils}/bin/sleep 1
-        done
-        ${pkgs.mullvad-vpn}/bin/mullvad lockdown-mode set off
-        ${pkgs.mullvad-vpn}/bin/mullvad auto-connect set off
-      '';
     };
   };
 
