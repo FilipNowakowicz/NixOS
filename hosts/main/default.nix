@@ -68,6 +68,7 @@ in
     inputs.lanzaboote.nixosModules.lanzaboote
     ./dashboard.nix
     ./disko.nix
+    ./impermanence.nix
     ./hardware-configuration.nix
     ../../modules/nixos/profiles/base.nix
     ../../modules/nixos/profiles/desktop.nix

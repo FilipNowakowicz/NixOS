@@ -26,24 +26,48 @@
               name = "cryptroot";
               settings.crypttabExtraOpts = [ "tpm2-device=auto" ];
               content = {
-                type = "lvm_pv";
-                vg = "vg";
+                type = "btrfs";
+                extraArgs = [
+                  "-f"
+                  "-L"
+                  "main-root"
+                ];
+                subvolumes = {
+                  "/@root" = {
+                    mountpoint = "/";
+                    mountOptions = [
+                      "compress=zstd"
+                      "noatime"
+                      "discard=async"
+                    ];
+                  };
+                  "/@home" = {
+                    mountpoint = "/home";
+                    mountOptions = [
+                      "compress=zstd"
+                      "noatime"
+                      "discard=async"
+                    ];
+                  };
+                  "/@nix" = {
+                    mountpoint = "/nix";
+                    mountOptions = [
+                      "compress=zstd"
+                      "noatime"
+                      "discard=async"
+                    ];
+                  };
+                  "/@persist" = {
+                    mountpoint = "/persist";
+                    mountOptions = [
+                      "compress=zstd"
+                      "noatime"
+                      "discard=async"
+                    ];
+                  };
+                };
               };
             };
-          };
-        };
-      };
-    };
-
-    lvm_vg.vg = {
-      type = "lvm_vg";
-      lvs = {
-        root = {
-          size = "100%FREE";
-          content = {
-            type = "filesystem";
-            format = "ext4";
-            mountpoint = "/";
           };
         };
       };
