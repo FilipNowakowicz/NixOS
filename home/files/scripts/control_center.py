@@ -13,8 +13,10 @@ import re
 import signal
 import subprocess
 import sys
+import tempfile
 import threading
 import time
+import urllib.request
 from types import SimpleNamespace
 
 os.environ["GDK_BACKEND"] = "wayland"
@@ -37,6 +39,8 @@ _lock_fd = None
 _inhibit_proc = None
 _location_cache = None   # (lat, lon) once resolved
 _location_lock = threading.Lock()
+_art_cache = {}   # art_url -> local path (or None if failed)
+_art_pending = set()  # art_urls currently being fetched
 
 VIEWS = ("home", "wifi", "bluetooth", "vpn", "dnd", "volume", "microphone")
 
@@ -76,8 +80,8 @@ G = {
     "zap": "󱐋",
     "globe": "󰖟",
     "key": "󰌆",
-    "chevron_left": "",
-    "chevron_right": "",
+    "chevron_left": "‹",
+    "chevron_right": "›",
     "headphones": "󰋋",
     "mouse": "󰍽",
     "keyboard": "󰌌",
@@ -86,7 +90,7 @@ G = {
     "phone": "󰏲",
     "monitor": "󰍹",
     "clock": "󰥔",
-    "plus": "",
+    "plus": "+",
     "play": "󰐊",
     "pause": "󰏤",
     "skip_back": "󰒮",
@@ -696,6 +700,7 @@ def gather_now_playing():
     else:
         state["artist"] = str(artists)
     state["album"] = meta.get("xesam:album", "") or ""
+    state["art_url"] = meta.get("mpris:artUrl", "") or ""
     return state
 
 
@@ -721,6 +726,40 @@ def gather_keep_awake():
 def gather_night_light():
     out, ok = _run(["pgrep", "-x", "wlsunset"])
     return ok and bool(out.strip())
+
+
+def _default_state():
+    now = time.localtime()
+    return {
+        "time": f"{now.tm_hour:02d}:{now.tm_min:02d}",
+        "hostname": os.uname().nodename if hasattr(os, "uname") else "",
+        "wifi": {
+            "enabled": False, "connected": False, "ssid": None,
+            "signal_pct": 0, "band": "", "freq_mhz": 0,
+            "security": "", "ip": "", "gateway": "", "networks": [],
+        },
+        "bluetooth": {"powered": False, "devices": [], "primary": None},
+        "audio": {
+            "sink_volume_pct": 0, "sink_muted": False, "sink_name": "—",
+            "source_volume_pct": 0, "source_muted": False, "source_name": "—",
+            "sinks": [], "sources": [],
+        },
+        "battery": {"percent": 0, "status": "Unknown", "charging": False, "time_str": "—"},
+        "brightness": {"percent": 100},
+        "power_profile": "balanced",
+        "dnd": {"mode": "default", "enabled": False},
+        "tailscale": {
+            "enabled": False, "ip": "", "name": "", "os": "",
+            "peers": [], "peer_count": 0, "exit_node": "None",
+        },
+        "mullvad": {"connected": False, "location": "—", "country": "", "city": "", "preferred": ""},
+        "cpu_temp": None,
+        "now_playing": {"player": "", "status": "Stopped", "title": "",
+                        "artist": "", "album": "", "art_url": ""},
+        "active_theme": gather_active_theme(),
+        "keep_awake": gather_keep_awake(),
+        "night_light": gather_night_light(),
+    }
 
 
 def gather_state():
@@ -849,8 +888,7 @@ def act_mullvad_set_location(loc):
 
 
 def act_switch_theme(name):
-    script = os.path.expanduser("~/nix/home/files/scripts/theme-switch.sh")
-    _fire(["bash", script, name])
+    _fire(["theme-switch", name])
 
 
 def act_lock():
@@ -933,6 +971,35 @@ def act_night_light(on):
         _fire(["pkill", "wlsunset"])
 
 
+def _fetch_art(url, callback):
+    """Download an art URL to a temp file; call callback(path_or_None) on the main thread."""
+    def _work():
+        try:
+            if url.startswith("file://"):
+                path = url[7:]
+                if os.path.exists(path):
+                    _art_cache[url] = path
+                    GLib.idle_add(callback, path)
+                else:
+                    _art_cache[url] = None
+                    GLib.idle_add(callback, None)
+                return
+            with urllib.request.urlopen(url, timeout=5) as resp:
+                data = resp.read()
+            fd, path = tempfile.mkstemp(suffix=".jpg")
+            with os.fdopen(fd, "wb") as f:
+                f.write(data)
+            _art_cache[url] = path
+            GLib.idle_add(callback, path)
+        except Exception:
+            _art_cache[url] = None
+            GLib.idle_add(callback, None)
+        finally:
+            _art_pending.discard(url)
+    _art_pending.add(url)
+    threading.Thread(target=_work, daemon=True).start()
+
+
 # ── Application ──────────────────────────────────────────────────
 
 
@@ -975,7 +1042,7 @@ class ControlCenter(Gtk.Application):
         Gtk4LayerShell.set_layer(self.win, Gtk4LayerShell.Layer.OVERLAY)
         Gtk4LayerShell.set_anchor(self.win, Gtk4LayerShell.Edge.TOP, True)
         Gtk4LayerShell.set_anchor(self.win, Gtk4LayerShell.Edge.RIGHT, True)
-        Gtk4LayerShell.set_margin(self.win, Gtk4LayerShell.Edge.TOP, 62)
+        Gtk4LayerShell.set_margin(self.win, Gtk4LayerShell.Edge.TOP, 6)
         Gtk4LayerShell.set_margin(self.win, Gtk4LayerShell.Edge.RIGHT, 15)
         Gtk4LayerShell.set_keyboard_mode(
             self.win, Gtk4LayerShell.KeyboardMode.ON_DEMAND
@@ -1007,8 +1074,8 @@ class ControlCenter(Gtk.Application):
         self.win.set_child(outer)
         self.win.present()
 
-        # Kick off polling. Initial state is already rendered by builders.
         self._poll_id = GLib.timeout_add(self.POLL_MS, self._tick)
+        self._tick()  # populate real state immediately without waiting one full interval
 
     def _on_close_request(self, *_args):
         clear_state(os.getpid())
@@ -1031,16 +1098,29 @@ class ControlCenter(Gtk.Application):
     # ── Refresh loop ──────────────────────────────────────────
 
     def _tick(self):
-        try:
-            self.state = gather_state()
-        except Exception:
+        if getattr(self, "_gathering", False):
             return True
+        self._gathering = True
+        def _worker():
+            try:
+                state = gather_state()
+            except Exception:
+                state = None
+            GLib.idle_add(self._apply_state, state)
+        threading.Thread(target=_worker, daemon=True).start()
+        return True
+
+    def _apply_state(self, state):
+        self._gathering = False
+        if state is None:
+            return False
+        self.state = state
         for fn in self._refreshers:
             try:
-                fn(self.state)
+                fn(state)
             except Exception:
                 pass
-        return True
+        return False
 
     @staticmethod
     def _set_class(widget, klass, on):
@@ -1091,6 +1171,11 @@ class ControlCenter(Gtk.Application):
         track.set_can_target(True)
         slider._dragging = False
         slider._last_pct = -1
+
+        def _on_track_width(*_):
+            if slider._last_pct >= 0:
+                self._set_slider(slider, slider._last_pct)
+        track.connect("notify::width", _on_track_width)
 
         def pos_to_pct(x):
             w = track.get_width()
@@ -1233,7 +1318,7 @@ class ControlCenter(Gtk.Application):
 
         inner = self._box(Gtk.Orientation.VERTICAL, spacing=4)
         top = self._box(Gtk.Orientation.HORIZONTAL, css="tile-icon")
-        glyph_lbl = self._label("", "tile-glyph")
+        glyph_lbl = self._label("", "tile-glyph", xalign=0.5)
         top.append(glyph_lbl)
         top.append(Gtk.Box(hexpand=True))
         badge_lbl = self._label("", "tile-badge")
@@ -1266,11 +1351,13 @@ class ControlCenter(Gtk.Application):
         track = Gtk.Box()
         track.add_css_class("slider-track")
         track.set_hexpand(True)
+        track.set_overflow(Gtk.Overflow.HIDDEN)
         fill = Gtk.Box()
         fill.add_css_class("slider-fill")
         fill.set_size_request(0, -1)
         knob = Gtk.Box()
         knob.add_css_class("slider-knob")
+        knob.set_halign(Gtk.Align.END)
         fill.append(knob)
         track.append(fill)
         row.append(track)
@@ -1292,7 +1379,11 @@ class ControlCenter(Gtk.Application):
         )
 
     def _set_slider(self, slider, pct):
-        slider.fill.set_size_request(max(0, min(100, int(pct))) * 3, -1)
+        pct = max(0, min(100, pct))
+        track = slider.fill.get_parent()
+        w = track.get_width()
+        if w > 0:
+            slider.fill.set_size_request(round(pct / 100 * w), -1)
         slider.value.set_label(str(int(pct)))
 
     @staticmethod
@@ -1411,8 +1502,9 @@ class ControlCenter(Gtk.Application):
 
         row = self._box(Gtk.Orientation.HORIZONTAL, spacing=10)
 
-        icon = self._label(glyph, "di-icon")
+        icon = self._label(glyph, "di-icon", xalign=0.5)
         icon.set_width_chars(2)
+        icon.set_valign(Gtk.Align.CENTER)
         row.append(icon)
 
         copy = self._box(Gtk.Orientation.VERTICAL, spacing=2)
@@ -1436,8 +1528,9 @@ class ControlCenter(Gtk.Application):
 
     def _drawer_row(self, glyph, name, subtitle, control_widget):
         row = self._box(Gtk.Orientation.HORIZONTAL, spacing=10, css="drawer-row")
-        icon = self._label(glyph, "di-icon")
+        icon = self._label(glyph, "di-icon", xalign=0.5)
         icon.set_width_chars(2)
+        icon.set_valign(Gtk.Align.CENTER)
         row.append(icon)
         copy = self._box(Gtk.Orientation.VERTICAL, spacing=2)
         copy.set_hexpand(True)
@@ -1486,8 +1579,10 @@ class ControlCenter(Gtk.Application):
     def _hero_card_ref(self):
         """Hero card with ref-able sub-widgets. Populate via the returned NS."""
         card = self._box(Gtk.Orientation.HORIZONTAL, spacing=14, css="hero-card")
-        icon = self._label("", "hero-icon-wrap")
+        icon = self._label("", "hero-icon-wrap", xalign=0.5)
         icon.set_width_chars(3)
+        icon.set_halign(Gtk.Align.CENTER)
+        icon.set_valign(Gtk.Align.CENTER)
         card.append(icon)
         copy = self._box(Gtk.Orientation.VERTICAL, spacing=2)
         copy.set_hexpand(True)
@@ -1568,12 +1663,17 @@ class ControlCenter(Gtk.Application):
         self._bind_slider(vol_s, act_set_sink_volume)
         self._bind_slider(brt_s, act_set_brightness)
         self._bind_slider(mic_s, act_set_source_volume)
-        vol_s.glyph_btn.connect(
-            "clicked", lambda _b: act_toggle_sink_mute(),
-        )
-        mic_s.glyph_btn.connect(
-            "clicked", lambda _b: act_toggle_source_mute(),
-        )
+        def _on_mute_sink(_b):
+            self._pending_set("audio.sink_muted",
+                              not self.state["audio"]["sink_muted"], ttl_s=2)
+            act_toggle_sink_mute()
+        vol_s.glyph_btn.connect("clicked", _on_mute_sink)
+
+        def _on_mute_source(_b):
+            self._pending_set("audio.source_muted",
+                              not self.state["audio"]["source_muted"], ttl_s=2)
+            act_toggle_source_mute()
+        mic_s.glyph_btn.connect("clicked", _on_mute_source)
 
         # Power profile
         view.append(self._section_label("Power Profile", action="Detailed"))
@@ -1660,27 +1760,28 @@ class ControlCenter(Gtk.Application):
         theme_chip.connect("clicked", _on_theme)
 
         # Now playing
-        np_section_lbl = self._label("Now Playing", "section-text")
-        np_section_meta = Gtk.Label(label="", xalign=1)
-        np_section_meta.add_css_class("section-action")
-        np_section_row = self._box(
-            Gtk.Orientation.HORIZONTAL, css="section-label",
-        )
-        np_section_row.append(np_section_lbl)
-        np_section_row.append(Gtk.Box(hexpand=True))
-        np_section_row.append(np_section_meta)
-        view.append(np_section_row)
+        view.append(self._section_label("Now Playing"))
 
         np = self._box(Gtk.Orientation.HORIZONTAL, spacing=12, css="nowplaying")
-        art = Gtk.Box()
-        art.add_css_class("album-art")
-        np.append(art)
+        art_fallback = Gtk.Box()
+        art_fallback.add_css_class("album-art")
+        art_pic = Gtk.Picture()
+        art_pic.add_css_class("album-art-pic")
+        art_pic.set_content_fit(Gtk.ContentFit.COVER)
+        art_pic.set_visible(False)
+        art_overlay = Gtk.Overlay()
+        art_overlay.set_size_request(42, 42)
+        art_overlay.set_child(art_fallback)
+        art_overlay.add_overlay(art_pic)
+        np.append(art_overlay)
         track = self._box(Gtk.Orientation.VERTICAL, spacing=2)
         track.set_hexpand(True)
         np_title = self._label("", "np-title")
         np_artist = self._label("", "np-artist")
+        np_player = self._label("", "np-player")
         track.append(np_title)
         track.append(np_artist)
+        track.append(np_player)
         np.append(track)
         ctrl = self._box(Gtk.Orientation.HORIZONTAL, spacing=4)
         skip_back_btn = self._icon_btn(G["skip_back"])
@@ -1814,14 +1915,18 @@ class ControlCenter(Gtk.Application):
             a = s["audio"]
             self._set_slider_polled(vol_s, a["sink_volume_pct"])
             vol_s.glyph_btn.set_label(
-                G["volume_mute"] if a["sink_muted"] else G["volume"]
+                G["volume_mute"]
+                if self.effective("audio.sink_muted", a["sink_muted"])
+                else G["volume"]
             )
             if vol_s.aux:
                 vol_s.aux.set_label(f"{self._short(a['sink_name'], 14)} ›")
             self._set_slider_polled(brt_s, s["brightness"]["percent"])
             self._set_slider_polled(mic_s, a["source_volume_pct"])
             mic_s.glyph_btn.set_label(
-                G["mic_off"] if a["source_muted"] else G["mic"]
+                G["mic_off"]
+                if self.effective("audio.source_muted", a["source_muted"])
+                else G["mic"]
             )
             if mic_s.aux:
                 mic_s.aux.set_label(f"{self._short(a['source_name'], 14)} ›")
@@ -1858,7 +1963,27 @@ class ControlCenter(Gtk.Application):
             play_btn.set_label(
                 G["pause"] if n["status"] == "Playing" else G["play"]
             )
-            np_section_meta.set_label(n["player"] or "")
+            np_player.set_label(n["player"] or "")
+
+            # Album art
+            art_url = n.get("art_url", "")
+            if art_url:
+                if art_url in _art_cache:
+                    path = _art_cache[art_url]
+                    if path and os.path.exists(path):
+                        art_pic.set_filename(path)
+                        art_pic.set_visible(True)
+                    else:
+                        art_pic.set_visible(False)
+                elif art_url not in _art_pending:
+                    def _on_art(path, url=art_url):
+                        if path and os.path.exists(path):
+                            art_pic.set_filename(path)
+                            art_pic.set_visible(True)
+                        return False
+                    _fetch_art(art_url, _on_art)
+            else:
+                art_pic.set_visible(False)
 
             # Stats
             bat = s["battery"]
@@ -2100,8 +2225,10 @@ class ControlCenter(Gtk.Application):
         head = self._box(
             Gtk.Orientation.HORIZONTAL, spacing=12, css="vpn-head",
         )
-        ic = self._label(G["shield"], "vpn-icon")
+        ic = self._label(G["shield"], "vpn-icon", xalign=0.5)
         ic.set_width_chars(3)
+        ic.set_halign(Gtk.Align.CENTER)
+        ic.set_valign(Gtk.Align.CENTER)
         head.append(ic)
         copy = self._box(Gtk.Orientation.VERTICAL, spacing=2)
         copy.set_hexpand(True)
@@ -2199,8 +2326,10 @@ class ControlCenter(Gtk.Application):
         head = self._box(
             Gtk.Orientation.HORIZONTAL, spacing=12, css="vpn-head",
         )
-        ic = self._label(G["key"], "vpn-icon")
+        ic = self._label(G["key"], "vpn-icon", xalign=0.5)
         ic.set_width_chars(3)
+        ic.set_halign(Gtk.Align.CENTER)
+        ic.set_valign(Gtk.Align.CENTER)
         head.append(ic)
         copy = self._box(Gtk.Orientation.VERTICAL, spacing=2)
         copy.set_hexpand(True)
@@ -2229,8 +2358,9 @@ class ControlCenter(Gtk.Application):
         mv_loc_row = self._box(
             Gtk.Orientation.HORIZONTAL, spacing=10, css="drawer-row",
         )
-        mv_loc_icon = self._label("—", "di-icon")
+        mv_loc_icon = self._label("—", "di-icon", xalign=0.5)
         mv_loc_icon.set_width_chars(2)
+        mv_loc_icon.set_valign(Gtk.Align.CENTER)
         mv_loc_row.append(mv_loc_icon)
         loc_copy = self._box(Gtk.Orientation.VERTICAL, spacing=2)
         loc_copy.set_hexpand(True)
@@ -2435,7 +2565,11 @@ class ControlCenter(Gtk.Application):
     def _build_volume_view(self):
         view = self._box(Gtk.Orientation.VERTICAL, spacing=12, css="panel-stack")
         mute_btn = self._icon_btn(G["volume"])
-        mute_btn.connect("clicked", lambda _b: act_toggle_sink_mute())
+        def _on_vol_mute(_b):
+            self._pending_set("audio.sink_muted",
+                              not self.state["audio"]["sink_muted"], ttl_s=2)
+            act_toggle_sink_mute()
+        mute_btn.connect("clicked", _on_vol_mute)
         view.append(self._detail_header("Volume", right_widget=mute_btn))
         hero = self._hero_card_ref()
         view.append(hero.widget)
@@ -2445,7 +2579,7 @@ class ControlCenter(Gtk.Application):
         main.append(slider.widget)
         view.append(main)
         self._bind_slider(slider, act_set_sink_volume)
-        slider.glyph_btn.connect("clicked", lambda _b: act_toggle_sink_mute())
+        slider.glyph_btn.connect("clicked", _on_vol_mute)
 
         view.append(self._section_label("Output Devices", action="Detect"))
         out = self._box(Gtk.Orientation.VERTICAL, spacing=2, css="drawer-list")
@@ -2454,19 +2588,17 @@ class ControlCenter(Gtk.Application):
 
         def refresh(s):
             a = s["audio"]
-            mute_btn.set_label(G["volume_mute"] if a["sink_muted"]
-                               else G["volume"])
+            muted = self.effective("audio.sink_muted", a["sink_muted"])
+            mute_btn.set_label(G["volume_mute"] if muted else G["volume"])
 
             hero.icon.set_label(self._sink_icon_glyph(a["sink_name"]))
             hero.title.set_label(self._short(a["sink_name"], 28))
             hero.sub.set_label("default sink")
             hero.big.set_label(str(a["sink_volume_pct"]))
-            hero.small.set_label("muted" if a["sink_muted"] else "level")
+            hero.small.set_label("muted" if muted else "level")
 
             self._set_slider_polled(slider, a["sink_volume_pct"])
-            slider.glyph_btn.set_label(
-                G["volume_mute"] if a["sink_muted"] else G["volume"]
-            )
+            slider.glyph_btn.set_label(G["volume_mute"] if muted else G["volume"])
 
             self._clear(out)
             if not a["sinks"]:
@@ -2498,7 +2630,11 @@ class ControlCenter(Gtk.Application):
     def _build_microphone_view(self):
         view = self._box(Gtk.Orientation.VERTICAL, spacing=12, css="panel-stack")
         mute_btn = self._icon_btn(G["mic"])
-        mute_btn.connect("clicked", lambda _b: act_toggle_source_mute())
+        def _on_mic_mute(_b):
+            self._pending_set("audio.source_muted",
+                              not self.state["audio"]["source_muted"], ttl_s=2)
+            act_toggle_source_mute()
+        mute_btn.connect("clicked", _on_mic_mute)
         view.append(self._detail_header("Microphone", right_widget=mute_btn))
         hero = self._hero_card_ref()
         view.append(hero.widget)
@@ -2508,7 +2644,7 @@ class ControlCenter(Gtk.Application):
         main.append(slider.widget)
         view.append(main)
         self._bind_slider(slider, act_set_source_volume)
-        slider.glyph_btn.connect("clicked", lambda _b: act_toggle_source_mute())
+        slider.glyph_btn.connect("clicked", _on_mic_mute)
 
         view.append(self._section_label("Input Level", action="Test"))
         meter = self._box(Gtk.Orientation.HORIZONTAL, spacing=3, css="level-meter")
@@ -2535,18 +2671,17 @@ class ControlCenter(Gtk.Application):
 
         def refresh(s):
             a = s["audio"]
-            mute_btn.set_label(G["mic_off"] if a["source_muted"] else G["mic"])
+            muted = self.effective("audio.source_muted", a["source_muted"])
+            mute_btn.set_label(G["mic_off"] if muted else G["mic"])
 
-            hero.icon.set_label(G["mic_off"] if a["source_muted"] else G["mic"])
+            hero.icon.set_label(G["mic_off"] if muted else G["mic"])
             hero.title.set_label(self._short(a["source_name"], 28))
             hero.sub.set_label("default source")
             hero.big.set_label(str(a["source_volume_pct"]))
-            hero.small.set_label("muted" if a["source_muted"] else "level")
+            hero.small.set_label("muted" if muted else "level")
 
             self._set_slider_polled(slider, a["source_volume_pct"])
-            slider.glyph_btn.set_label(
-                G["mic_off"] if a["source_muted"] else G["mic"]
-            )
+            slider.glyph_btn.set_label(G["mic_off"] if muted else G["mic"])
 
             self._clear(inp)
             if not a["sources"]:
@@ -2627,6 +2762,7 @@ class ControlCenter(Gtk.Application):
             border: 1px solid {rgba(orange, 0.18)};
             background: rgba(255, 255, 255, 0.04);
             color: {rgba(text, 0.8)};
+            font-size: 16px;
             box-shadow: none;
         }}
         .back-btn:hover {{
@@ -2650,8 +2786,8 @@ class ControlCenter(Gtk.Application):
         }}
         .tile-icon {{ margin-bottom: 4px; }}
         .tile-glyph {{
-            min-width: 30px; min-height: 30px;
-            padding: 4px 6px;
+            min-width: 34px; min-height: 34px;
+            padding: 4px;
             border-radius: 9px;
             background: rgba(255, 255, 255, 0.05);
             color: {rgba(text, 0.78)};
@@ -2729,7 +2865,6 @@ class ControlCenter(Gtk.Application):
         }}
         .slider-knob {{
             min-width: 12px; min-height: 12px;
-            margin-left: auto;
             margin-top: -3px;
             border-radius: 999px;
             background: {rgba(text, 1.0)};
@@ -2740,6 +2875,7 @@ class ControlCenter(Gtk.Application):
         }}
         .slider-aux {{
             padding: 4px 6px;
+            min-width: 88px;
             background: transparent;
             border: none;
             color: {rgba(text, 0.5)};
@@ -2850,8 +2986,13 @@ class ControlCenter(Gtk.Application):
                 {rgba(amber, 0.55)} 0%,
                 {rgba(orange, 0.7)} 100%);
         }}
+        .album-art-pic {{
+            min-width: 42px; min-height: 42px;
+            border-radius: 9px;
+        }}
         .np-title {{ font-weight: 600; }}
         .np-artist {{ color: {rgba(text, 0.54)}; font-size: 10.5px; }}
+        .np-player {{ color: {rgba(text, 0.28)}; font-size: 9px; }}
 
         /* Stat grid + action row + icon buttons */
         .stat-cell {{
@@ -3121,8 +3262,7 @@ def main():
 
     write_state(os.getpid(), initial)
     release_lock()
-    initial_state = gather_state()
-    app = ControlCenter(initial, load_colors(), initial_state)
+    app = ControlCenter(initial, load_colors(), _default_state())
     return app.run(None)
 
 
