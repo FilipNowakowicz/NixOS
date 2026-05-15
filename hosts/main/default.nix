@@ -524,6 +524,10 @@ in
       allow id 05e3:0610
       allow id 05e3:0626
 
+      # Allow SanDisk Ultra USB backup stick
+      # ID: 0781:5581, serial: 4C530001250727100272
+      allow id 0781:5581 serial "4C530001250727100272" name "Ultra"
+
       # Reject everything else
       reject
     '';

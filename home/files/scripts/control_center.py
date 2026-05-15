@@ -30,7 +30,7 @@ import gi
 gi.require_version("Gtk4LayerShell", "1.0")
 gi.require_version("Gdk", "4.0")
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gdk, Gio, GLib, Gtk, Gtk4LayerShell
+from gi.repository import Gdk, Gio, GLib, Gtk, Gtk4LayerShell, Pango
 
 
 STATE_PATH = "/tmp/control-center.json"
@@ -43,6 +43,14 @@ _art_cache = {}   # art_url -> local path (or None if failed)
 _art_pending = set()  # art_urls currently being fetched
 
 VIEWS = ("home", "wifi", "bluetooth", "vpn", "dnd", "volume", "microphone")
+PANEL_CONTENT_WIDTH = 400
+PANEL_TOTAL_WIDTH = PANEL_CONTENT_WIDTH + 34  # content + 16px padding + border
+FAST_STATE_KEYS = (
+    "time", "hostname", "audio", "battery", "brightness", "power_profile",
+    "dnd", "cpu_temp", "now_playing", "active_theme", "keep_awake",
+    "night_light",
+)
+SLOW_STATE_KEYS = ("wifi", "bluetooth", "tailscale", "mullvad")
 
 DEFAULTS = {
     "bg": "161a20",
@@ -355,6 +363,16 @@ def _wpctl_source_pretty(desc):
     return desc
 
 
+def _is_hidden_output_sink(desc, default=False):
+    """Hide monitor/HDMI sinks from the picker unless they are active."""
+    if default:
+        return False
+    d = (desc or "").lower()
+    return any(token in d for token in (
+        "hdmi", "displayport", "display port", "monitor",
+    ))
+
+
 def _parse_wpctl_status(text):
     sinks = []
     sources = []
@@ -393,7 +411,8 @@ def _parse_wpctl_status(text):
         desc = re.sub(r"\s*\[[^\]]+\]\s*$", "", m.group(3)).strip()
         entry = {"id": idx, "desc": desc, "default": default}
         if section == "sinks":
-            sinks.append(entry)
+            if not _is_hidden_output_sink(desc, default=default):
+                sinks.append(entry)
             if default:
                 default_sink_desc = desc
         elif section == "sources":
@@ -784,6 +803,39 @@ def gather_state():
     }
 
 
+def gather_fast_state(previous=None):
+    """Fast, visible state refreshed often without waiting on network/VPN calls."""
+    previous = previous or _default_state()
+    now = time.localtime()
+    return {
+        **previous,
+        "time": f"{now.tm_hour:02d}:{now.tm_min:02d}",
+        "hostname": os.uname().nodename if hasattr(os, "uname") else "",
+        "audio": gather_audio(),
+        "battery": gather_battery(),
+        "brightness": gather_brightness(),
+        "power_profile": gather_power_profile(),
+        "dnd": gather_dnd(),
+        "cpu_temp": gather_cpu_temp(),
+        "now_playing": gather_now_playing(),
+        "active_theme": gather_active_theme(),
+        "keep_awake": gather_keep_awake(),
+        "night_light": gather_night_light(),
+    }
+
+
+def gather_slow_state(previous=None):
+    """Slower subsystems that should not hold up initial paint or audio UI."""
+    previous = previous or _default_state()
+    return {
+        **previous,
+        "wifi": gather_wifi(),
+        "bluetooth": gather_bluetooth(),
+        "tailscale": gather_tailscale(),
+        "mullvad": gather_mullvad(),
+    }
+
+
 # ── Actions (write paths) ────────────────────────────────────────
 
 
@@ -1004,7 +1056,8 @@ def _fetch_art(url, callback):
 
 
 class ControlCenter(Gtk.Application):
-    POLL_MS = 1500
+    FAST_POLL_MS = 750
+    SLOW_POLL_MS = 5000
     PENDING_TTL_S = 6
 
     def __init__(self, initial_view, colors, state):
@@ -1015,7 +1068,10 @@ class ControlCenter(Gtk.Application):
         self.win = None
         self.stack = None
         self._refreshers = []
-        self._poll_id = 0
+        self._fast_poll_id = 0
+        self._slow_poll_id = 0
+        self._fast_gathering = False
+        self._slow_gathering = False
         # Optimistic overrides while slow writes (e.g. tailscale up) catch up.
         # key -> (target_value, expires_at)
         self._pending = {}
@@ -1056,7 +1112,7 @@ class ControlCenter(Gtk.Application):
         self.stack = Gtk.Stack()
         self.stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT)
         self.stack.set_transition_duration(260)
-        self.stack.set_size_request(400, -1)
+        self.stack.set_size_request(PANEL_CONTENT_WIDTH, -1)
 
         self.stack.add_named(self._build_home_view(), "home")
         self.stack.add_named(self._build_wifi_view(), "wifi")
@@ -1069,22 +1125,28 @@ class ControlCenter(Gtk.Application):
 
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         outer.set_name("panel")
+        outer.set_size_request(PANEL_TOTAL_WIDTH, -1)
         outer.append(self.stack)
 
         self.win.set_child(outer)
         self.win.present()
 
-        self._poll_id = GLib.timeout_add(self.POLL_MS, self._tick)
-        self._tick()  # populate real state immediately without waiting one full interval
+        self._fast_poll_id = GLib.timeout_add(self.FAST_POLL_MS, self._tick_fast)
+        self._slow_poll_id = GLib.timeout_add(self.SLOW_POLL_MS, self._tick_slow)
+        self._tick_fast()  # populate visible state immediately
+        self._tick_slow()  # fill network/VPN details in the background
 
     def _on_close_request(self, *_args):
         clear_state(os.getpid())
         return False
 
     def _on_shutdown(self, *_args):
-        if self._poll_id:
-            GLib.source_remove(self._poll_id)
-            self._poll_id = 0
+        if self._fast_poll_id:
+            GLib.source_remove(self._fast_poll_id)
+            self._fast_poll_id = 0
+        if self._slow_poll_id:
+            GLib.source_remove(self._slow_poll_id)
+            self._slow_poll_id = 0
 
     def _on_key(self, _ctrl, keyval, _keycode, _state):
         if keyval == Gdk.KEY_Escape:
@@ -1097,29 +1159,61 @@ class ControlCenter(Gtk.Application):
 
     # ── Refresh loop ──────────────────────────────────────────
 
-    def _tick(self):
-        if getattr(self, "_gathering", False):
+    def _tick_fast(self):
+        if self._fast_gathering:
             return True
-        self._gathering = True
+        self._fast_gathering = True
+        previous = self.state
         def _worker():
             try:
-                state = gather_state()
+                state = gather_fast_state(previous)
             except Exception:
                 state = None
-            GLib.idle_add(self._apply_state, state)
+            GLib.idle_add(self._apply_fast_state, state)
         threading.Thread(target=_worker, daemon=True).start()
         return True
 
-    def _apply_state(self, state):
-        self._gathering = False
-        if state is None:
-            return False
-        self.state = state
+    def _tick_slow(self):
+        if self._slow_gathering:
+            return True
+        self._slow_gathering = True
+        previous = self.state
+        def _worker():
+            try:
+                state = gather_slow_state(previous)
+            except Exception:
+                state = None
+            GLib.idle_add(self._apply_slow_state, state)
+        threading.Thread(target=_worker, daemon=True).start()
+        return True
+
+    def _apply_fast_state(self, state):
+        self._fast_gathering = False
+        return self._apply_state(state, FAST_STATE_KEYS)
+
+    def _apply_slow_state(self, state):
+        self._slow_gathering = False
+        return self._apply_state(state, SLOW_STATE_KEYS)
+
+    def _refresh_ui(self):
         for fn in self._refreshers:
             try:
-                fn(state)
+                fn(self.state)
             except Exception:
                 pass
+        return False
+
+    def _apply_state(self, state, keys=None):
+        if state is None:
+            return False
+        if keys is None:
+            self.state = state
+        else:
+            self.state = {
+                **self.state,
+                **{key: state[key] for key in keys if key in state},
+            }
+        self._refresh_ui()
         return False
 
     @staticmethod
@@ -1145,6 +1239,7 @@ class ControlCenter(Gtk.Application):
         self._pending[key] = (
             target, time.time() + (ttl_s or self.PENDING_TTL_S),
         )
+        GLib.idle_add(self._refresh_ui)
 
     def effective(self, key, polled):
         """Return the user-intended value if a pending write is in flight
@@ -1273,6 +1368,15 @@ class ControlCenter(Gtk.Application):
         return lbl
 
     @staticmethod
+    def _center_icon(label):
+        label.set_xalign(0.5)
+        label.set_yalign(0.5)
+        label.set_justify(Gtk.Justification.CENTER)
+        label.set_halign(Gtk.Align.CENTER)
+        label.set_valign(Gtk.Align.CENTER)
+        return label
+
+    @staticmethod
     def _box(orientation=Gtk.Orientation.VERTICAL, spacing=0, css=None):
         box = Gtk.Box(orientation=orientation, spacing=spacing)
         if css:
@@ -1318,7 +1422,7 @@ class ControlCenter(Gtk.Application):
 
         inner = self._box(Gtk.Orientation.VERTICAL, spacing=4)
         top = self._box(Gtk.Orientation.HORIZONTAL, css="tile-icon")
-        glyph_lbl = self._label("", "tile-glyph", xalign=0.5)
+        glyph_lbl = self._center_icon(self._label("", "tile-glyph", xalign=0.5))
         top.append(glyph_lbl)
         top.append(Gtk.Box(hexpand=True))
         badge_lbl = self._label("", "tile-badge")
@@ -1343,6 +1447,7 @@ class ControlCenter(Gtk.Application):
     def _slider_row(self, glyph, aux_label=None, aux_view=None):
         """Build a slider row. Returns SimpleNamespace(widget, fill, value, aux)."""
         row = self._box(Gtk.Orientation.HORIZONTAL, spacing=12, css="slider-row")
+        row.set_size_request(376, -1)
 
         gbtn = Gtk.Button(label=glyph)
         gbtn.add_css_class("glyph-btn")
@@ -1364,18 +1469,27 @@ class ControlCenter(Gtk.Application):
 
         val = self._label("0", "slider-value", xalign=1)
         val.set_width_chars(3)
+        val.set_size_request(24, -1)
         row.append(val)
 
         aux = None
+        aux_text = None
         if aux_label:
-            aux = Gtk.Button(label=aux_label)
+            aux = Gtk.Button()
             aux.add_css_class("slider-aux")
+            aux.set_size_request(74, -1)
+            aux_text = self._label(aux_label, "slider-aux-label", xalign=1)
+            aux_text.set_ellipsize(Pango.EllipsizeMode.END)
+            aux_text.set_max_width_chars(11)
+            aux_text.set_size_request(74, -1)
+            aux.set_child(aux_text)
             if aux_view:
                 aux.connect("clicked", lambda _b, v=aux_view: self.go_to(v))
             row.append(aux)
 
         return SimpleNamespace(
             widget=row, glyph_btn=gbtn, fill=fill, value=val, aux=aux,
+            aux_label=aux_text,
         )
 
     def _set_slider(self, slider, pct):
@@ -1465,6 +1579,7 @@ class ControlCenter(Gtk.Application):
         refresh stays the source of truth.
         """
         bar = self._box(Gtk.Orientation.HORIZONTAL, spacing=2, css="segmented")
+        bar.set_homogeneous(True)
         buttons = []
 
         def select(idx):
@@ -1481,6 +1596,7 @@ class ControlCenter(Gtk.Application):
                 btn.add_css_class("active")
             btn.set_hexpand(True)
             inner = self._box(Gtk.Orientation.HORIZONTAL, spacing=6)
+            inner.set_halign(Gtk.Align.CENTER)
             inner.append(self._label(glyph))
             inner.append(self._label(label))
             btn.set_child(inner)
@@ -1503,6 +1619,7 @@ class ControlCenter(Gtk.Application):
         row = self._box(Gtk.Orientation.HORIZONTAL, spacing=10)
 
         icon = self._label(glyph, "di-icon", xalign=0.5)
+        self._center_icon(icon)
         icon.set_width_chars(2)
         icon.set_valign(Gtk.Align.CENTER)
         row.append(icon)
@@ -1529,6 +1646,7 @@ class ControlCenter(Gtk.Application):
     def _drawer_row(self, glyph, name, subtitle, control_widget):
         row = self._box(Gtk.Orientation.HORIZONTAL, spacing=10, css="drawer-row")
         icon = self._label(glyph, "di-icon", xalign=0.5)
+        self._center_icon(icon)
         icon.set_width_chars(2)
         icon.set_valign(Gtk.Align.CENTER)
         row.append(icon)
@@ -1580,6 +1698,7 @@ class ControlCenter(Gtk.Application):
         """Hero card with ref-able sub-widgets. Populate via the returned NS."""
         card = self._box(Gtk.Orientation.HORIZONTAL, spacing=14, css="hero-card")
         icon = self._label("", "hero-icon-wrap", xalign=0.5)
+        self._center_icon(icon)
         icon.set_width_chars(3)
         icon.set_halign(Gtk.Align.CENTER)
         icon.set_valign(Gtk.Align.CENTER)
@@ -1898,8 +2017,7 @@ class ControlCenter(Gtk.Application):
             else:
                 vpn_t.sub.set_label("Off")
             self._set_class(vpn_t.widget, "on", active > 0)
-            vpn_t.badge.set_label(f"{active}/2")
-            vpn_t.badge.set_visible(active > 0)
+            vpn_t.badge.set_visible(False)
 
             # DND tile
             d = s["dnd"]
@@ -1920,8 +2038,10 @@ class ControlCenter(Gtk.Application):
                 else G["volume"]
             )
             if vol_s.aux:
-                vol_s.aux.set_label(f"{self._short(a['sink_name'], 14)} ›")
+                vol_s.aux_label.set_label(f"{self._short(a['sink_name'], 11)} ›")
             self._set_slider_polled(brt_s, s["brightness"]["percent"])
+            if brt_s.aux:
+                brt_s.aux_label.set_label("Auto")
             self._set_slider_polled(mic_s, a["source_volume_pct"])
             mic_s.glyph_btn.set_label(
                 G["mic_off"]
@@ -1929,7 +2049,7 @@ class ControlCenter(Gtk.Application):
                 else G["mic"]
             )
             if mic_s.aux:
-                mic_s.aux.set_label(f"{self._short(a['source_name'], 14)} ›")
+                mic_s.aux_label.set_label(f"{self._short(a['source_name'], 11)} ›")
 
             # Power profile (respect optimistic pending)
             profile = self.effective("power_profile", s["power_profile"])
@@ -2226,6 +2346,7 @@ class ControlCenter(Gtk.Application):
             Gtk.Orientation.HORIZONTAL, spacing=12, css="vpn-head",
         )
         ic = self._label(G["shield"], "vpn-icon", xalign=0.5)
+        self._center_icon(ic)
         ic.set_width_chars(3)
         ic.set_halign(Gtk.Align.CENTER)
         ic.set_valign(Gtk.Align.CENTER)
@@ -2327,6 +2448,7 @@ class ControlCenter(Gtk.Application):
             Gtk.Orientation.HORIZONTAL, spacing=12, css="vpn-head",
         )
         ic = self._label(G["key"], "vpn-icon", xalign=0.5)
+        self._center_icon(ic)
         ic.set_width_chars(3)
         ic.set_halign(Gtk.Align.CENTER)
         ic.set_valign(Gtk.Align.CENTER)
@@ -2359,6 +2481,7 @@ class ControlCenter(Gtk.Application):
             Gtk.Orientation.HORIZONTAL, spacing=10, css="drawer-row",
         )
         mv_loc_icon = self._label("—", "di-icon", xalign=0.5)
+        self._center_icon(mv_loc_icon)
         mv_loc_icon.set_width_chars(2)
         mv_loc_icon.set_valign(Gtk.Align.CENTER)
         mv_loc_row.append(mv_loc_icon)
@@ -2725,10 +2848,14 @@ class ControlCenter(Gtk.Application):
             font-size: 12px;
             color: {rgba(text, 0.92)};
         }}
+        .tile-glyph, .glyph-btn, .chip-glyph, .icon-btn, .back-btn,
+        .hero-icon-wrap, .vpn-icon, .di-icon {{
+            font-family: "JetBrainsMono Nerd Font", "Inter", sans-serif;
+        }}
         window {{ background: transparent; }}
 
         #panel {{
-            min-width: 400px;
+            min-width: {PANEL_CONTENT_WIDTH}px;
             padding: 16px;
             border-radius: 20px;
             border: 1px solid {rgba(orange, 0.28)};
@@ -2740,7 +2867,10 @@ class ControlCenter(Gtk.Application):
                 inset 0 1px 0 rgba(255, 255, 255, 0.03);
         }}
 
-        .panel-stack {{ margin: 0; }}
+        .panel-stack {{
+            margin: 0;
+            min-width: {PANEL_CONTENT_WIDTH}px;
+        }}
 
         .panel-header {{ margin-bottom: 4px; }}
         .panel-title {{ font-size: 13px; font-weight: 600; letter-spacing: 0.03em; }}
@@ -2786,8 +2916,8 @@ class ControlCenter(Gtk.Application):
         }}
         .tile-icon {{ margin-bottom: 4px; }}
         .tile-glyph {{
-            min-width: 34px; min-height: 34px;
-            padding: 4px;
+            min-width: 42px; min-height: 42px;
+            padding: 0;
             border-radius: 9px;
             background: rgba(255, 255, 255, 0.05);
             color: {rgba(text, 0.78)};
@@ -2837,10 +2967,10 @@ class ControlCenter(Gtk.Application):
         .section-action:hover {{ color: {rgba(text, 1.0)}; }}
 
         /* Sliders */
-        .slider-row {{ margin: 0; }}
+        .slider-row {{ margin: 0; min-width: 376px; }}
         .glyph-btn {{
             min-width: 26px; min-height: 26px;
-            padding: 0 6px;
+            padding: 0;
             border-radius: 8px;
             border: none;
             background: rgba(255, 255, 255, 0.04);
@@ -2870,18 +3000,26 @@ class ControlCenter(Gtk.Application):
             background: {rgba(text, 1.0)};
         }}
         .slider-value {{
+            min-width: 24px;
             color: {rgba(text, 0.66)};
             font-size: 11px;
         }}
         .slider-aux {{
-            padding: 4px 6px;
-            min-width: 88px;
+            padding: 4px 0;
+            min-width: 74px;
+            min-height: 24px;
             background: transparent;
             border: none;
             color: {rgba(text, 0.5)};
             font-size: 10px;
             box-shadow: none;
         }}
+        .slider-aux-label {{
+            min-width: 74px;
+            color: {rgba(text, 0.5)};
+            font-size: 10px;
+        }}
+        .slider-aux:hover .slider-aux-label {{ color: {rgba(text, 1.0)}; }}
         .slider-aux:hover {{ color: {rgba(text, 1.0)}; }}
         .app-slider {{ margin: 6px 0 0 0; min-height: 4px; }}
         .app-slider .slider-fill {{ min-height: 4px; }}
@@ -2895,6 +3033,7 @@ class ControlCenter(Gtk.Application):
         }}
         .seg {{
             padding: 6px 8px;
+            min-height: 26px;
             border-radius: 9px;
             border: none;
             background: transparent;
@@ -3128,7 +3267,7 @@ class ControlCenter(Gtk.Application):
         }}
         .hero-icon-wrap {{
             min-width: 44px; min-height: 44px;
-            padding: 8px;
+            padding: 0;
             border-radius: 12px;
             background: {rgba(amber, 0.22)};
             color: {rgba(amber, 1.0)};
@@ -3157,7 +3296,7 @@ class ControlCenter(Gtk.Application):
         .vpn-section.off {{ opacity: 0.62; }}
         .vpn-icon {{
             min-width: 38px; min-height: 38px;
-            padding: 8px;
+            padding: 0;
             border-radius: 11px;
             background: {rgba(amber, 0.18)};
             color: {rgba(amber, 1.0)};
@@ -3262,7 +3401,12 @@ def main():
 
     write_state(os.getpid(), initial)
     release_lock()
-    app = ControlCenter(initial, load_colors(), _default_state())
+    initial_state = _default_state()
+    try:
+        initial_state = gather_fast_state(initial_state)
+    except Exception:
+        pass
+    app = ControlCenter(initial, load_colors(), initial_state)
     return app.run(None)
 
 
