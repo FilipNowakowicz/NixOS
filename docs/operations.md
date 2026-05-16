@@ -38,6 +38,50 @@ nix run '.#vm' -- destroy vm
 QEMU VM metadata comes from `lib/hosts.nix`; entries need `sshPort` and
 `diskSize` to appear in the VM registry.
 
+## main Workstation Operations
+
+`main` is an impermanent workstation. Rebuilds are normal NixOS switches, but
+runtime state must either live on `/home`, `/nix`, `/persist`, or be explicitly
+listed in `hosts/main/impermanence.nix`.
+
+Switch:
+
+```bash
+nh os switch --hostname main .
+```
+
+After storage, boot, backup, or impermanence changes, verify the live system:
+
+```bash
+journalctl -b -u rollback-root.service --no-pager
+findmnt -R / -o TARGET,SOURCE,FSTYPE,OPTIONS
+systemctl list-timers --all --no-pager | rg 'restic|btrfs|fstrim|nix'
+systemctl --failed --no-pager
+```
+
+Force the first backup/check after changing backup coverage:
+
+```bash
+sudo systemctl start restic-backups-local.service
+sudo systemctl start restic-check-local.service
+journalctl -u restic-backups-local.service -n 120 --no-pager
+journalctl -u restic-check-local.service -n 120 --no-pager
+```
+
+The host declares scoped passwordless sudo for a small set of agent-assisted
+maintenance commands. Keep using normal passworded sudo for anything outside
+that allowlist.
+
+Clean stale boot artifacts:
+
+```bash
+sudo bootctl cleanup
+sudo efibootmgr -b 0003 -B
+```
+
+Only delete EFI entries after confirming `BootCurrent` and the entry title with
+`bootctl status` or `efibootmgr`.
+
 ## Homeserver GCE Snapshots
 
 `infra/main.tf` attaches a daily GCE snapshot schedule to the

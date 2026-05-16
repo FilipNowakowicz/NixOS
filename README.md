@@ -10,7 +10,7 @@ The repository separates hardware, host identity, system profiles, and user conf
 - **Reproducible & Declarative**: NixOS defines the entire system state, services, and hardware. Home Manager manages the user environment and dotfiles.
 - **Multi-Host Ready**: Built from reusable profiles for a primary workstation (`main`), a GCP homeserver (`homeserver-gcp`), a QEMU test VM, and Home Manager profiles. The host registry defines the target architecture (`system`) per host; the current fleet is `x86_64-linux`.
 - **Secrets Management**: Handled by [sops-nix](https://github.com/Mic92/sops-nix) with age encryption, with secrets decrypted at boot by the host itself.
-- **Impermanent Root**: The QEMU test VM uses an ephemeral root filesystem created with [impermanence](https://github.com/nix-community/impermanence). System state is reset on boot, with persistent data explicitly stored on a `/persist` volume.
+- **Impermanent Root**: `main` and the QEMU test VM use ephemeral root filesystems with [impermanence](https://github.com/nix-community/impermanence). System state is reset on boot, with persistent data explicitly stored on `/persist`.
 - **Declarative Disks**: Disk layouts for real hosts and the QEMU test VM are managed declaratively with [disko](https://github.com/nix-community/disko).
 - **Runtime Theming**: A runtime-swappable color system allows changing themes without a full NixOS rebuild.
 
@@ -71,7 +71,7 @@ Requires extra local capability:
 
 ## Destructive Operations
 
-Disk provisioning and reinstall workflows are destructive. Review the target device before running `disko` or `nixos-anywhere`. The `main` disk layout assumes `/dev/nvme0n1`.
+Disk provisioning and reinstall workflows are destructive. Review the target device before running `disko` or `nixos-anywhere`. The `main` disk layout targets the stable NVMe by-id path in `hosts/main/disko.nix`; do not replace it with kernel-order names like `/dev/nvme0n1` unless the disk identity changes.
 
 ---
 
@@ -80,7 +80,11 @@ Disk provisioning and reinstall workflows are destructive. Review the target dev
 The `main` host uses a secure, encrypted systemd-boot setup:
 
 - **Bootloader**: [Lanzaboote](https://github.com/nix-community/lanzaboote) manages Secure Boot, signing a unified kernel image.
-- **Disk Encryption**: LUKS encrypts the entire disk.
+- **Disk Encryption**: LUKS encrypts the Btrfs root disk.
+- **Btrfs Layout**: `disko` creates `@root`, `@home`, `@nix`, and `@persist`; `/nix` and `/persist` are marked `neededForBoot`.
+- **Ephemeral Root**: initrd systemd rolls `@root` back to the empty `@root-blank` snapshot on every boot, moves the previous root to top-level `old_roots/`, and keeps old roots for 30 days.
+- **Persistent State**: impermanence bind mounts machine identity, SSH host keys, service state, Wi-Fi profiles, Mullvad, Tailscale, Bluetooth, USBGuard, Secure Boot PKI, logs, and NixOS state from `/persist`.
+- **Filesystem Maintenance**: Btrfs scrub is enabled monthly for `/`; fstrim runs via the standard timer.
 - **TPM Unlocking**: The system's TPM 2.0 is used to automatically unlock the LUKS-encrypted disk on boot.
 - **Hardware Pass-through**: IOMMU is enabled (`intel_iommu=on iommu=force`) for potential VM GPU pass-through.
 - **Graphics Drivers**: The configuration pins `AQ_DRM_DEVICES` to a stable udev symlink for the Intel iGPU to keep multi-GPU / monitor behavior predictable.
@@ -98,7 +102,9 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 ## Features
 
 - **Runtime Theming**: A runtime-swappable color system allows changing themes without a full NixOS rebuild.
-- **USB Device Control**: USBGuard enabled on `main` with a strict deny-default policy; only the primary mouse (Logitech receiver) is whitelisted by ID.
+- **USB Device Control**: USBGuard enabled on `main` with a strict deny-default policy and a curated allowlist for trusted internal/peripheral devices.
+- **Workstation Backups**: `main` backs up user-critical state and persisted service identity to Backblaze B2 with Restic, including Codex/Claude state, Wi-Fi profiles, Mullvad, Tailscale, Bluetooth, fingerprint, USBGuard, Secure Boot PKI, machine-id, and SSH host identity.
+- **Scoped Agent Maintenance Sudo**: `main` keeps normal `wheel` sudo passworded, but allows a narrow set of passwordless maintenance commands for interactive agent sessions: Restic start/status, boot cleanup, selected EFI entry deletion, Nix GC, and switching this flake path.
 - **Tailscale ACLs as Nix**: Security rules and tag owners are generated declaratively from the host registry, providing a single source of truth for network access control.
 - **Generated Inventory Export**: `packages/inventory-data.nix` exports the host and goal inventory as JSON for the homepage site.
 - **Systemd Hardening**: A custom DSL (`services.hardened`) applies a high-security sandbox baseline to critical services (Vaultwarden, Nginx, Syncthing).
@@ -134,8 +140,10 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 │   └── acl.nix                        # Declarative Tailscale ACL generator
 ├── hosts/
 │   ├── main/                          # Primary workstation
+│   │   ├── CLAUDE.md                  # Host-local runbook and gotchas
 │   │   ├── default.nix
 │   │   ├── disko.nix
+│   │   ├── impermanence.nix
 │   │   └── hardware-configuration.nix
 │   ├── homeserver-gcp/                # GCP homeserver (Vaultwarden, LGTM, Nginx)
 │   │   ├── default.nix
@@ -243,7 +251,7 @@ ISO outside the host registry.
 
 | Host             | Command                                  | Notes                                                            |
 | ---------------- | ---------------------------------------- | ---------------------------------------------------------------- |
-| `main`           | `nh os switch --hostname main .`         | Active workstation rebuild.                                      |
+| `main`           | `nh os switch --hostname main .`         | Active impermanent workstation rebuild.                          |
 | `homeserver-gcp` | `deploy '.#homeserver-gcp'`              | GCP homeserver; see `scripts/deploy-gcp.sh`.                     |
 | `vm`             | `deploy '.#vm'`                          | Legacy-supported QEMU path, after `nix run '.#vm' -- create vm`. |
 | `user@wsl`       | `home-manager switch --flake .#user@wsl` | Portable Home Manager for WSL.                                   |

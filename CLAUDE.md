@@ -14,6 +14,9 @@ approaches proactively. Explain why, not just what.
 - **Deploy (VM):** `deploy '.#vm'` (QEMU `vm` is legacy-supported testing only)
 - **Deploy (WSL):** `home-manager switch --flake .#user@wsl`
 - **Deploy (main):** `nh os switch --hostname main .` (alias: `rebuild`)
+- **Main storage model:** `main` uses LUKS + Btrfs subvolumes (`@root`, `@home`, `@nix`, `@persist`) with initrd rollback of `@root` from `@root-blank` on every boot. Persistent state is explicit in `hosts/main/impermanence.nix`.
+- **Main backups:** `main` Restic/B2 backup coverage is declared in `hosts/main/default.nix` and includes selected home state plus persisted service identity such as Wi-Fi profiles, Mullvad, Tailscale, Bluetooth, USBGuard, Secure Boot PKI, machine-id, and SSH host key.
+- **Agent maintenance sudo:** `main` keeps normal wheel sudo passworded but grants `user` narrow NOPASSWD rules for agent-assisted maintenance commands declared as `agentMaintenanceCommands` in `hosts/main/default.nix`. Do not broaden this to `NOPASSWD: ALL`.
 - **Validate flake eval:** `bash scripts/validate.sh flake-eval`
 - **Automated updates:** Weekly `flake.lock` updates (`flake-update.yml`); auto-merges if `merge-gate` status check passes.
 - **Merge Gate:** Consolidates all required checks (flake-check, invariants, smoke-tests) into a single required status check for branch protection.
@@ -71,7 +74,8 @@ nix run '.#vm' -- ssh <name>      # SSH into VM
 - `docs/architecture.md` — structural rules and module boundaries
 - `docs/operations.md` — deployment, VM workflows, and validation runbook
 - `docs/security.md` — secrets, exposure, and hardening model
-- `hosts/main/` — real machine config, disko layout, LUKS/LVM, Lanzaboote (Secure Boot)
+- `hosts/main/` — real machine config, disko layout, LUKS/Btrfs, impermanence, Lanzaboote (Secure Boot)
+  - `hosts/main/CLAUDE.md` — host-local runbook for impermanence, backups, scoped sudo, and recovery gotchas
 - `hosts/vm/` — dev/test VM config (desktop profile + home-manager)
 - `hosts/homeserver-gcp/` — GCP homeserver (Vaultwarden, Syncthing, LGTM, Nginx, Tailscale, TLS)
 - `hosts/installer/` — minimal NixOS ISO config for fresh installs
@@ -120,7 +124,8 @@ homeserver implementation plan.
 
 ## Security Preferences
 
-- **Passwordless sudo is for VMs/dev machines and `machine-common` hosts only.**
+- **Broad passwordless sudo is for VMs/dev machines and `machine-common` hosts only.**
+- **Scoped passwordless sudo on `main` is limited to `agentMaintenanceCommands`** for interactive maintenance; keep the allowlist narrow and command-specific.
 - **Interactive access should rely on SSH keys.** Host user password hashes are still managed through sops where declared for login/recovery compatibility.
 - **Scope secrets appropriately.** Each host should only be able to decrypt
   the secrets it needs, as defined in `.sops.yaml`.

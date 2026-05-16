@@ -68,6 +68,27 @@ ssh -i /path/to/id_ed25519_recovery -p 2222 root@<host-ip>
 
 Then enter the LUKS passphrase when prompted.
 
+## Impermanence And Local State
+
+`main` uses an impermanent Btrfs root. The encrypted filesystem contains
+separate `@root`, `@home`, `@nix`, and `@persist` subvolumes. During initrd,
+`rollback-root.service` moves the current `@root` aside to top-level
+`old_roots/<timestamp>` and recreates `@root` from the empty `@root-blank`
+snapshot. Anything not on `/home`, `/nix`, `/persist`, or explicitly
+bind-mounted from `/persist` is disposable.
+
+Persistent `main` state is intentionally explicit:
+
+- machine identity and SSH host keys;
+- NetworkManager Wi-Fi/VPN profiles;
+- Mullvad account/device state and relay cache;
+- Tailscale node identity;
+- Bluetooth, fingerprint, USBGuard, Secure Boot PKI, logs, coredumps, and NixOS state.
+
+Adding a persistent path is a security decision. Copy live service state into
+`/persist` first, then add the path to `hosts/main/impermanence.nix`; otherwise
+the next rollback boot may bind an empty directory over the live path.
+
 ## Network Exposure
 
 Tailscale is the primary remote-access layer.
@@ -105,6 +126,24 @@ Validation coverage includes:
 - `profile-hardening` NixOS test for sandbox behavior;
 - service-specific smoke tests for GCP homeserver paths.
 
+## Scoped Agent Maintenance Sudo
+
+`main` keeps `security.sudo.wheelNeedsPassword = true`. It also declares a
+narrow `security.sudo.extraRules` allowlist for the primary user so interactive
+agents can perform repeat maintenance without a password prompt. The allowlist
+lives in `agentMaintenanceCommands` in `hosts/main/default.nix`.
+
+Allowed command categories are limited to:
+
+- starting/statusing the local Restic backup and check units;
+- `bootctl` status/cleanup;
+- deleting an explicitly named EFI boot entry with `efibootmgr -b XXXX -B`;
+- Nix garbage collection with an explicit age;
+- switching this flake path for `main`.
+
+Do not broaden this to full passwordless sudo. Additions should be exact-command
+maintenance operations and should keep normal interactive sudo passworded.
+
 ## Backups
 
 Backup policy is driven by `hostMeta.backup.class` from `lib/hosts.nix` and
@@ -120,3 +159,10 @@ Current classes:
 `hostMeta.backup.name` selects the restic job to receive that policy and
 defaults to `local`. `main` uses `local`; `homeserver-gcp` uses `b2` for
 Backblaze B2 off-site backups.
+
+`main` extends the shared backup profile with workstation-specific paths in
+`hosts/main/default.nix`. The backup covers selected user state plus the
+persistent identities needed after a full reinstall: Codex and Claude state,
+Wi-Fi profiles, Mullvad account/device state, Tailscale node identity,
+Bluetooth pairings, fingerprint enrollment state, USBGuard rules, Secure Boot
+PKI, machine-id, and SSH host identity.
