@@ -21,7 +21,7 @@ The repository separates hardware, host identity, system profiles, and user conf
 - [Architecture](docs/architecture.md) - layer boundaries, global imports, and host registry rules.
 - [Operations](docs/operations.md) - deployment, validation, and formatting commands.
 - [Security Model](docs/security.md) - sops recipients, initrd SSH, Tailscale exposure, USBGuard, hardening, and backups.
-- [Neovim](docs/neovim.md) - current editor setup and links to the longer module design.
+- [Neovim](docs/neovim.md) - editor architecture, module layout, and current follow-up work.
 - [Backlog](docs/backlog.md), [Goals](docs/goals.md), and [Homeserver Goals](docs/homeserver-goals.md) - deferred and remaining roadmap work.
 
 ---
@@ -375,9 +375,8 @@ The flake provides several `devShells` and `apps` for development and maintenanc
 
 ## Neovim
 
-The current editor setup is documented in [docs/neovim.md](docs/neovim.md).
-The first-class Home Manager module design is tracked separately in
-[docs/neovim-module.md](docs/neovim-module.md).
+The current editor setup, module layout, and open follow-up work are documented
+in [docs/neovim.md](docs/neovim.md).
 
 ---
 

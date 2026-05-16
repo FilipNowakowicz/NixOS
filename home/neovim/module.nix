@@ -75,6 +75,10 @@ let
   generatedLua = import ./generators/lua-config.nix {
     inherit generatedConfig pkgs;
   };
+  generatedCheatsheet = import ./generators/cheatsheet.nix {
+    inherit pkgs;
+    staticConfig = ../files/nvim;
+  };
 
   staticConfig = ../files/nvim;
 
@@ -83,6 +87,7 @@ let
     cp -R ${staticConfig}/. "$out/"
     chmod -R u+w "$out"
     cp ${generatedLua} "$out/lua/config/generated.lua"
+    cp ${generatedCheatsheet} "$out/CHEATSHEET.md"
     ${lib.optionalString (!cfg.cheatsheet.enable) ''rm -f "$out/CHEATSHEET.md"''}
   '';
 in

@@ -26,14 +26,6 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.opt_local.formatoptions:append("t")
 
     vim.opt_local.conceallevel = 2
-    vim.keymap.set("n", "<leader>vz", function()
-      vim.opt_local.conceallevel = (vim.opt_local.conceallevel:get() == 2) and 0 or 2
-      vim.notify("Conceal: " .. vim.opt_local.conceallevel:get())
-    end, { buffer = true, desc = "Toggle conceal" })
-
-    vim.keymap.set("n", "<leader>vv", "<cmd>VimtexView<cr>", { buffer = true, desc = "View PDF" })
-    vim.keymap.set("n", "<leader>vc", "<cmd>VimtexCompile<cr>", { buffer = true, desc = "Compile" })
-    vim.keymap.set("n", "<leader>vt", "<cmd>VimtexTocOpen<cr>", { buffer = true, desc = "TOC" })
   end,
 })
 

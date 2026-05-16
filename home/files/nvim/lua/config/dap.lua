@@ -1,5 +1,3 @@
-local map = vim.keymap.set
-
 local generated = require("config.generated")
 local ok_dap, dap = pcall(require, "dap")
 local ok_dapui, dapui = pcall(require, "dapui")
@@ -33,38 +31,3 @@ for filetype, configs in pairs((generated.dap and generated.dap.configurations) 
 		return configuration
 	end, configs)
 end
-
-map("n", "<F5>", function()
-	dap.continue()
-end, { desc = "DAP continue" })
-map("n", "<F10>", function()
-	dap.step_over()
-end, { desc = "DAP step over" })
-map("n", "<F11>", function()
-	dap.step_into()
-end, { desc = "DAP step into" })
-map("n", "<F12>", function()
-	dap.step_out()
-end, { desc = "DAP step out" })
-
-map("n", "<leader>db", function()
-	dap.toggle_breakpoint()
-end, { desc = "DAP toggle breakpoint" })
-
-map("n", "<leader>dB", function()
-	vim.ui.input({ prompt = "Breakpoint condition: " }, function(cond)
-		if cond and cond ~= "" then
-			dap.set_breakpoint(cond)
-		end
-	end)
-end, { desc = "DAP conditional breakpoint" })
-
-map("n", "<leader>dr", function()
-	dap.repl.open()
-end, { desc = "DAP REPL" })
-map("n", "<leader>dl", function()
-	dap.run_last()
-end, { desc = "DAP run last" })
-map("n", "<leader>du", function()
-	dapui.toggle()
-end, { desc = "DAP UI toggle" })

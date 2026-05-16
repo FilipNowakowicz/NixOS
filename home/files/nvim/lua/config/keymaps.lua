@@ -1,55 +1,47 @@
-local map = vim.keymap.set
+local registry = require("config.keymap_registry")
+local generated = require("config.generated")
 
--- Oil (file explorer)
-map("n", "<leader>e", "<cmd>Oil<cr>",  { silent = true, desc = "File explorer" })
-map("n", "-",         "<cmd>Oil<cr>",  { silent = true, desc = "Open parent directory" })
+local function is_enabled(entry)
+  if entry.enabled == nil then
+    return true
+  end
+  if entry.enabled == "tex_grammar" then
+    return generated.languages.tex and generated.languages.tex.grammar
+  end
+  if type(entry.enabled) == "function" then
+    return entry.enabled()
+  end
+  return entry.enabled
+end
 
--- Telescope
-map("n", "<leader>ff", function()
-  require("telescope.builtin").find_files()
-end, { desc = "Find files" })
+local function apply_entry(entry, extra_opts)
+  local opts = vim.tbl_extend("force", { desc = entry.desc }, entry.opts or {}, extra_opts or {})
+  vim.keymap.set(entry.mode, entry.lhs, entry.rhs, opts)
+end
 
-map("n", "<leader>fg", function()
-  require("telescope.builtin").live_grep()
-end, { desc = "Live grep" })
+for _, entry in ipairs(registry) do
+  if is_enabled(entry) and not entry.event and not entry.filetypes then
+    apply_entry(entry)
+  end
+end
 
-map("n", "<leader>fb", function()
-  require("telescope.builtin").buffers()
-end, { desc = "Buffers" })
+vim.api.nvim_create_autocmd("LspAttach", {
+  callback = function(args)
+    for _, entry in ipairs(registry) do
+      if is_enabled(entry) and entry.event == "LspAttach" then
+        apply_entry(entry, { buffer = args.buf })
+      end
+    end
+  end,
+})
 
-map("n", "<leader>fh", function()
-  require("telescope.builtin").help_tags()
-end, { desc = "Help tags" })
-
--- Gitsigns
-map("n", "]c", function()
-  require("gitsigns").next_hunk()
-end, { desc = "Next hunk" })
-
-map("n", "[c", function()
-  require("gitsigns").prev_hunk()
-end, { desc = "Previous hunk" })
-
-map("n", "<leader>hs", function()
-  require("gitsigns").stage_hunk()
-end, { desc = "Stage hunk" })
-
-map("n", "<leader>hr", function()
-  require("gitsigns").reset_hunk()
-end, { desc = "Reset hunk" })
-
-map("n", "<leader>hp", function()
-  require("gitsigns").preview_hunk()
-end, { desc = "Preview hunk" })
-
-map("n", "<leader>hb", function()
-  require("gitsigns").blame_line()
-end, { desc = "Blame line" })
-
--- Run current file with Python (convenience)
-map("n", "<leader>r", function()
-  vim.cmd("!python %")
-end, { silent = true, desc = "Run current file (python)" })
-
--- Markdown preview
-map("n", "<leader>m", "<cmd>Glow<CR>", { silent = true, desc = "Markdown preview" })
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "tex", "plaintex" },
+  callback = function(args)
+    for _, entry in ipairs(registry) do
+      if is_enabled(entry) and entry.filetypes and vim.tbl_contains(entry.filetypes, args.match) then
+        apply_entry(entry, { buffer = args.buf })
+      end
+    end
+  end,
+})

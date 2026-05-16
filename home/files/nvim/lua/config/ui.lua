@@ -76,9 +76,6 @@ pcall(function() require("lualine").setup() end)
 
 pcall(function()
   require("leap").add_default_mappings()
-  vim.keymap.set({ "n", "o" }, "gs", function()
-    pcall(function() require("leap.remote").action() end)
-  end, { desc = "Leap remote" })
 end)
 
 -----------------------------------------------------------
@@ -86,25 +83,8 @@ end)
 -----------------------------------------------------------
 pcall(function()
   require("trouble").setup()
-
-  local map = vim.keymap.set
-  map("n", "<leader>xx", "<cmd>Trouble diagnostics toggle<cr>",              { desc = "Diagnostics" })
-  map("n", "<leader>xf", "<cmd>Trouble diagnostics toggle filter.buf=0<cr>", { desc = "Buffer diagnostics" })
-  map("n", "<leader>xl", "<cmd>Trouble lsp toggle<cr>",                      { desc = "LSP references/definitions" })
-  map("n", "<leader>xq", "<cmd>Trouble qflist toggle<cr>",                   { desc = "Quickfix list" })
 end)
 
------------------------------------------------------------
--- Snacks
------------------------------------------------------------
--- Words navigation (requires snacks.words to be enabled in plugins.lua)
-vim.keymap.set("n", "]]", function() Snacks.words.jump(1, true) end,  { desc = "Next word occurrence" })
-vim.keymap.set("n", "[[", function() Snacks.words.jump(-1, true) end, { desc = "Prev word occurrence" })
-vim.keymap.set("n", "<leader>un", function() Snacks.notifier.show_history() end, { desc = "Notification history" })
-
------------------------------------------------------------
--- which-key groups
------------------------------------------------------------
 pcall(function()
   require("which-key").add({
     { "<leader>c", group = "Copilot" },

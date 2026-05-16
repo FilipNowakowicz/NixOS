@@ -1,6 +1,8 @@
+local M = {}
+
 local ok, toggleterm = pcall(require, "toggleterm")
 if not ok then
-  return
+  return M
 end
 
 toggleterm.setup({
@@ -19,6 +21,8 @@ local lazygit = Terminal:new({
   float_opts = { border = "rounded" },
 })
 
-vim.keymap.set("n", "<leader>gg", function()
+function M.toggle_lazygit()
   lazygit:toggle()
-end, { desc = "Lazygit" })
+end
+
+return M
