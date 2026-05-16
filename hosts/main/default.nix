@@ -520,10 +520,18 @@ in
       # ID: 8087:0026
       allow id 8087:0026
 
+      # Allow internal fingerprint reader (Synaptics; goodix-tod driver claims it)
+      # ID: 06cb:00be
+      allow id 06cb:00be
+
       # Allow GenesysLogic USB extender hub (USB 2.1 + USB 3.1 interfaces)
       # ID: 05e3:0610, 05e3:0626
       allow id 05e3:0610
       allow id 05e3:0626
+
+      # Allow integrated webcam (SunplusIT)
+      # ID: 13d3:56b2
+      allow id 13d3:56b2
 
       # Allow SanDisk Ultra USB backup stick
       # ID: 0781:5581, serial: 4C530001250727100272
