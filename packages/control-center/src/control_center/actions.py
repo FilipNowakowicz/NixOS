@@ -104,6 +104,14 @@ def act_open_hidden_wifi():
     _fire_if_found(["nm-connection-editor", "--create", "--type=wifi"])
 
 
+def act_bt_scan():
+    _fire(["bluetoothctl", "scan", "on"])
+
+
+def act_open_bluetooth_settings():
+    _fire_if_found(["blueman-manager"])
+
+
 def act_bt_powered(on):
     _fire(["bluetoothctl", "power", "on" if on else "off"])
 
@@ -144,6 +152,27 @@ def act_mullvad_disconnect():
 def act_mullvad_set_location(loc):
     """loc is whitespace-separated like 'se' or 'se sto' or 'se sto se-sto-wg-001'."""
     _fire(["mullvad", "relay", "set", "location"] + loc.split())
+
+
+def act_open_vpn_tools():
+    if _fire_if_found([
+        "kitty", "-e", "sh", "-lc",
+        "printf '\\nVPN tools\\n========\\n\\nMullvad status:\\n'; "
+        "mullvad status 2>/dev/null || true; "
+        "printf '\\nRelay:\\n'; mullvad relay get 2>/dev/null || true; "
+        "printf '\\nTailscale status:\\n'; tailscale status 2>/dev/null || true; "
+        "printf '\\nPress Ctrl-D to close.\\n'; exec ${SHELL:-sh} -i",
+    ]):
+        return
+    _fire_if_found(["mullvad", "status"])
+
+
+def act_open_notification_config():
+    if _fire_if_found([
+        "kitty", "-e", "nvim", os.path.expanduser("~/.config/mako/config"),
+    ]):
+        return
+    _fire_if_found(["xdg-open", os.path.expanduser("~/.config/mako/config")])
 
 
 def act_switch_theme(name):

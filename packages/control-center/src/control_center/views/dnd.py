@@ -4,7 +4,7 @@ import time
 
 from gi.repository import GLib, Gtk
 
-from ..actions import act_set_dnd_mode
+from ..actions import act_open_notification_config, act_set_dnd_mode
 from ..constants import G
 
 
@@ -60,7 +60,11 @@ class DndViewMixin:
         seg.buttons[1].connect("clicked", lambda _b: _enable_for(_seconds_until_8am()))
         seg.buttons[2].connect("clicked", lambda _b: _enable_for(0))
 
-        view.append(self._ghost_btn("Open Notification Settings"))
+        notif_btn = self._ghost_btn("Edit Notification Rules")
+        notif_btn.connect("clicked", lambda _b: (
+            self._hide_window(), act_open_notification_config(),
+        ))
+        view.append(notif_btn)
 
         def refresh(s):
             self._set_class(sw, "on", self.effective(

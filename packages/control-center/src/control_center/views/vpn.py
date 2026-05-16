@@ -6,6 +6,7 @@ from ..actions import (
     act_mullvad_connect,
     act_mullvad_disconnect,
     act_mullvad_set_location,
+    act_open_vpn_tools,
     act_tailscale_down,
     act_tailscale_exit_node,
     act_tailscale_up,
@@ -210,7 +211,11 @@ class VpnViewMixin:
         mv_change_btn.connect("clicked", lambda _b: mv_popover.popup())
 
         view.append(mv_section)
-        view.append(self._ghost_btn("Open VPN Settings"))
+        vpn_tools_btn = self._ghost_btn("Open VPN Tools")
+        vpn_tools_btn.connect("clicked", lambda _b: (
+            self._hide_window(), act_open_vpn_tools(),
+        ))
+        view.append(vpn_tools_btn)
 
         def refresh(s):
             ts = s["tailscale"]; mv = s["mullvad"]

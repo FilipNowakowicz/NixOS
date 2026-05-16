@@ -1,8 +1,14 @@
 """Bluetooth detail view: hero card + paired-device list."""
 
-from gi.repository import Gtk
+from gi.repository import GLib, Gtk
 
-from ..actions import act_bt_connect, act_bt_disconnect, act_bt_powered
+from ..actions import (
+    act_bt_connect,
+    act_bt_disconnect,
+    act_bt_powered,
+    act_bt_scan,
+    act_open_bluetooth_settings,
+)
 from ..constants import G
 
 
@@ -23,10 +29,32 @@ class BluetoothViewMixin:
 
         hero = self._hero_card_ref()
         view.append(hero.widget)
-        view.append(self._section_label("My Devices", action="Scan"))
+        section = self._section_label("My Devices", action="Scan")
+        section_btn = section.get_last_child()
+        view.append(section)
         lst = self._box(Gtk.Orientation.VERTICAL, spacing=2, css="drawer-list")
         view.append(lst)
-        view.append(self._ghost_btn("Open Bluetooth Settings"))
+        settings_btn = self._ghost_btn("Open Bluetooth Settings")
+        view.append(settings_btn)
+
+        def _scan_done():
+            section_btn.set_label("Scan")
+            self._tick_slow()
+            return False
+
+        def _open_blueman():
+            self._hide_window()
+            act_open_bluetooth_settings()
+
+        def _on_scan(_b):
+            if not self.effective("bluetooth.powered", self.state["bluetooth"]["powered"]):
+                return
+            section_btn.set_label("Scanning...")
+            act_bt_scan()
+            GLib.timeout_add(1800, _scan_done)
+            _open_blueman()
+        section_btn.connect("clicked", _on_scan)
+        settings_btn.connect("clicked", lambda _b: _open_blueman())
 
         def refresh(s):
             b = s["bluetooth"]
@@ -99,10 +127,12 @@ class BluetoothViewMixin:
                             act_bt_disconnect(addr)
                     row.connect("clicked", _on_dev_click)
                     lst.append(row)
-            lst.append(self._drawer_item(
+            pair = self._drawer_item(
                 G["plus"], "Pair new device",
                 "Put your device in pairing mode", "›", subtle=True,
-            ))
+            )
+            pair.connect("clicked", lambda _b: _open_blueman())
+            lst.append(pair)
 
         self._refreshers.append(refresh)
         refresh(self.state)
