@@ -21,17 +21,17 @@
   # otherwise the bind mount lands on an empty dir and the service loses
   # its state.
   #
-  # Phase 2 candidates (audit, migrate, then uncomment):
-  #
-  # environment.persistence."/persist".directories = [
-  #   "/var/lib/sbctl"                            # Lanzaboote / Secure Boot PKI
-  #   "/var/lib/tailscale"                        # tailnet node identity + peers
-  #   "/var/lib/bluetooth"                        # Bluetooth pairings
-  #   "/var/lib/fprint"                           # fingerprint enrollments
-  #   "/var/lib/usbguard"                         # USBGuard rule hashes
-  #   "/var/lib/AccountsService"                  # display-manager user metadata
-  #   "/etc/NetworkManager/system-connections"    # saved Wi-Fi / VPN profiles
-  #   "/var/cache/mullvad-vpn"
-  #   "/var/lib/mullvad-vpn"
-  # ];
+  # Phase 2: selective state migration to /persist (one-time copy before each line is uncommented)
+  environment.persistence."/persist".directories = [
+    "/var/lib/sbctl" # Lanzaboote / Secure Boot PKI
+    "/var/lib/tailscale" # tailnet node identity + peers
+    "/var/lib/bluetooth" # Bluetooth pairings
+    "/var/lib/fprint" # fingerprint enrollments
+    "/var/lib/usbguard" # USBGuard rule hashes
+    "/etc/NetworkManager/system-connections" # saved Wi-Fi / VPN profiles
+    "/var/cache/mullvad-vpn" # Mullvad VPN cache
+    # Phase 2 candidates (not yet present, uncomment when installed):
+    # "/var/lib/AccountsService"                  # display-manager user metadata
+    # "/var/lib/mullvad-vpn"                      # Mullvad VPN state
+  ];
 }
