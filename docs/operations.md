@@ -149,6 +149,27 @@ Rules of thumb:
 - Docs changes: run `bash scripts/validate.sh docs`; CI runs this even for docs-only PRs.
 - NixOS test changes: run the relevant smoke/profile test if KVM is available.
 
+## Desktop Apps
+
+The control center is now built from the repo-local package at
+`packages/control-center/`.
+
+Run the flake app directly during development:
+
+```bash
+nix run .#control-center
+```
+
+Build the package output without launching it:
+
+```bash
+nix build '.#packages.x86_64-linux.control-center'
+```
+
+Home Manager installs the same packaged `control-center` binary on `main`, so
+desktop behavior should be debugged from the package source rather than from a
+deleted `home/files/scripts/control_center.py` script path.
+
 ## Formatting And Hooks
 
 ```bash

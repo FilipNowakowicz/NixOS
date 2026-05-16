@@ -1,0 +1,70 @@
+"""Module-wide constants: paths, panel geometry, state-key partitions, glyphs."""
+
+STATE_PATH = "/tmp/control-center.json"
+LOCK_PATH = "/tmp/control-center.lock"
+
+VIEWS = ("home", "wifi", "bluetooth", "vpn", "dnd", "volume", "microphone")
+
+PANEL_CONTENT_WIDTH = 400
+PANEL_TOTAL_WIDTH = PANEL_CONTENT_WIDTH + 34  # content + 16px padding + border
+
+FAST_STATE_KEYS = (
+    "time", "hostname", "audio", "battery", "brightness", "power_profile",
+    "dnd", "cpu_temp", "now_playing", "active_theme", "keep_awake",
+    "night_light",
+)
+SLOW_STATE_KEYS = ("wifi", "bluetooth", "tailscale", "mullvad")
+
+DEFAULTS = {
+    "bg": "161a20",
+    "brown": "1f252d",
+    "orange": "4a5568",
+    "amber": "8aa4b8",
+    "text": "c8d0d8",
+}
+
+# Nerd Font glyphs — system already ships JetBrainsMono Nerd Font,
+# so we use codepoints rather than embedded SVG.
+G = {
+    "wifi": "󰤨",
+    "wifi_3": "󰤥",
+    "wifi_2": "󰤢",
+    "wifi_1": "󰤟",
+    "bluetooth": "󰂯",
+    "bluetooth_on": "󰂱",
+    "shield": "󰒃",
+    "bell_off": "󰂛",
+    "coffee": "󰛊",
+    "volume": "󰕾",
+    "volume_mute": "󰝟",
+    "mic": "󰍬",
+    "mic_off": "󰍭",
+    "sun": "󰃟",
+    "moon": "󰽢",
+    "palette": "󰏘",
+    "settings": "󰒓",
+    "lock": "󰌾",
+    "power": "󰐥",
+    "sleep": "󰒲",
+    "leaf": "󰌪",
+    "gauge": "󰂀",
+    "zap": "󱐋",
+    "globe": "󰖟",
+    "key": "󰌆",
+    "chevron_left": "‹",
+    "chevron_right": "›",
+    "headphones": "󰋋",
+    "mouse": "󰍽",
+    "keyboard": "󰌌",
+    "laptop": "󰌢",
+    "server": "󰒋",
+    "phone": "󰏲",
+    "monitor": "󰍹",
+    "clock": "󰥔",
+    "plus": "+",
+    "play": "󰐊",
+    "pause": "󰏤",
+    "skip_back": "󰒮",
+    "skip_forward": "󰒭",
+    "live_dot": "●",
+}

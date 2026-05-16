@@ -99,6 +99,7 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 ## Features
 
 - **Runtime Theming**: A runtime-swappable color system allows changing themes without a full NixOS rebuild.
+- **Packaged Control Center**: The desktop control center now lives in `packages/control-center` as a first-class flake package/app instead of a loose Home Manager script, so its GTK4 code and runtime wrapper are versioned together.
 - **USB Device Control**: USBGuard enabled on `main` with a strict deny-default policy and a curated allowlist for trusted internal/peripheral devices.
 - **Workstation Backups**: `main` backs up user-critical state and persisted service identity to Backblaze B2 with Restic, including Codex/Claude state, Wi-Fi profiles, Mullvad, Tailscale, Bluetooth, fingerprint, USBGuard, Secure Boot PKI, machine-id, and SSH host identity.
 - **Scoped Agent Maintenance Sudo**: `main` keeps normal `wheel` sudo passworded, but allows a narrow set of passwordless maintenance commands for interactive agent sessions: Restic start/status, boot cleanup, selected EFI entry deletion, Nix GC, and switching this flake path.
@@ -135,6 +136,9 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 │   ├── recovery-pubkeys.nix           # Initrd recovery-only SSH public keys
 │   ├── syncthing.nix                  # Shared Syncthing device/folder registry
 │   └── acl.nix                        # Declarative Tailscale ACL generator
+├── packages/
+│   ├── control-center/                # Packaged GTK4 control center app and wrapper
+│   └── inventory-data.nix             # Host/goal inventory export as JSON
 ├── hosts/
 │   ├── main/                          # Primary workstation
 │   │   ├── CLAUDE.md                  # Host-local runbook and gotchas
@@ -191,7 +195,7 @@ The `main` host uses a secure, encrypted systemd-boot setup:
     └── files/                         # Static dotfiles and scripts
         ├── kitty/
         ├── nvim/
-        ├── scripts/
+        ├── scripts/                   # Utility scripts; control-center moved to packages/control-center
         └── waybar/
 ```
 

@@ -101,3 +101,15 @@ Hand-maintained `hardware-configuration.nix` files must carry a short header
 with their regeneration policy and a `Last reviewed: YYYY-MM-DD` note so it is
 obvious when a checked-in hardware snapshot should be regenerated or manually
 revalidated.
+
+## 5. Local Package Boundary
+
+Desktop applications that need custom runtime wrapping but are still repo-owned
+should live under `packages/` and be exposed through flake `packages` and, when
+useful, flake `apps`.
+
+Current example:
+
+- `packages/control-center/` owns the GTK4 control center source tree and its
+  runtime wrapper; Home Manager should consume the packaged output instead of
+  embedding a standalone `home/files/scripts/control_center.py` copy.
