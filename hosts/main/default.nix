@@ -260,6 +260,20 @@ in
         "/home/user/.local/share/Anki2"
         "/home/user/.config/chromium"
         "/home/user/.local/share/kwalletd"
+        "/home/user/.codex"
+        "/home/user/.claude"
+        "/home/user/.claude.json"
+        "/etc/machine-id"
+        "/etc/ssh/ssh_host_ed25519_key"
+        "/etc/ssh/ssh_host_ed25519_key.pub"
+        "/etc/NetworkManager/system-connections"
+        "/etc/mullvad-vpn"
+        "/var/cache/mullvad-vpn"
+        "/var/lib/tailscale"
+        "/var/lib/bluetooth"
+        "/var/lib/fprint"
+        "/var/lib/sbctl"
+        "/var/lib/usbguard"
       ];
       repository = "b2:filipnowakowicz-backup:/main";
       passwordFile = config.sops.secrets.restic_password.path;
