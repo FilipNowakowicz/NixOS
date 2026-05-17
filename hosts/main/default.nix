@@ -258,7 +258,7 @@ in
       IdleActionSec = "15min";
     };
 
-    fprintd = {
+    fprintd = lib.mkIf (!config.profiles.ci) {
       enable = true;
       tod = {
         enable = true;
@@ -267,10 +267,6 @@ in
     };
     # Bluetooth management (GUI)
     blueman.enable = true;
-
-    # prometheus.globalConfig.external_labels = {
-    #   host = "main";
-    # };
 
     # ── Systemd Failure Notifications ────────────────────────────────────────
     systemd-failure-notify = {
@@ -409,19 +405,10 @@ in
     };
   };
 
-  # Fingerprint login
-  security.pam.services = {
+  security.pam.services = lib.mkIf (!config.profiles.ci) {
     hyprlock.fprintAuth = true;
     greetd.fprintAuth = true;
   };
-
-  # systemd.services = {
-  #   prometheus.serviceConfig = {
-  #     TimeoutStopSec = "20s";
-  #     SupplementaryGroups = [ "telemetry-ingest" ];
-  #   };
-  #   "opentelemetry-collector".serviceConfig.SupplementaryGroups = lib.mkAfter [ "telemetry-ingest" ];
-  # };
 
   # NetworkManager manages networking; avoid boot blocking on online targets.
   systemd = {

@@ -338,32 +338,6 @@ in
       # Waybar
       "waybar/config".source = ../../files/waybar/config;
       "waybar/style.css".source = ../../files/waybar/style.css;
-      "hypr/hypridle.conf" = {
-        force = true;
-        text = ''
-          general {
-            after-sleep-cmd = hyprctl dispatch dpms on
-            before-sleep-cmd = loginctl lock-session
-            lock-cmd = pidof hyprlock || ${pkgs.hyprlock}/bin/hyprlock
-          }
-
-          listener {
-            on-timeout = pidof hyprlock > /dev/null || ${pkgs.hyprlock}/bin/hyprlock
-            timeout = 300
-          }
-
-          listener {
-            on-timeout = hyprctl dispatch dpms off
-            on-resume = hyprctl dispatch dpms on
-            timeout = 330
-          }
-
-          listener {
-            on-timeout = ${pkgs.systemd}/bin/systemctl suspend
-            timeout = 900
-          }
-        '';
-      };
     };
   };
 
@@ -382,19 +356,37 @@ in
 
     # ── Hypridle ───────────────────────────────────────────────────────────
     # Hyprland-native idle daemon. Single source of truth for desktop idle
-    # behavior: lock at 10 minutes, suspend at 15 minutes.
-    #
+    # behavior: lock at 5 minutes, screen off at 5:30, suspend at 15 minutes.
     # Uses loginctl lock-session so Hyprland's session-lock protocol handles
     # hyprlock lifecycle independently of the idle timer.
-    #
-    # NOTE: home-manager's hypridle module generates on_timeout (underscore)
-    # but hypridle 0.1.7 requires on-timeout (dash). Module is disabled and
-    # replaced with a handwritten config file plus user service unit.
-    hypridle.enable = false;
+    hypridle = {
+      enable = true;
+      systemdTarget = "nixos-fake-graphical-session.target";
+      settings = {
+        general = {
+          after-sleep-cmd = "hyprctl dispatch dpms on";
+          before-sleep-cmd = "loginctl lock-session";
+          lock-cmd = "pidof hyprlock || ${pkgs.hyprlock}/bin/hyprlock";
+        };
+        listener = [
+          {
+            timeout = 300;
+            on-timeout = "pidof hyprlock > /dev/null || ${pkgs.hyprlock}/bin/hyprlock";
+          }
+          {
+            timeout = 330;
+            on-timeout = "hyprctl dispatch dpms off";
+            on-resume = "hyprctl dispatch dpms on";
+          }
+          {
+            timeout = 900;
+            on-timeout = "${pkgs.systemd}/bin/systemctl suspend";
+          }
+        ];
+      };
+    };
   };
 
-  # Start with the same user target that Hyprland explicitly starts in
-  # ~/.config/hypr/hyprland.conf (nixos-fake-graphical-session.target).
   systemd.user.services = {
     battery-notify = {
       Unit = {
@@ -411,22 +403,6 @@ in
       };
     };
 
-    hypridle = {
-      Unit = {
-        Description = "hypridle";
-        After = [ "nixos-fake-graphical-session.target" ];
-        PartOf = [ "nixos-fake-graphical-session.target" ];
-      };
-      Service = {
-        Type = "simple";
-        ExecStart = "${pkgs.hypridle}/bin/hypridle -c %h/.config/hypr/hypridle.conf";
-        Restart = "on-failure";
-        RestartSec = 10;
-      };
-      Install = {
-        WantedBy = [ "nixos-fake-graphical-session.target" ];
-      };
-    };
   };
 
   systemd.user.timers.battery-notify = {

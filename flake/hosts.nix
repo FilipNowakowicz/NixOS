@@ -86,14 +86,7 @@ let
   ciNixosConfigs = allNixosConfigs // {
     main-ci = mkNixos "main" {
       skipHeavyPackages = true;
-      extraModules = [
-        (
-          { lib, ... }:
-          {
-            services.fprintd.enable = lib.mkForce false;
-          }
-        )
-      ];
+      extraModules = [ { profiles.ci = true; } ];
     };
 
     homeserver-gcp = mkNixos "homeserver-gcp" {
