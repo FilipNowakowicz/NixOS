@@ -152,7 +152,7 @@ in
       lib-generators = import ../tests/lib/generators.nix {
         inherit nixpkgs system;
       };
-      lib-generators-golden = import ../tests/lib/generators.golden.nix {
+      lib-generators-structured = import ../tests/lib/generators-structured.nix {
         inherit nixpkgs system;
       };
       lib-acl = import ../tests/lib/acl.nix {

@@ -37,6 +37,19 @@ let
       expected = "x \"y\" {\n  debug = false\n  enabled = true\n}";
     };
 
+    testStringEscaping = {
+      expr = gen.toAlloyHCL [
+        {
+          type = "loki.write";
+          label = "escaped";
+          body = {
+            value = "say \"hi\" \\ path";
+          };
+        }
+      ];
+      expected = "loki.write \"escaped\" {\n  value = \"say \\\"hi\\\" \\\\ path\"\n}";
+    };
+
     testNestedBlock = {
       expr = gen.toAlloyHCL [
         {
@@ -63,6 +76,19 @@ let
         }
       ];
       expected = "loki.source.journal \"systemd\" {\n  forward_to = [loki.write.target.receiver,]\n}";
+    };
+
+    testEmptyList = {
+      expr = gen.toAlloyHCL [
+        {
+          type = "loki.source.journal";
+          label = "systemd";
+          body = {
+            relabel_rules = [ ];
+          };
+        }
+      ];
+      expected = "loki.source.journal \"systemd\" {\n  relabel_rules = []\n}";
     };
 
     testInlineObject = {
@@ -147,6 +173,21 @@ let
       };
     };
 
+    testNginxProxyLocationExtraOptions = {
+      expr = gen.nginx.proxyLocation {
+        target = "http://127.0.0.1:9000";
+        extraOptions = {
+          recommendedProxySettings = true;
+          proxyReadTimeout = "60s";
+        };
+      };
+      expected = {
+        proxyPass = "http://127.0.0.1:9000";
+        recommendedProxySettings = true;
+        proxyReadTimeout = "60s";
+      };
+    };
+
     testSystemdTimerWithJitter = {
       expr = gen.systemd.timer {
         schedule = "daily";
@@ -178,6 +219,20 @@ let
           Persistent = false;
           RandomizedDelaySec = "2h";
           AccuracySec = "15m";
+        };
+      };
+    };
+
+    testSystemdTimerWantedByOverride = {
+      expr = gen.systemd.timer {
+        schedule = "hourly";
+        wantedBy = [ "custom.target" ];
+      };
+      expected = {
+        wantedBy = [ "custom.target" ];
+        timerConfig = {
+          OnCalendar = "hourly";
+          Persistent = true;
         };
       };
     };

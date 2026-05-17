@@ -111,7 +111,7 @@ light)
     ".#checks.${system}.invariants-homeserver-gcp" \
     ".#checks.${system}.invariants-main" \
     ".#checks.${system}.lib-generators" \
-    ".#checks.${system}.lib-generators-golden" \
+    ".#checks.${system}.lib-generators-structured" \
     ".#checks.${system}.lib-acl" \
     ".#checks.${system}.lib-invariants" \
     ".#checks.${system}.secrets-directory"

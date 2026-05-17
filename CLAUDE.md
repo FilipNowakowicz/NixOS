@@ -25,7 +25,7 @@ approaches proactively. Explain why, not just what.
 - **Validate hosts:** `bash scripts/validate.sh hosts`
 - **Validate profile tests:** `bash scripts/validate.sh profile-tests`
 - **Validate heavy suite:** `bash scripts/validate.sh heavy`
-- **Golden tests:** `nix build '.#checks.x86_64-linux.lib-generators-golden'`
+- **Structured generator tests:** `nix build '.#checks.x86_64-linux.lib-generators-structured'`
 - **CVE scan:** `bash scripts/validate.sh cve-reports`
 - **Lint:** `statix check .` and `deadnix .`
 - **Pre-commit (manual run):** `pre-commit run --all-files`
