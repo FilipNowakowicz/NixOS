@@ -1,14 +1,9 @@
 {
-  config,
   inputs,
   lib,
   pkgs,
   ...
 }:
-let
-  trustedUsers = config.nix.settings.trusted-users or [ ];
-  broadTrustedUsers = lib.filter (user: user == "*" || lib.hasPrefix "@" user) trustedUsers;
-in
 {
   zramSwap.enable = true;
 
@@ -46,11 +41,11 @@ in
 
   # ── Localization ───────────────────────────────────────────────────────────
   time.timeZone = lib.mkDefault "Europe/Warsaw";
-  i18n.defaultLocale = "en_GB.UTF-8";
-  console.keyMap = "dvorak";
+  i18n.defaultLocale = lib.mkDefault "en_GB.UTF-8";
+  console.keyMap = lib.mkDefault "dvorak";
 
   # ── Shell ───────────────────────────────────────────────────────────────────
-  programs.zsh.enable = true;
+  programs.zsh.enable = lib.mkDefault true;
   users.defaultUserShell = pkgs.zsh;
 
   # ── System Packages ────────────────────────────────────────────────────────
@@ -61,8 +56,4 @@ in
     usbutils
     wget
   ];
-
-  warnings =
-    lib.optional (broadTrustedUsers != [ ])
-      "nix.settings.trusted-users contains broad trust entries (${lib.concatStringsSep ", " broadTrustedUsers}); prefer exact users unless this is intentional.";
 }
