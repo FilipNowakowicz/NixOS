@@ -152,6 +152,7 @@ in
     collectors = {
       metrics.enable = true;
       logs.enable = true;
+      audit.enable = true;
       traces.enable = true;
       blackbox = {
         enable = true;

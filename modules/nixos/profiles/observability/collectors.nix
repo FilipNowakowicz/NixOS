@@ -21,37 +21,116 @@ let
     };
   };
 
-  alloyConfig = gen.toAlloyHCL [
+  auditSources = cfg.collectors.audit.sources // cfg.collectors.audit.extraSources;
+
+  mkRelabelRule =
     {
-      type = "loki.write";
-      label = "target";
-      body = {
-        endpoint = gen.nestedBlock (
-          {
-            url = cfg.collectors.logs.pushURL;
-          }
-          // lib.optionalAttrs shouldUseIngestAuth {
-            basic_auth = gen.nestedBlock {
-              password_file = toString cfg.ingestAuth.passwordFile;
-              inherit (cfg.ingestAuth) username;
-            };
-          }
-        );
+      sourceLabels,
+      targetLabel,
+      action ? null,
+      regex ? null,
+      replacement ? null,
+    }:
+    gen.nestedBlock (
+      {
+        source_labels = sourceLabels;
+        target_label = targetLabel;
+      }
+      // lib.optionalAttrs (action != null) {
+        inherit action;
+      }
+      // lib.optionalAttrs (regex != null) {
+        inherit regex;
+      }
+      // lib.optionalAttrs (replacement != null) {
+        inherit replacement;
+      }
+    );
+
+  journalRelabelComponent = {
+    type = "loki.relabel";
+    label = "journal_labels";
+    body = {
+      forward_to = [ (gen.ref "loki.write.target.receiver") ];
+      rule = [
+        (mkRelabelRule {
+          sourceLabels = [ "__journal__systemd_unit" ];
+          targetLabel = "unit";
+        })
+        (mkRelabelRule {
+          sourceLabels = [ "__journal_syslog_identifier" ];
+          targetLabel = "syslog_identifier";
+        })
+        (mkRelabelRule {
+          sourceLabels = [ "__journal_priority_keyword" ];
+          targetLabel = "priority";
+        })
+        (mkRelabelRule {
+          sourceLabels = [ "__journal__comm" ];
+          targetLabel = "comm";
+        })
+      ];
+    };
+  };
+
+  defaultJournalSource = {
+    type = "loki.source.journal";
+    label = "systemd";
+    body = {
+      forward_to = [ (gen.ref "loki.write.target.receiver") ];
+      labels = {
+        host = config.networking.hostName;
+        job = "systemd-journal";
       };
-    }
-    {
-      type = "loki.source.journal";
-      label = "systemd";
-      body = {
-        forward_to = [ (gen.ref "loki.write.target.receiver") ];
-        labels = {
-          host = config.networking.hostName;
-          job = "systemd-journal";
+      relabel_rules = gen.ref "loki.relabel.journal_labels.rules";
+      max_age = "12h";
+    };
+  };
+
+  auditJournalSources = lib.mapAttrsToList (name: source: {
+    type = "loki.source.journal";
+    label = "audit_${name}";
+    body = {
+      forward_to = [ (gen.ref "loki.write.target.receiver") ];
+      inherit (source) matches;
+      labels = {
+        host = config.networking.hostName;
+        job = "audit-journal";
+        audit_event_type = source.eventType;
+        audit_scope = source.scope;
+        audit_source = name;
+      }
+      // source.labels;
+      relabel_rules = gen.ref "loki.relabel.journal_labels.rules";
+      format_as_json = source.formatAsJson;
+      max_age = "12h";
+    };
+  }) (lib.filterAttrs (_: source: source.enable) auditSources);
+
+  alloyConfig = gen.toAlloyHCL (
+    [
+      {
+        type = "loki.write";
+        label = "target";
+        body = {
+          endpoint = gen.nestedBlock (
+            {
+              url = cfg.collectors.logs.pushURL;
+            }
+            // lib.optionalAttrs shouldUseIngestAuth {
+              basic_auth = gen.nestedBlock {
+                password_file = toString cfg.ingestAuth.passwordFile;
+                inherit (cfg.ingestAuth) username;
+              };
+            }
+          );
         };
-        max_age = "12h";
-      };
-    }
-  ];
+      }
+      journalRelabelComponent
+      defaultJournalSource
+    ]
+    ++ lib.optionals cfg.collectors.audit.enable auditJournalSources
+  );
 
   sanitizeProbeName =
     name:
@@ -214,6 +293,126 @@ in
           );
         default = { };
         description = "Named HTTP probes scraped through the local blackbox exporter.";
+      };
+    };
+
+    audit = {
+      enable = lib.mkEnableOption "narrow audit-focused journald streams for Loki";
+
+      sources = lib.mkOption {
+        type =
+          with lib.types;
+          attrsOf (
+            submodule (_: {
+              options = {
+                enable = lib.mkOption {
+                  type = bool;
+                  default = true;
+                  description = "Whether to emit this audit stream.";
+                };
+
+                matches = lib.mkOption {
+                  type = str;
+                  description = "systemd journal match string used by Alloy for this audit stream.";
+                  example = "SYSLOG_IDENTIFIER=sudo";
+                };
+
+                eventType = lib.mkOption {
+                  type = str;
+                  description = "Stable audit event type label for this stream.";
+                  example = "sudo";
+                };
+
+                scope = lib.mkOption {
+                  type = str;
+                  description = "Operational scope label attached to this audit stream.";
+                  example = "operator-actions";
+                };
+
+                labels = lib.mkOption {
+                  type = attrsOf str;
+                  default = { };
+                  description = "Additional static labels attached to this audit stream.";
+                };
+
+                formatAsJson = lib.mkOption {
+                  type = bool;
+                  default = false;
+                  description = "Whether to forward full journal entries as JSON for this audit stream.";
+                };
+              };
+            })
+          );
+        default = {
+          sudo = {
+            matches = "SYSLOG_IDENTIFIER=sudo";
+            eventType = "sudo";
+            scope = "operator-actions";
+          };
+          ssh = {
+            matches = "_SYSTEMD_UNIT=sshd.service";
+            eventType = "ssh";
+            scope = "remote-access";
+          };
+          service-failures = {
+            matches = "SYSLOG_IDENTIFIER=systemd PRIORITY=3";
+            eventType = "service_failure";
+            scope = "service-health";
+          };
+        };
+        description = ''
+          Built-in audit journald streams. These are intentionally narrow and
+          focus on events that are likely to matter during incident review.
+        '';
+      };
+
+      extraSources = lib.mkOption {
+        type =
+          with lib.types;
+          attrsOf (
+            submodule (_: {
+              options = {
+                enable = lib.mkOption {
+                  type = bool;
+                  default = true;
+                  description = "Whether to emit this extra audit stream.";
+                };
+
+                matches = lib.mkOption {
+                  type = str;
+                  description = "systemd journal match string used by Alloy for this audit stream.";
+                };
+
+                eventType = lib.mkOption {
+                  type = str;
+                  description = "Stable audit event type label for this stream.";
+                };
+
+                scope = lib.mkOption {
+                  type = str;
+                  description = "Operational scope label attached to this audit stream.";
+                };
+
+                labels = lib.mkOption {
+                  type = attrsOf str;
+                  default = { };
+                  description = "Additional static labels attached to this audit stream.";
+                };
+
+                formatAsJson = lib.mkOption {
+                  type = bool;
+                  default = false;
+                  description = "Whether to forward full journal entries as JSON for this audit stream.";
+                };
+              };
+            })
+          );
+        default = { };
+        description = ''
+          Host-specific audit journald streams merged on top of the built-in
+          sources. Use this for additional narrow selectors such as a stable
+          secret materialization unit if a host exposes one.
+        '';
       };
     };
   };

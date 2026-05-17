@@ -162,6 +162,42 @@ Allowed command categories are limited to:
 Do not broaden this to full passwordless sudo. Additions should be exact-command
 maintenance operations and should keep normal interactive sudo passworded.
 
+## Audit Timeline In Loki
+
+Security-relevant host events are shipped to Loki through the existing Alloy
+journald pipeline.
+
+The general journal stream keeps broad operational coverage under
+`job="systemd-journal"`. A second narrow stream keeps incident-focused events
+under `job="audit-journal"` with stable labels:
+
+- `audit_event_type` for the event class, currently `sudo`, `ssh`, or `service_failure`;
+- `audit_scope` for the operational area, such as `operator-actions` or `remote-access`;
+- `audit_source` for the configured selector name;
+- `unit`, `syslog_identifier`, `priority`, and `comm` when journald exposes them.
+
+Current built-in selectors intentionally stay narrow:
+
+- `SYSLOG_IDENTIFIER=sudo`
+- `_SYSTEMD_UNIT=sshd.service`
+- `SYSLOG_IDENTIFIER=systemd PRIORITY=3`
+
+Use host-specific `profiles.observability.collectors.audit.extraSources` only
+for additional high-signal selectors. This is the extension point for things
+like a stable secret-materialization unit if a host exposes one; do not turn it
+into a broad "ship every auth-related log twice" rule set.
+
+Common LogQL queries:
+
+- `{job="audit-journal"}`
+- `{job="audit-journal",audit_event_type="sudo"}`
+- `{job="audit-journal",audit_event_type="ssh"}`
+- `{job="audit-journal",audit_event_type="service_failure"}`
+- `{job="audit-journal",host="main"} |= "session opened"`
+
+Grafana renders these through the `Security Events` dashboard on
+`homeserver-gcp`.
+
 ## Backups
 
 Backup policy is driven by `hostMeta.backup.class` from `lib/hosts.nix` and

@@ -5,6 +5,7 @@ in
 {
   profiles.observability.dashboards = {
     fleet.enable = true;
+    security-events.enable = true;
 
     lynis = {
       enable = true;

@@ -53,6 +53,7 @@ in
           enable = true;
           pushURL = "https://${cfg.remoteEndpoint.host}/obs/loki/loki/api/v1/push";
         };
+        audit.enable = true;
         traces = {
           enable = true;
           exportURL = "https://${cfg.remoteEndpoint.host}/obs/otlp/v1/traces";

@@ -132,6 +132,78 @@ let
     ];
   };
 
+  securityEventsDashboard = dash.mkDashboard {
+    uid = "security-events";
+    title = "Security Events";
+    timeFrom = "now-24h";
+    panels = [
+      (dash.logsPanel {
+        id = 20;
+        title = "Recent Audit Events";
+        ds = dash.lokiDS;
+        gridPos = dash.gridPos {
+          x = 0;
+          y = 0;
+          w = 24;
+          h = 8;
+        };
+        targets = [
+          (dash.target {
+            expr = "{job=\"audit-journal\"}";
+          })
+        ];
+      })
+      (dash.logsPanel {
+        id = 21;
+        title = "Sudo Activity";
+        ds = dash.lokiDS;
+        gridPos = dash.gridPos {
+          x = 0;
+          y = 8;
+          w = 12;
+          h = 8;
+        };
+        targets = [
+          (dash.target {
+            expr = "{job=\"audit-journal\",audit_event_type=\"sudo\"}";
+          })
+        ];
+      })
+      (dash.logsPanel {
+        id = 22;
+        title = "SSH Sessions";
+        ds = dash.lokiDS;
+        gridPos = dash.gridPos {
+          x = 12;
+          y = 8;
+          w = 12;
+          h = 8;
+        };
+        targets = [
+          (dash.target {
+            expr = "{job=\"audit-journal\",audit_event_type=\"ssh\"}";
+          })
+        ];
+      })
+      (dash.logsPanel {
+        id = 23;
+        title = "Service Failures";
+        ds = dash.lokiDS;
+        gridPos = dash.gridPos {
+          x = 0;
+          y = 16;
+          w = 24;
+          h = 8;
+        };
+        targets = [
+          (dash.target {
+            expr = "{job=\"audit-journal\",audit_event_type=\"service_failure\"}";
+          })
+        ];
+      })
+    ];
+  };
+
   dashboardSubmodule = lib.types.submodule {
     options = {
       enable = lib.mkOption {
@@ -162,6 +234,11 @@ in
     profiles.observability.dashboards.fleet = {
       enable = lib.mkDefault false;
       definition = fleetDashboard;
+    };
+
+    profiles.observability.dashboards.security-events = {
+      enable = lib.mkDefault false;
+      definition = securityEventsDashboard;
     };
 
     environment.etc = lib.mapAttrs' (name: dashboard: {
