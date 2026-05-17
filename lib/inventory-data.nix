@@ -151,6 +151,17 @@ let
       health = hostHealth name cfg;
       resticBackups = c.services.restic.backups or { };
       tailscaleFirewall = (c.networking.firewall.interfaces or { }).tailscale0 or { };
+      trackedSystemdUnits = lib.filter (unit: unit != "") [
+        (lib.optionalString c.services.openssh.enable "sshd.service")
+        (lib.optionalString c.services.tailscale.enable "tailscaled.service")
+        (lib.optionalString (c.services.nginx.enable or false) "nginx.service")
+        (lib.optionalString (c.services.vaultwarden.enable or false) "vaultwarden.service")
+        (lib.optionalString (c.services.adguardhome.enable or false) "adguardhome.service")
+        (lib.optionalString (c.services.grafana.enable or false) "grafana.service")
+        (lib.optionalString (c.services.loki.enable or false) "loki.service")
+        (lib.optionalString (c.services.mimir.enable or false) "mimir.service")
+        (lib.optionalString (c.services.tempo.enable or false) "tempo.service")
+      ];
     in
     {
       inherit name;
@@ -163,6 +174,7 @@ let
       tailscaleTracked = (meta ? tailscale) || (meta ? tailnetFQDN);
       ip = meta.ip or null;
       deployable = meta ? deploy;
+      deployUser = meta.deploy.sshUser or null;
       backupClass = meta.backup.class or null;
       homeManagerRole = meta.homeManager.role or null;
       homeManagerProfiles = meta.homeManager.profiles or [ ];
@@ -217,6 +229,13 @@ let
           ]
         else
           [ ];
+      drift = {
+        tailscaleTag = meta.tailscale.tag or null;
+        tailnetFQDN = meta.tailnetFQDN or null;
+        tcpPorts = tailscaleFirewall.allowedTCPPorts or [ ];
+        strictTCPPortSet = meta ? deploy;
+        systemdUnits = trackedSystemdUnits;
+      };
       inherit health;
     };
 

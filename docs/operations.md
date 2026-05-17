@@ -40,6 +40,13 @@ systemctl list-timers --all --no-pager | rg 'restic|btrfs|fstrim|nix'
 systemctl --failed --no-pager
 ```
 
+Run the narrow drift check after rebuilds when the change could affect
+Tailscale identity, tailscale-only ports, or core service state:
+
+```bash
+bash scripts/check-host-drift.sh main
+```
+
 `main` mounts its primary Btrfs subvolumes with `compress=zstd`; verify that in
 the `findmnt` output for `/`, `/home`, `/nix`, and `/persist`. A hidden
 maintenance mount at `/.btrfs-root` exposes the filesystem top-level so
@@ -136,6 +143,19 @@ the live homeserver routing surface. The test checks:
 
 Use this before deploy work that touches `hosts/homeserver-gcp/` or the
 observability ingress path.
+
+After deploys, run the host drift check from a machine that can reach the
+tailnet host:
+
+```bash
+bash scripts/check-host-drift.sh homeserver-gcp
+```
+
+The first pass checks a narrow set of registry-backed facts:
+
+- Tailscale tag and tailnet FQDN from `lib/hosts.nix`
+- Tailscale-only TCP ports derived from `networking.firewall.interfaces.tailscale0.allowedTCPPorts`
+- Selected enabled systemd units such as `tailscaled`, `sshd`, and core homeserver services
 
 ## Tailscale ACL Drift
 

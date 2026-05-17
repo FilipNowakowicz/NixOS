@@ -1,0 +1,220 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(
+  git rev-parse --show-toplevel 2>/dev/null || pwd
+)"
+cd "$repo_root"
+
+usage() {
+  cat <<'EOF'
+Usage: bash scripts/check-host-drift.sh [host]
+
+Compare a host's live state against the repo's expected drift facts.
+
+Examples:
+  bash scripts/check-host-drift.sh main
+  bash scripts/check-host-drift.sh homeserver-gcp
+EOF
+}
+
+host="${1:-}"
+if [[ -z $host ]]; then
+  if command -v hostnamectl >/dev/null 2>&1; then
+    host="$(hostnamectl --static)"
+  else
+    host="$(hostname -s)"
+  fi
+fi
+
+case "${host:-}" in
+"" | -h | --help | help)
+  usage
+  exit 0
+  ;;
+esac
+
+inventory_path="$(nix build '.#packages.x86_64-linux.inventory-data' --no-link --print-out-paths)/inventory.json"
+
+host_json="$(
+  jq -e -c --arg host "$host" '.hosts[] | select(.name == $host)' "$inventory_path"
+)"
+
+expected_tag="$(jq -r '.drift.tailscaleTag // ""' <<<"$host_json")"
+expected_fqdn="$(jq -r '.drift.tailnetFQDN // ""' <<<"$host_json")"
+strict_tcp_port_set="$(jq -r '.drift.strictTCPPortSet // false' <<<"$host_json")"
+deployable="$(jq -r '.deployable // false' <<<"$host_json")"
+deploy_user="$(jq -r '.deployUser // ""' <<<"$host_json")"
+units_json="$(jq -c '.drift.systemdUnits // []' <<<"$host_json")"
+expected_ports_json="$(jq -c '.drift.tcpPorts // []' <<<"$host_json")"
+mapfile -t units < <(jq -r '.[]' <<<"$units_json")
+
+current_host=""
+if command -v hostnamectl >/dev/null 2>&1; then
+  current_host="$(hostnamectl --static 2>/dev/null || true)"
+fi
+if [[ -z $current_host ]]; then
+  current_host="$(hostname -s 2>/dev/null || true)"
+fi
+
+transport="local"
+transport_target="$host"
+if [[ $deployable == "true" && $host != "$current_host" ]]; then
+  if [[ -z $deploy_user || -z $expected_fqdn ]]; then
+    echo "error: ${host} is deployable but inventory data does not include ssh user and tailnet FQDN" >&2
+    exit 1
+  fi
+  transport="ssh"
+  transport_target="${deploy_user}@${expected_fqdn}"
+fi
+if [[ $deployable != "true" && -n $current_host && $host != "$current_host" ]]; then
+  echo "error: ${host} is a local-only host; run this command on ${host} itself" >&2
+  exit 1
+fi
+
+# shellcheck disable=SC2016
+probe_script='
+set -euo pipefail
+
+tmpdir="$(mktemp -d)"
+cleanup() {
+  rm -rf "$tmpdir"
+}
+trap cleanup EXIT
+
+if command -v tailscale >/dev/null 2>&1; then
+  tailscale status --json >"$tmpdir/tailscale.json" 2>/dev/null || printf "{}\n" >"$tmpdir/tailscale.json"
+else
+  printf "{}\n" >"$tmpdir/tailscale.json"
+fi
+
+if command -v ss >/dev/null 2>&1; then
+  if ! ss -H -ltn >"$tmpdir/ports.txt" 2>/dev/null; then
+    : >"$tmpdir/ports.txt"
+  fi
+else
+  : >"$tmpdir/ports.txt"
+fi
+
+: >"$tmpdir/units.txt"
+for unit in "$@"; do
+  state="$(systemctl is-active "$unit" 2>/dev/null || true)"
+  if [ -z "$state" ]; then
+    state="unknown"
+  fi
+  printf "%s\t%s\n" "$unit" "$state" >>"$tmpdir/units.txt"
+done
+
+emit_section() {
+  local name="$1"
+  local path="$2"
+  printf "__HOST_DRIFT_SECTION__ %s %s\n" "$name" "$(base64 <"$path" | tr -d "\n")"
+}
+
+emit_section tailscale "$tmpdir/tailscale.json"
+emit_section ports "$tmpdir/ports.txt"
+emit_section units "$tmpdir/units.txt"
+'
+
+echo "Building expected drift data for ${host}..."
+echo "Collecting live state over ${transport}: ${transport_target}"
+
+probe_output=""
+if [[ $transport == "ssh" ]]; then
+  probe_output="$(
+    ssh \
+      -o BatchMode=yes \
+      -o ConnectTimeout=10 \
+      "$transport_target" \
+      bash -s -- "${units[@]}" <<<"$probe_script"
+  )"
+else
+  probe_output="$(
+    bash -s -- "${units[@]}" <<<"$probe_script"
+  )"
+fi
+
+section_b64() {
+  local name="$1"
+  awk -v name="$name" '$1 == "__HOST_DRIFT_SECTION__" && $2 == name { print $3 }' <<<"$probe_output"
+}
+
+tailscale_json="$(section_b64 tailscale | base64 -d)"
+ports_text="$(section_b64 ports | base64 -d)"
+units_text="$(section_b64 units | base64 -d)"
+
+actual_tags_json="$(jq -c '[.Self.Tags[]? | sub("^tag:"; "")] | unique' <<<"$tailscale_json")"
+actual_fqdn="$(jq -r '(.Self.DNSName // "") | rtrimstr(".")' <<<"$tailscale_json")"
+actual_ports_json="$(
+  awk '
+    $1 == "LISTEN" {
+      local = $4
+      if (local ~ /^127\.0\.0\.1:/) next
+      if (local ~ /^\[::1\]:/) next
+      port = local
+      sub(/^.*:/, "", port)
+      if (port ~ /^[0-9]+$/) print port
+    }
+  ' <<<"$ports_text" | sort -n | uniq | jq -Rcs '
+    split("\n")
+    | map(select(length > 0) | tonumber)
+  '
+)"
+
+failures=()
+
+record_failure() {
+  local message="$1"
+  failures+=("$message")
+}
+
+if [[ -n $expected_tag ]]; then
+  if ! jq -e --arg tag "$expected_tag" 'index($tag) != null' <<<"$actual_tags_json" >/dev/null; then
+    live_tags="$(jq -r 'if length == 0 then "<none>" else join(", ") end' <<<"$actual_tags_json")"
+    record_failure "tailscale tag mismatch: expected ${expected_tag} from lib/hosts.nix, live tags are ${live_tags}"
+  fi
+fi
+
+if [[ -n $expected_fqdn && $actual_fqdn != "$expected_fqdn" ]]; then
+  record_failure "tailnet FQDN mismatch: expected ${expected_fqdn} from lib/hosts.nix, live value is ${actual_fqdn:-<missing>}"
+fi
+
+missing_ports_json="$(
+  jq -nc \
+    --argjson expected "$expected_ports_json" \
+    --argjson actual "$actual_ports_json" \
+    '$expected - $actual'
+)"
+if [[ "$(jq 'length' <<<"$missing_ports_json")" -gt 0 ]]; then
+  record_failure "missing listening TCP ports: expected $(jq -r 'join(\", \")' <<<"$missing_ports_json") from networking.firewall.interfaces.tailscale0.allowedTCPPorts"
+fi
+
+if [[ $strict_tcp_port_set == "true" ]]; then
+  extra_ports_json="$(
+    jq -nc \
+      --argjson expected "$expected_ports_json" \
+      --argjson actual "$actual_ports_json" \
+      '$actual - $expected'
+  )"
+  if [[ "$(jq 'length' <<<"$extra_ports_json")" -gt 0 ]]; then
+    record_failure "unexpected non-loopback listening TCP ports: $(jq -r 'join(\", \")' <<<"$extra_ports_json"); review host service modules or manual changes"
+  fi
+fi
+
+while IFS=$'\t' read -r unit state; do
+  [[ -n $unit ]] || continue
+  if [[ $state != "active" ]]; then
+    record_failure "systemd unit ${unit} is ${state}; expected active because the corresponding service is enabled in NixOS modules"
+  fi
+done <<<"$units_text"
+
+if [[ ${#failures[@]} -eq 0 ]]; then
+  echo "Host drift check passed for ${host}."
+  exit 0
+fi
+
+echo "HOST DRIFT DETECTED for ${host}:"
+for failure in "${failures[@]}"; do
+  echo "  - ${failure}"
+done
+exit 1
