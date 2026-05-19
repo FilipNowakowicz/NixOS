@@ -193,12 +193,21 @@ in
 
   # Narrow passwordless sudo for interactive agent-assisted maintenance.
   # Keep wheel passworded globally; only these exact commands are exempt.
-  security.sudo.extraRules = [
-    {
-      users = [ "user" ];
-      commands = map passwordlessAgentCommand agentMaintenanceCommands;
-    }
-  ];
+  security = {
+    sudo.extraConfig = ''
+      Defaults lecture=never
+    '';
+    sudo.extraRules = [
+      {
+        users = [ "user" ];
+        commands = map passwordlessAgentCommand agentMaintenanceCommands;
+      }
+    ];
+    pam.services = lib.mkIf (!config.profiles.ci) {
+      hyprlock.fprintAuth = true;
+      greetd.fprintAuth = true;
+    };
+  };
 
   assertions = [
     {
@@ -469,11 +478,6 @@ in
         ];
       };
     };
-  };
-
-  security.pam.services = lib.mkIf (!config.profiles.ci) {
-    hyprlock.fprintAuth = true;
-    greetd.fprintAuth = true;
   };
 
   # NetworkManager manages networking; avoid boot blocking on online targets.
