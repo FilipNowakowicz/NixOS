@@ -30,6 +30,7 @@
     "/var/lib/fprint" # fingerprint enrollments
     "/var/lib/usbguard" # USBGuard rule hashes
     "/var/lib/fail2ban" # banned-IP database (resets to empty without this)
+    "/var/db/sudo" # sudo lecture marker; avoids first-sudo lecture after every rollback
     "/var/cache/tuigreet" # tuigreet --remember last-user cache
     "/var/cache/restic-backups-local" # restic index/pack cache; avoid B2 re-download after each rollback
     "/etc/NetworkManager/system-connections" # saved Wi-Fi / VPN profiles
