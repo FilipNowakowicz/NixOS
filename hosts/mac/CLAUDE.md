@@ -32,9 +32,15 @@ findmnt -R / -o TARGET,SOURCE,FSTYPE,OPTIONS
 - **Compression**: `compress=zstd` on all primary subvolumes.
 - **Ephemeral root**: same rollback pattern as `main`. `@root` is moved to
   `/old_roots/<timestamp>` and reset to `@root-blank` on every boot.
-- **No TPM2**: pre-2018 MacBook Air has no T2; LUKS unlock is passphrase-only
-  at the bootloader prompt. Keep the passphrase in your password manager —
-  there is no initrd SSH fallback configured.
+- **No TPM2**: pre-2018 MacBook Air has no T2. While the host stays at home,
+  a sops-managed keyfile (`luks_keyfile` in `hosts/mac/secrets/luks-keyfile.enc`)
+  is baked into the initrd via `boot.initrd.secrets` and unlocks LUKS without
+  a prompt; the original passphrase still works as fallback. This trades
+  at-rest protection for boot convenience — the keyfile sits on the
+  unencrypted ESP, so the disk is only protected if pulled from the machine.
+  Before the laptop travels: remove the `boot.initrd` keyfile block from
+  `default.nix`, run `cryptsetup luksRemoveKey` for the keyfile slot, and
+  fall back to the passphrase (or enrol a FIDO2 token).
 
 ## Persistent State
 

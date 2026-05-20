@@ -24,15 +24,15 @@ default path.
 
 ## Hardware
 
-| Component   | Detail                                                |
-| :---------- | :---------------------------------------------------- |
-| CPU         | Intel Core i5-5350U (Broadwell, x86_64)               |
-| GPU         | Intel HD Graphics 6000 (modesetting, no discrete)     |
-| RAM         | 8 GB LPDDR3 (non-upgradable)                          |
-| WiFi        | Broadcom BCM4360 — needs firmware (see below)         |
-| Storage     | 128 GB Apple PCIe SSD — `/dev/nvme0n1`                |
-| Ethernet    | No built-in port — USB-to-ethernet adapter required   |
-| Secure Boot | No T2 chip (pre-2018) — standard EFI boot, no lockout |
+| Component   | Detail                                                                    |
+| :---------- | :------------------------------------------------------------------------ |
+| CPU         | Intel Core i5-5350U (Broadwell, x86_64)                                   |
+| GPU         | Intel HD Graphics 6000 (modesetting, no discrete)                         |
+| RAM         | 8 GB LPDDR3 (non-upgradable)                                              |
+| WiFi        | Broadcom BCM4360 — needs firmware (see below)                             |
+| Storage     | 128 GB Apple SSD — `/dev/disk/by-id/ata-APPLE_SSD_SM0128G_S2XUNY4M230628` |
+| Ethernet    | No built-in port — USB-to-ethernet adapter required                       |
+| Secure Boot | No T2 chip (pre-2018) — standard EFI boot, no lockout                     |
 
 8 GB RAM + dual-core Broadwell is the hard ceiling. It is enough for a
 browser, a terminal, an editor, and a Moonlight stream — not much beyond.
@@ -96,11 +96,13 @@ home LAN devices that should not run Tailscale themselves.
       the minimal ISO). iPhone USB tethering is a viable fallback.
 - [ ] USB drive for the installer ISO.
 
-## Status (2026-05-18)
+## Status (2026-05-19)
 
-Configuration is **landed on disk** and evaluates + builds cleanly. The host
-has not been installed yet. The remaining work is the physical install:
-build an ISO, flash it to USB, boot the Mac, run `nixos-anywhere`.
+Configuration is **installed on the MacBook Air** and reachable over Tailscale
+as `mac.tail90fc7a.ts.net` / `100.73.117.103`. The post-install smoke checks
+pass: SSH works, the system is running, no units are failed, Tailscale is
+authed, secrets are decrypted, impermanence mounts are in place, and
+`deploy --dry-activate '.#mac'` reaches the target successfully.
 
 What's already in the repo:
 
@@ -140,9 +142,10 @@ What deliberately diverged from the original plan:
   (`input-leap`, `moonlight-qt`, `services.syncthing.enable = true`) need
   a `home/users/user/mac.nix` or a conditional in `home.nix`.
 
-## Install Runbook (next session)
+## Install Runbook (archived)
 
-Everything below has to happen with the Mac physically present.
+The install has already been completed. Keep this archived runbook only for a
+future reinstall.
 
 ### Prerequisites
 
@@ -222,6 +225,20 @@ nix develop --command nixos-anywhere \
   root@<installer-ip>
 ```
 
+For the temporary reverse-tunnel install path, use the GCP loopback tunnel
+instead of the LAN IP:
+
+```bash
+nix develop --command nixos-anywhere \
+  --flake '.#mac' \
+  --extra-files "$EXTRA" \
+  --ssh-option StrictHostKeyChecking=no \
+  --ssh-option UserKnownHostsFile=/tmp/mac-installer-root-known-hosts \
+  --ssh-option 'ProxyCommand=ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/tmp/gcp-jump-known-hosts -W %h:%p user@100.103.234.89' \
+  --ssh-port 2200 \
+  root@127.0.0.1
+```
+
 Disko will:
 
 1. Partition the SSD: 512 MB ESP (`mac-boot`) + LUKS (the rest).
@@ -250,21 +267,21 @@ The Mac should:
   if no auth key is present in sops; we did not pre-bake one).
 
 ```bash
-ssh user@<mac-tailscale-ip>
-sudo systemctl status sops-nix.service rollback-root.service --no-pager
+ssh user@mac.tail90fc7a.ts.net
+sudo test -s /run/secrets-for-users.d/1/user_password
+sudo test -s /run/secrets-for-users.d/1/root_password
+sudo systemctl is-active sshd tailscaled alloy prometheus-node-exporter prometheus
 systemctl --failed --no-pager
 findmnt -R / -o TARGET,SOURCE,FSTYPE,OPTIONS
 ```
 
-### 8. Replace the disk pointer with `/dev/disk/by-id/...`
+### 8. Disk pointer
 
-`hosts/mac/disko.nix` currently points at `/dev/nvme0n1`. Once the live
-system reports the stable id, edit `disko.nix` to use it and redeploy:
+`hosts/mac/disko.nix` uses the stable device id reported by the installed
+system:
 
 ```bash
-ls -l /dev/disk/by-id | grep nvme   # on the Mac
-# back on main, edit hosts/mac/disko.nix, then:
-deploy '.#mac'
+/dev/disk/by-id/ata-APPLE_SSD_SM0128G_S2XUNY4M230628
 ```
 
 ### 9. Add Tailscale auth key to sops (optional, only if you want the Mac
@@ -286,19 +303,19 @@ Pre-install (done):
 
 Post-install (next session):
 
-- [ ] Mac reaches stage 2, no failed units.
-- [ ] SSH from `main` over Tailscale works.
-- [ ] `deploy '.#mac'` from `main` ships diffs.
-- [ ] Host appears in Grafana node dashboard via observability-client.
-- [ ] User and root console login both work (hash from sops).
-- [ ] Disk pointer in `disko.nix` replaced with `/dev/disk/by-id/...`.
+- [x] Mac reaches stage 2, no failed units.
+- [x] SSH from `main` over Tailscale works.
+- [x] `deploy --dry-activate '.#mac'` from `main` reaches activation.
+- [x] Host appears in Grafana node dashboard via observability-client.
+- [x] User and root console login both work (hash from sops verified remotely;
+      physical TTY login still requires a keyboard/screen check).
+- [x] Disk pointer in `disko.nix` replaced with `/dev/disk/by-id/...`.
 
 Workload follow-ups (not part of the bootstrap):
 
 - [ ] `home/users/user/mac.nix` or conditional adds for `input-leap`
       (client) + `moonlight-qt` + `services.syncthing.enable = true` with
       the Syncthing folder set defined in `lib/syncthing.nix`.
-- [ ] Trim Hyprland eye-candy (blur, complex animations) for Intel HD 6000.
 - [ ] Input Leap server config on `main` (TLS cert exchange + Tailscale-only
       bind).
 - [ ] Sunshine host config on `main` for Moonlight client on mac.

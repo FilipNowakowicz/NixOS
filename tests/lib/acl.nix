@@ -15,6 +15,10 @@ let
       tailscale.tag = "workstation";
       backup.class = "standard";
     };
+    mac = {
+      role = "desktop";
+      tailscale.tag = "workstation";
+    };
     homeserver-gcp = {
       role = "homeserver";
       tailnetFQDN = "homeserver-gcp.example.ts.net";
@@ -66,10 +70,10 @@ let
       ];
     };
 
-    # Two tag-pair rules (server↔workstation) plus the admin break-glass.
+    # Server↔workstation, workstation peers, plus the admin break-glass.
     testAclCount = {
       expr = lib.length result.acls;
-      expected = 3;
+      expected = 4;
     };
 
     # Rules are sorted by "srcTag→dstTag"; server < workstation alphabetically.
@@ -95,11 +99,21 @@ let
 
     testThirdAclSrc = {
       expr = (lib.elemAt result.acls 2).src;
-      expected = [ "autogroup:admin" ];
+      expected = [ "tag:workstation" ];
     };
 
     testThirdAclDst = {
       expr = (lib.elemAt result.acls 2).dst;
+      expected = [ "tag:workstation:*" ];
+    };
+
+    testFourthAclSrc = {
+      expr = (lib.elemAt result.acls 3).src;
+      expected = [ "autogroup:admin" ];
+    };
+
+    testFourthAclDst = {
+      expr = (lib.elemAt result.acls 3).dst;
       expected = [ "*:*" ];
     };
 
@@ -126,10 +140,17 @@ let
       expected = true;
     };
 
+    testHasWorkstationPeerRule = {
+      expr = lib.any (
+        rule: rule.src == [ "tag:workstation" ] && rule.dst == [ "tag:workstation:*" ]
+      ) result.acls;
+      expected = true;
+    };
+
     # Deduplication: duplicate ports in acceptFrom must not produce duplicate rules.
     testBackupMetadataDoesNotChangeAclCount = {
       expr = lib.length result.acls;
-      expected = 3;
+      expected = 4;
     };
 
     testNonTailscaleHostExcludedFromTagOwners = {

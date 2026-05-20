@@ -1,12 +1,11 @@
 {
-  # The Apple-branded NVMe in a 2017 MacBook Air is the only NVMe device on the
-  # bus, so `/dev/nvme0n1` is stable across boots. Once the host is alive,
-  # replace this with `/dev/disk/by-id/nvme-...` and rebuild for resilience
-  # against future hardware additions (USB NVMe enclosures, etc).
+  # The Apple-branded SSD in this MacBook Air is exposed by the installer as an
+  # ATA disk, not NVMe. Use the stable by-id path so USB installer/device order
+  # cannot redirect disko to the wrong disk.
   disko.devices = {
     disk.mac = {
       type = "disk";
-      device = "/dev/nvme0n1";
+      device = "/dev/disk/by-id/ata-APPLE_SSD_SM0128G_S2XUNY4M230628";
       content = {
         type = "gpt";
         partitions = {
@@ -33,9 +32,11 @@
             content = {
               type = "luks";
               name = "cryptroot";
-              # No TPM2 on a 2017 MacBook Air — LUKS unlock is passphrase-only
-              # at the bootloader prompt. Keep the passphrase in your password
-              # manager; there is no initrd SSH fallback configured.
+              # No TPM2 on a 2017 MacBook Air. While the host stays at home,
+              # initrd unlock uses a sops-managed keyfile slot (see the
+              # `boot.initrd` block in default.nix); the original passphrase
+              # remains valid as fallback. Plan to revert to passphrase-only
+              # (or FIDO2) before the laptop travels.
               content = {
                 type = "btrfs";
                 extraArgs = [
@@ -52,6 +53,7 @@
                       "discard=async"
                     ];
                   };
+                  "/@root-blank" = { };
                   "/@home" = {
                     mountpoint = "/home";
                     mountOptions = [

@@ -23,8 +23,8 @@ let
         };
         targets = [
           (dash.target {
-            expr = "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)";
-            legendFormat = "{{instance}}";
+            expr = "100 - (avg by(host) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)";
+            legendFormat = "{{host}}";
           })
         ];
       })
@@ -41,7 +41,7 @@ let
         targets = [
           (dash.target {
             expr = "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100";
-            legendFormat = "{{instance}}";
+            legendFormat = "{{host}}";
           })
         ];
       })
@@ -58,7 +58,7 @@ let
         targets = [
           (dash.target {
             expr = ''(1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|efivarfs|squashfs|devtmpfs",mountpoint="/"} / node_filesystem_size_bytes) * 100'';
-            legendFormat = "{{instance}}";
+            legendFormat = "{{host}}";
           })
         ];
       })
@@ -74,8 +74,8 @@ let
         };
         targets = [
           (dash.target {
-            expr = ''sum by(instance) (node_systemd_unit_state{state="failed"})'';
-            legendFormat = "{{instance}}";
+            expr = ''sum by(host) (node_systemd_unit_state{state="failed"})'';
+            legendFormat = "{{host}}";
           })
         ];
       })
@@ -92,7 +92,7 @@ let
         targets = [
           (dash.target {
             expr = "(time() - restic_last_backup_timestamp_seconds) / 3600";
-            legendFormat = "{{instance}}";
+            legendFormat = "{{host}}";
           })
         ];
       })
@@ -109,7 +109,7 @@ let
         targets = [
           (dash.target {
             expr = "(time() - restic_last_check_timestamp_seconds) / 3600";
-            legendFormat = "{{instance}}";
+            legendFormat = "{{host}}";
           })
         ];
       })

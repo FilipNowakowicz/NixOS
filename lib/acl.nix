@@ -12,6 +12,20 @@ let
 
   sortedUnique = values: builtins.sort builtins.lessThan (lib.unique values);
 
+  collectSharedTagPairs =
+    hosts:
+    let
+      tags = collectTagNames hosts;
+      tailscaleHostValues = lib.attrValues (tailscaleHosts hosts);
+      sharedTags = lib.filter (
+        tag: lib.length (lib.filter (cfg: cfg.tailscale.tag == tag) tailscaleHostValues) > 1
+      ) tags;
+    in
+    map (tag: {
+      srcTag = tag;
+      dstTag = tag;
+    }) sharedTags;
+
   mkTagOwners =
     tags:
     lib.listToAttrs (
@@ -53,7 +67,7 @@ let
   mkTagAclRules =
     hostRegistry:
     let
-      fwdPairs = collectTagPairs hostRegistry;
+      fwdPairs = collectTagPairs hostRegistry ++ collectSharedTagPairs hostRegistry;
       # Reverse direction for return traffic.
       revKeys = sortedUnique (map (p: "${p.dstTag}→${p.srcTag}") fwdPairs);
       revPairs = map (

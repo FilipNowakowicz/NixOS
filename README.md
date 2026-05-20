@@ -487,7 +487,7 @@ Tailscale security rules are managed declaratively within the flake. The `lib/ac
 
 - **Current Policy Scope**: The ACL model is intentionally explicit. It consumes `tailscale.tag`, `tailscale.acceptFrom`, and `tailnetFQDN` where host-specific destinations are needed.
 - **Registry Richness**: Other host metadata such as `role`, `ip`, and `backup.class` remains available to the rest of the flake, but does not affect ACL generation yet.
-- **Generator**: `lib/acl.nix` maps tags to owners, emits explicit workstation-to-server rules, and keeps `autogroup:admin` as deliberate break-glass access.
+- **Generator**: `lib/acl.nix` maps tags to owners, emits explicit tag-to-tag rules including shared-tag workstation peers, and keeps `autogroup:admin` as deliberate break-glass access.
 - **Validation**: Unit tests in `tests/lib/acl.nix` verify the generated rules and output shape.
 - **Drift Detection**: `.github/workflows/tailscale-acl-drift.yml` runs `scripts/check-tailscale-acl-drift.sh` against the live tailnet policy.
 - **Output**: The generated ACL JSON can be inspected via:

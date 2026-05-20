@@ -48,8 +48,30 @@ in
 
   networking = {
     hostName = "mac";
-    networkmanager.enable = true;
+    networkmanager = {
+      enable = true;
+      # NetworkManager owns wired/tether; wlp3s0 is driven by a dedicated
+      # wpa_supplicant unit below because NM defaults to the nl80211 driver,
+      # which the proprietary Broadcom `wl` module rejects with "Association
+      # request to the driver failed" on Imperial's WPA-EAP APs (FT handshake).
+      unmanaged = [ "interface-name:wlp3s0" ];
+      settings = {
+        connection."wifi.cloned-mac-address" = "permanent";
+        device."wifi.scan-rand-mac-address" = "no";
+      };
+    };
     firewall.interfaces.tailscale0.allowedTCPPorts = [ 22 ];
+    # Loose reverse-path filtering: this host commonly has two live default
+    # routes (Wi-Fi + USB-Ethernet/iPhone tether). Strict rpfilter drops the
+    # WiFi return traffic because the FIB best-route lookup picks the lower-
+    # metric tether, even though the packet legitimately arrived on wlp3s0.
+    firewall.checkReversePath = "loose";
+
+    # Dedicated dhcpcd for wlp3s0 (NM disables dhcpcd globally and runs its
+    # own DHCP for managed interfaces). useDHCP on the iface flips the gate
+    # that actually generates the systemd unit.
+    dhcpcd.enable = true;
+    interfaces.wlp3s0.useDHCP = true;
   };
 
   # ── Hardware ────────────────────────────────────────────────────────────────
@@ -77,6 +99,22 @@ in
       "intel_iommu=on"
       "mem_sleep_default=deep"
     ];
+
+    # LUKS auto-unlock via a keyfile baked into the initrd. This pre-2018
+    # MacBook Air has no TPM/T2 and no FIDO2 token yet, and the laptop stays
+    # at home, so we trade at-rest protection for boot convenience. The
+    # initrd lives on the unencrypted ESP, so anyone with the powered laptop
+    # is in — the disk is only protected if pulled from the machine. Revert
+    # this block (and remove the LUKS key slot with `cryptsetup luksRemoveKey`)
+    # before the host travels.
+    initrd = {
+      # systemd stage 1 always falls back to interactive passphrase prompts
+      # when the keyfile is missing/wrong — no `fallbackToPassword` needed.
+      luks.devices.cryptroot.keyFile = "/luks.key";
+      secrets = {
+        "/luks.key" = config.sops.secrets.luks_keyfile.path;
+      };
+    };
   };
 
   nixpkgs.config.permittedInsecurePackages = [
@@ -180,6 +218,79 @@ in
     nh
   ];
 
+  # ── Wi-Fi (Imperial-WPA / eduroam, wext driver) ─────────────────────────────
+  # NetworkManager + nl80211 cannot drive the BCM4360 against Imperial's WPA-EAP
+  # APs (driver rejects FT-aware association). This unit runs a per-interface
+  # wpa_supplicant in wext mode, with the password injected at activation time
+  # via a sops template. dhcpcd (above) handles DHCP once associated.
+  sops.templates."wpa_supplicant-wlp3s0.conf" = {
+    owner = "root";
+    group = "root";
+    mode = "0400";
+    restartUnits = [ "wpa-supplicant-wlp3s0.service" ];
+    content = ''
+      ctrl_interface=/run/wpa_supplicant
+      ap_scan=1
+      update_config=0
+
+      network={
+        ssid="eduroam"
+        key_mgmt=WPA-EAP
+        eap=PEAP
+        identity="fn724@ic.ac.uk"
+        anonymous_identity="anonymous@ic.ac.uk"
+        password="${config.sops.placeholder.imperial_wifi_password}"
+        phase2="auth=MSCHAPV2"
+        ca_cert="/etc/ssl/certs/ca-certificates.crt"
+        domain_suffix_match="wireless.ic.ac.uk"
+        priority=10
+      }
+
+      network={
+        ssid="Imperial-WPA"
+        key_mgmt=WPA-EAP
+        eap=PEAP
+        identity="fn724"
+        password="${config.sops.placeholder.imperial_wifi_password}"
+        phase2="auth=MSCHAPV2"
+        ca_cert="/etc/ssl/certs/ca-certificates.crt"
+        domain_suffix_match="wireless.ic.ac.uk"
+        priority=5
+      }
+    '';
+  };
+
+  systemd.services.wpa-supplicant-wlp3s0 = {
+    description = "WPA Supplicant for wlp3s0 (wext driver, Imperial WPA-EAP)";
+    wantedBy = [ "multi-user.target" ];
+    after = [
+      "network-pre.target"
+      "sops-install-secrets.service"
+    ];
+    wants = [ "sops-install-secrets.service" ];
+    before = [ "network.target" ];
+
+    path = with pkgs; [
+      wpa_supplicant
+      iproute2
+    ];
+
+    preStart = ''
+      install -d -m 700 /run/wpa_supplicant
+      ip link set wlp3s0 up || true
+    '';
+
+    script = ''
+      exec wpa_supplicant -i wlp3s0 -D wext -c ${config.sops.templates."wpa_supplicant-wlp3s0.conf".path}
+    '';
+
+    serviceConfig = {
+      Type = "simple";
+      Restart = "always";
+      RestartSec = "5s";
+    };
+  };
+
   # ── Secrets ─────────────────────────────────────────────────────────────────
   # SSH host key bind-mounted from /persist by impermanence-base.nix. The key
   # is pre-generated and committed encrypted to hosts/mac/secrets/; it is
@@ -191,6 +302,12 @@ in
     secrets = {
       user_password.neededForUsers = true;
       root_password.neededForUsers = true;
+      imperial_wifi_password.restartUnits = [ "wpa-supplicant-wlp3s0.service" ];
+      luks_keyfile = {
+        format = "binary";
+        sopsFile = ./secrets/luks-keyfile.enc;
+        mode = "0400";
+      };
     };
   };
 
