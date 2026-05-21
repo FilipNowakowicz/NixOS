@@ -170,5 +170,8 @@ in
       secrets-directory = import ../tests/lib/secrets-directory.nix {
         inherit nixpkgs system;
       };
+      lib-scan-plaintext-secrets = import ../tests/lib/scan-plaintext-secrets.nix {
+        inherit nixpkgs system;
+      };
     };
 }
