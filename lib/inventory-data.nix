@@ -169,8 +169,6 @@ let
       inherit (meta) status;
       closurePath = builtins.unsafeDiscardStringContext (toString c.system.build.toplevel);
       inherit (c.system) stateVersion;
-      tailscaleTag = meta.tailscale.tag or null;
-      tailnetFQDN = meta.tailnetFQDN or null;
       tailscaleTracked = (meta ? tailscale) || (meta ? tailnetFQDN);
       ip = meta.ip or null;
       deployable = meta ? deploy;
@@ -190,12 +188,6 @@ let
         timer = backup.timerConfig.OnCalendar or null;
         initialize = backup.initialize or false;
       }) resticBackups;
-      profiles = {
-        desktop = c.programs.hyprland.enable or false;
-        security = c.services.fail2ban.enable or false;
-        observability = c.profiles.observability.enable or false;
-        observabilityClient = c.profiles.observability-client.enable or false;
-      };
       services = {
         openssh = c.services.openssh.enable;
         tailscale = c.services.tailscale.enable;

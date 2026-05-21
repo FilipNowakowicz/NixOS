@@ -162,10 +162,6 @@ rec {
       }
     ) assertions;
 
-  # Create a check derivation that validates config against assertions
-  # hostName: string - host identifier for error messages
-  # assertions: list of { name: string; check: config -> bool | { passed; message; } }
-  # config: the evaluated NixOS config to test
   mkInvariantCheck =
     hostName: assertions: config:
     let

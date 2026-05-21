@@ -19,12 +19,18 @@ EOF
 }
 
 host="${1:-}"
+
+# Detect current hostname once; reused as default target and for transport decisions.
+current_host=""
+if command -v hostnamectl >/dev/null 2>&1; then
+  current_host="$(hostnamectl --static 2>/dev/null || true)"
+fi
+if [[ -z $current_host ]]; then
+  current_host="$(hostname -s 2>/dev/null || true)"
+fi
+
 if [[ -z $host ]]; then
-  if command -v hostnamectl >/dev/null 2>&1; then
-    host="$(hostnamectl --static)"
-  else
-    host="$(hostname -s)"
-  fi
+  host="$current_host"
 fi
 
 case "${host:-}" in
@@ -40,22 +46,22 @@ host_json="$(
   jq -e -c --arg host "$host" '.hosts[] | select(.name == $host)' "$inventory_path"
 )"
 
-expected_tag="$(jq -r '.drift.tailscaleTag // ""' <<<"$host_json")"
-expected_fqdn="$(jq -r '.drift.tailnetFQDN // ""' <<<"$host_json")"
-strict_tcp_port_set="$(jq -r '.drift.strictTCPPortSet // false' <<<"$host_json")"
-deployable="$(jq -r '.deployable // false' <<<"$host_json")"
-deploy_user="$(jq -r '.deployUser // ""' <<<"$host_json")"
-units_json="$(jq -c '.drift.systemdUnits // []' <<<"$host_json")"
-expected_ports_json="$(jq -c '.drift.tcpPorts // []' <<<"$host_json")"
-mapfile -t units < <(jq -r '.[]' <<<"$units_json")
-
-current_host=""
-if command -v hostnamectl >/dev/null 2>&1; then
-  current_host="$(hostnamectl --static 2>/dev/null || true)"
-fi
-if [[ -z $current_host ]]; then
-  current_host="$(hostname -s 2>/dev/null || true)"
-fi
+{
+  read -r expected_tag
+  read -r expected_fqdn
+  read -r strict_tcp_port_set
+  read -r deployable
+  read -r deploy_user
+  read -r expected_ports_json
+} < <(jq -r '
+  .drift.tailscaleTag // "",
+  .drift.tailnetFQDN // "",
+  (.drift.strictTCPPortSet // false | tostring),
+  (.deployable // false | tostring),
+  .deployUser // "",
+  (.drift.tcpPorts // [] | tojson)
+' <<<"$host_json")
+mapfile -t units < <(jq -r '.drift.systemdUnits // [] | .[]' <<<"$host_json")
 
 transport="local"
 transport_target="$host"
