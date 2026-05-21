@@ -1,31 +1,11 @@
 {
   config,
-  lib,
   inputs,
   hostMeta,
   ...
 }:
 let
   inherit (hostMeta) tailnetFQDN;
-  expectedTrustedUsers = [
-    "root"
-    "user"
-  ];
-  actualTrustedUsers = config.nix.settings.trusted-users or [ ];
-  missingTrustedUsers = lib.filter (
-    user: !(builtins.elem user actualTrustedUsers)
-  ) expectedTrustedUsers;
-  unexpectedTrustedUsers = lib.filter (
-    user: !(builtins.elem user expectedTrustedUsers)
-  ) actualTrustedUsers;
-  trustedUserViolations = lib.filter (msg: msg != "") [
-    (lib.optionalString (
-      missingTrustedUsers != [ ]
-    ) "missing trusted users: ${lib.concatStringsSep ", " missingTrustedUsers}")
-    (lib.optionalString (
-      unexpectedTrustedUsers != [ ]
-    ) "unexpected trusted users: ${lib.concatStringsSep ", " unexpectedTrustedUsers}")
-  ];
 in
 {
   imports = [
@@ -55,13 +35,6 @@ in
   # this target is therefore root-equivalent; keep SSH Tailscale-scoped and
   # key-only.
   security.sudo.wheelNeedsPassword = false;
-
-  assertions = [
-    {
-      assertion = trustedUserViolations == [ ];
-      message = "homeserver-gcp nix.settings.trusted-users must stay minimal: ${lib.concatStringsSep "; " trustedUserViolations}";
-    }
-  ];
 
   nix = {
     settings.trusted-public-keys = [

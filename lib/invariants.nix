@@ -101,6 +101,31 @@ rec {
           lib.concatStringsSep "; " violations;
     };
 
+  checkHardenedFail2ban =
+    cfg:
+    let
+      fail2ban = cfg.services.fail2ban or { };
+      bantimeIncrement = fail2ban."bantime-increment" or { };
+      violations = lib.filter (msg: msg != "") [
+        (lib.optionalString (!(fail2ban.enable or false)) "services.fail2ban.enable must be true")
+        (lib.optionalString ((fail2ban.maxretry or 0) > 3) "services.fail2ban.maxretry must be <= 3")
+        (lib.optionalString (
+          (fail2ban.bantime or null) != "30m"
+        ) ''services.fail2ban.bantime must be "30m"'')
+        (lib.optionalString (
+          !(bantimeIncrement.enable or false)
+        ) "services.fail2ban.bantime-increment.enable must be true")
+        (lib.optionalString (
+          (bantimeIncrement.maxtime or null) == null
+        ) "services.fail2ban.bantime-increment.maxtime must be set")
+      ];
+    in
+    {
+      passed = violations == [ ];
+      message =
+        if violations == [ ] then "fail2ban is hardened" else lib.concatStringsSep "; " violations;
+    };
+
   checkNoGlobalTCPPorts =
     ports: cfg:
     let
