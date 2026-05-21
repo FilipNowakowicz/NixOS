@@ -144,7 +144,8 @@ the live homeserver routing surface. The test checks:
 
 - `/` reaches Vaultwarden through Nginx.
 - `/grafana/` works as a sub-path deployment.
-- `/obs/loki/`, `/obs/mimir/`, and `/obs/otlp/` enforce the expected auth boundary.
+- exact `/obs/*` ingest endpoints require credentials, and broader
+  observability API paths are denied.
 
 Use this before deploy work that touches `hosts/homeserver-gcp/` or the
 observability ingress path.

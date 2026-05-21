@@ -331,9 +331,9 @@ The stack includes pre-configured dashboards for fleet overview and deep-dives i
 
 Authenticated ingest routes on `https://homeserver-gcp.<tailnet-name>.ts.net`:
 
-- `/obs/loki/` → Loki push API
-- `/obs/mimir/` → Mimir remote_write API
-- `/obs/otlp/` → OpenTelemetry Collector HTTP ingest
+- `/obs/loki/loki/api/v1/push` -> Loki push API
+- `/obs/mimir/api/v1/push` -> Mimir remote_write API
+- `/obs/otlp/v1/traces` -> OpenTelemetry Collector trace ingest
 
 Implementation is in `modules/nixos/profiles/observability/`, with client-side telemetry shipping via `modules/nixos/profiles/observability-client.nix`.
 
@@ -510,7 +510,7 @@ Tailscale security rules are managed declaratively within the flake. The `lib/ac
 
 - **Current Policy Scope**: The ACL model is intentionally explicit. It consumes `tailscale.tag`, `tailscale.acceptFrom`, and `tailnetFQDN` where host-specific destinations are needed.
 - **Registry Richness**: Other host metadata such as `role`, `ip`, and `backup.class` remains available to the rest of the flake, but does not affect ACL generation yet.
-- **Generator**: `lib/acl.nix` maps tags to owners, emits explicit tag-to-tag rules including shared-tag workstation peers, and keeps `autogroup:admin` as deliberate break-glass access.
+- **Generator**: `lib/acl.nix` maps tags to owners, emits explicit tag-to-tag port rules from `acceptFrom`, and keeps `autogroup:admin` as deliberate break-glass access.
 - **Validation**: Unit tests in `tests/lib/acl.nix` verify the generated rules and output shape.
 - **Drift Detection**: `.github/workflows/tailscale-acl-drift.yml` runs `scripts/check-tailscale-acl-drift.sh` against the live tailnet policy.
 - **Output**: The generated ACL JSON can be inspected via:
