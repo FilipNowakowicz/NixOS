@@ -88,7 +88,7 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 
 - **Bootloader**: [Lanzaboote](https://github.com/nix-community/lanzaboote) manages Secure Boot, signing a unified kernel image.
 - **Disk Encryption**: LUKS encrypts the Btrfs root disk.
-- **Btrfs Layout**: `disko` creates `@root`, `@home`, `@nix`, and `@persist`; `/nix` and `/persist` are marked `neededForBoot`.
+- **Btrfs Layout**: `disko` creates `@root`, `@root-blank`, `@home`, `@nix`, and `@persist`; `/nix` and `/persist` are marked `neededForBoot`.
 - **Compression & Local Snapshots**: the primary Btrfs subvolumes mount with `compress=zstd`, and `btrbk-local.timer` keeps daily local snapshots of `@home` and `@persist` for same-disk recovery.
 - **Ephemeral Root**: initrd systemd rolls `@root` back to the empty `@root-blank` snapshot on every boot, moves the previous root to top-level `old_roots/`, and keeps old roots for 30 days.
 - **Persistent State**: impermanence bind mounts machine identity, SSH host keys, service state, Wi-Fi profiles, Mullvad, Tailscale, Bluetooth, USBGuard, Secure Boot PKI, logs, and NixOS state from `/persist`.

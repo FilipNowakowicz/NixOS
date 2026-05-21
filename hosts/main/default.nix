@@ -405,12 +405,18 @@ in
         "/etc/ssh/ssh_host_ed25519_key.pub"
         "/etc/NetworkManager/system-connections"
         "/etc/mullvad-vpn"
-        "/var/cache/mullvad-vpn"
         "/var/lib/tailscale"
         "/var/lib/bluetooth"
         "/var/lib/fprint"
         "/var/lib/sbctl"
         "/var/lib/usbguard"
+      ];
+      exclude = [
+        # Token/credential caches — not durable; regenerated on next gcloud auth
+        "/home/user/.config/gcloud/access_tokens.db"
+        "/home/user/.config/gcloud/credentials.db"
+        "/home/user/.config/gcloud/logs"
+        "/home/user/.config/gcloud/legacy_credentials"
       ];
       repositoryFile = config.sops.secrets.restic_repository.path;
       passwordFile = config.sops.secrets.restic_password.path;
