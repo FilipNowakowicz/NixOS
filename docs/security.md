@@ -10,12 +10,12 @@ Secrets are managed by `sops-nix` with age recipients configured in `.sops.yaml`
 
 Current recipient groups:
 
-| Group                  | Purpose                                              |
-| :--------------------- | :--------------------------------------------------- |
-| `&user`                | Personal operator key; can decrypt all repo secrets. |
-| `&main_host`           | `main` SSH-host-derived age identity.                |
-| `&mac_host`            | `mac` SSH-host-derived age identity.                 |
-| `&homeserver_gcp_host` | `homeserver-gcp` SSH-host-derived age identity.      |
+| Group                  | Purpose                                                  |
+| :--------------------- | :------------------------------------------------------- |
+| `&user`                | Personal operator key; root secret for all repo secrets. |
+| `&main_host`           | `main` SSH-host-derived age identity.                    |
+| `&mac_host`            | `mac` SSH-host-derived age identity.                     |
+| `&homeserver_gcp_host` | `homeserver-gcp` SSH-host-derived age identity.          |
 
 Host behavior:
 
@@ -27,6 +27,21 @@ Host behavior:
 - Planned Home Manager user-secret backups under `home/users/user/secrets/` are encrypted only to `&user`; hosts do not decrypt them automatically.
 - `boot.initrd.secrets` must point only at sops-managed `/run/secrets/*` paths; this is enforced by a native NixOS assertion in the shared SOPS profile.
 - Intentional plaintext exceptions must be narrow entries in `.plaintext-secrets-allowlist`.
+
+`&user` is the root secret for this repository. It is intentionally broad so the
+operator can recover and maintain every encrypted file from one personal age
+identity, but exposing that private key exposes every repo secret reachable
+through `.sops.yaml`. If the personal age key is copied to an untrusted machine,
+included in a public artifact, logged, backed up to an untrusted location, or
+otherwise suspected compromised, rotate the personal key and re-encrypt all repo
+secrets. Also rotate the underlying credentials that were decryptable by the old
+key unless the exposure window can be ruled out.
+
+Structured SOPS files under `home/users/user/secrets/` are accepted even though
+their cleartext keys disclose provider and account shape, such as which tools
+have restorable auth state and the visible GitHub hostname/username nesting in
+the GitHub CLI backup. Token values must still be encrypted, and the repository
+check rejects plaintext JSON/YAML auth backups in that directory.
 
 ## Host Key Rotation
 
