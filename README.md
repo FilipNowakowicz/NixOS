@@ -21,9 +21,16 @@ The repository separates hardware, host identity, system profiles, and user conf
 - [Architecture](docs/architecture.md) - layer boundaries, global imports, and host registry rules.
 - [Operations](docs/operations.md) - deployment, validation, and formatting commands.
 - [Security Model](docs/security.md) - sops recipients, initrd SSH, Tailscale exposure, USBGuard, hardening, and backups.
-- [MacBook Goals](docs/macbook-goals.md) - companion workstation topology, install archive, and remaining pairing tasks.
+- [Restore Drill](docs/restore-drill.md) - quarterly manual restore from the B2 restic repository.
 - [Neovim](docs/neovim.md) - editor architecture, module layout, and current follow-up work.
+- [Homeserver Goals](docs/homeserver-goals.md) - deferred GCP/homeserver roadmap.
+- [MacBook Goals](docs/macbook-goals.md) - companion workstation topology and open follow-ups.
 - [Backlog](docs/backlog.md) - deferred and remaining infrastructure work.
+
+Host-local runbooks (gotchas, recovery, install) live next to each host's
+config: [`hosts/main/CLAUDE.md`](hosts/main/CLAUDE.md),
+[`hosts/mac/CLAUDE.md`](hosts/mac/CLAUDE.md),
+[`hosts/homeserver-gcp/CLAUDE.md`](hosts/homeserver-gcp/CLAUDE.md).
 
 ---
 
@@ -127,10 +134,12 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 ├── .sops.yaml                         # SOPS configuration for secret management
 ├── docs/
 │   ├── architecture.md                 # Structural rules and module boundaries
-│   ├── neovim.md                       # Neovim module layout and generated config contract
 │   ├── operations.md                   # Deployment and validation runbook
-│   ├── restore-drill.md                # Manual backup restore verification procedure
 │   ├── security.md                     # Secrets, exposure, and hardening model
+│   ├── restore-drill.md                # Manual backup restore verification procedure
+│   ├── neovim.md                       # Neovim module layout and generated config contract
+│   ├── homeserver-goals.md             # Homeserver roadmap (deferred provider integrations)
+│   ├── macbook-goals.md                # MacBook Air companion topology and follow-ups
 │   └── backlog.md                      # Deferred work
 ├── lib/
 │   ├── hosts.nix                      # Host registry (typed schema; single source of truth for all hosts)
@@ -152,6 +161,11 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 │   │   ├── impermanence.nix
 │   │   └── hardware-configuration.nix
 │   ├── mac/                           # 2017 MacBook Air companion workstation
+│   │   ├── CLAUDE.md
+│   │   ├── default.nix
+│   │   ├── disko.nix
+│   │   ├── impermanence.nix
+│   │   └── hardware-configuration.nix
 │   ├── homeserver-gcp/                # GCP homeserver (Vaultwarden, AdGuard, LGTM, Nginx)
 │   │   ├── CLAUDE.md
 │   │   ├── default.nix
@@ -235,16 +249,18 @@ ISO outside the host registry.
 | Host             | Status  | Description                                                                        |
 | ---------------- | ------- | ---------------------------------------------------------------------------------- |
 | `main`           | Active  | Primary workstation, running a full desktop environment with NVIDIA PRIME support. |
+| `mac`            | Active  | 2017 MacBook Air companion workstation tightly coupled to `main`.                  |
 | `homeserver-gcp` | Active  | GCP homeserver for Vaultwarden, AdGuard, LGTM, Nginx, and Tailscale.               |
 | `installer`      | Utility | Minimal ISO configuration used to bootstrap new installations.                     |
 
 ### Deployment
 
-| Host             | Command                                  | Notes                                               |
-| ---------------- | ---------------------------------------- | --------------------------------------------------- |
-| `main`           | `nh os switch --hostname main .`         | Active impermanent workstation rebuild.             |
-| `homeserver-gcp` | `deploy '.#homeserver-gcp'`              | Active GCP homeserver; see `scripts/deploy-gcp.sh`. |
-| `user@wsl`       | `home-manager switch --flake .#user@wsl` | Portable Home Manager for WSL.                      |
+| Host             | Command                                  | Notes                                                                |
+| ---------------- | ---------------------------------------- | -------------------------------------------------------------------- |
+| `main`           | `nh os switch --hostname main .`         | Active impermanent workstation rebuild.                              |
+| `mac`            | `deploy '.#mac'`                         | Companion workstation (2017 MacBook Air); `nh os switch` also works. |
+| `homeserver-gcp` | `deploy '.#homeserver-gcp'`              | Active GCP homeserver; see `scripts/deploy-gcp.sh`.                  |
+| `user@wsl`       | `home-manager switch --flake .#user@wsl` | Portable Home Manager for WSL.                                       |
 
 ---
 
@@ -341,7 +357,7 @@ Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) and [age]
 - This allows a host to decrypt its own secrets automatically during activation. Impermanent hosts keep their SSH key under `/persist` so the age key remains stable across reboots.
 - The user's personal age key (`user`) can decrypt all secrets.
 - `homeserver-gcp` uses a pre-baked encrypted SSH host key committed in `hosts/homeserver-gcp/secrets/`; deployed once during initial GCE image bootstrap.
-- Planned Home Manager user-secret backups live under `home/users/user/secrets/` and are encrypted only for `&user`.
+- Home Manager user-secret backups (`home/users/user/secrets/`) are encrypted for `&user` only; see [`docs/security.md`](docs/security.md) for the full recipient table.
 
 ### Setup
 
@@ -371,19 +387,21 @@ Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) and [age]
    sops hosts/homeserver-gcp/secrets/secrets.yaml
    ```
 
-### Planned Home Manager User Secrets
+### Home Manager User Secrets
 
-The repo is prepared for optional user-scoped auth backup through the
-Home Manager `sops-nix` module. This is intended for convenience and recovery of
-selected user credentials, not for every app cache.
+User-scoped auth and identity files are backed up through the Home Manager
+`sops-nix` module on hosts where `userSecrets.enable = true`. The git
+`user.name` and `user.email` are also rendered at activation from a sops
+template, so the literal identity values are never committed.
 
-Prepared targets:
+Covered files:
 
 - `~/.codex/auth.json`
 - `~/.claude/.credentials.json`
 - `~/.gemini/oauth_creds.json`
 - `~/.config/gh/hosts.yml`
 - `~/.config/gcloud/application_default_credentials.json`
+- git identity (`user.name`, `user.email`) via `programs.git.includes`
 
 Not included:
 
@@ -392,11 +410,9 @@ Not included:
 
 Those SQLite files are token caches and low-value to restore declaratively.
 
-To finish rollout:
-
-1. Set `userSecrets.enable = true;` in the relevant Home Manager config.
-2. Encrypt the current live files into `home/users/user/secrets/`.
-3. Activate Home Manager and verify the apps still read the restored paths.
+Hosts without the personal age key (currently `mac` and `user@wsl`) leave
+`userSecrets.enable` at its default `false` and configure git identity
+manually with `git config --global user.{name,email}`.
 
 **Host Key Rotation**: Rotating a host's SSH key or changing its identity requires a corresponding update to `.sops.yaml` (new age key) followed by `sops updatekeys <path/to/secrets.yaml>` to re-encrypt the file for the new key. Failing to do this before deployment will result in a boot-time decryption failure.
 
@@ -535,4 +551,9 @@ Examples:
 
 The workflow uses a signed Cloudflare R2 binary cache. PR and merge-queue jobs substitute from that cache but do not publish to it, keeping slow full-closure uploads off the merge path. Cache publication runs after successful `push` or manual `workflow_dispatch` builds, so merged changes warm the cache for later CI runs.
 
-<!-- > **KVM Requirement**: NixOS integration tests require KVM virtualization. While GitHub-hosted `ubuntu-latest` runners provide `/dev/kvm` for public repositories, private or self-hosted runners must have KVM support enabled to prevent silent job timeouts. -->
+---
+
+## License And Security
+
+- `LICENSE` — repository content is published under the MIT license.
+- `SECURITY.md` — private vulnerability disclosure intake.

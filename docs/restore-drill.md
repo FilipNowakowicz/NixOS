@@ -20,7 +20,8 @@ nix develop   # provides restic, sops
 Export credentials for the duration of the drill:
 
 ```bash
-export RESTIC_REPOSITORY="b2:filipnowakowicz-gcp:"
+export RESTIC_REPOSITORY="$(sops --decrypt --extract '["restic_repository"]' \
+  hosts/homeserver-gcp/secrets/secrets.yaml)"
 export RESTIC_PASSWORD_FILE="$(sops --decrypt --extract '["restic_password"]' \
   hosts/homeserver-gcp/secrets/secrets.yaml | mktemp --suffix=.pass)"
 # B2 credentials

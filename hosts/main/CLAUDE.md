@@ -106,7 +106,8 @@ deterministically. Treat as code, not state:
 ## Backups
 
 `services.restic.backups.local` backs up selected home directories and
-persistent service identity to `b2:filipnowakowicz-backup:/main`.
+persistent service identity to the B2 repository in the `restic_repository`
+sops secret on this host.
 
 Important covered state:
 
@@ -255,7 +256,10 @@ Prerequisites (from your external password manager):
 **Restore via B2**:
 
 ```bash
-export RESTIC_REPOSITORY="b2:filipnowakowicz-backup:/main"
+# Recover the repo URL from sops if you still have the age key + repo checkout:
+export RESTIC_REPOSITORY="$(sops --decrypt --extract '["restic_repository"]' \
+  hosts/main/secrets/secrets.yaml)"
+# Otherwise paste the literal `b2:<bucket>:/main` from your password manager.
 export RESTIC_PASSWORD="<from password manager>"
 export B2_ACCOUNT_ID="<key id>"
 export B2_ACCOUNT_KEY="<key>"
