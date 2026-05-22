@@ -118,6 +118,14 @@ in
             '';
           };
 
+          "= /home/status.svg" = {
+            alias = "${homepageDir}/status.svg";
+            extraConfig = ''
+              default_type image/svg+xml;
+              add_header Cache-Control "no-store";
+            '';
+          };
+
           "/obs/" = {
             return = "404";
           };

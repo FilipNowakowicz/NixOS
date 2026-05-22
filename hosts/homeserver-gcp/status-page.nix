@@ -255,6 +255,7 @@ in
         main_online="$(tailscale_online_json main)"
 
         tmp="/var/lib/homepage/public/status.json.tmp"
+        badge_tmp="/var/lib/homepage/public/status.svg.tmp"
         ${pkgs.jq}/bin/jq -n \
           --argjson generatedAt "$now" \
           --arg fqdn "${tailnetFQDN}" \
@@ -363,6 +364,63 @@ in
           }' > "$tmp"
         mv "$tmp" /var/lib/homepage/public/status.json
         chmod 0644 /var/lib/homepage/public/status.json
+
+        read -r badge_mode badge_label badge_tracked <<EOF
+        $(${pkgs.jq}/bin/jq -r '
+          def service_values:
+            [.hosts | to_entries[] | (.value.services // {} | to_entries[]) | .[]?];
+          def backup_values:
+            [.hosts | to_entries[] | (.value.backups // []) | .[]?];
+          {
+            tracked: (service_values | length),
+            failedUnits: (.failedUnits | length),
+            downServices: (service_values | map(select(.value.active == false)) | length),
+            unknownServices: (service_values | map(select(.value.active == null)) | length),
+            offlinePeers: ((.tailnet.devices // []) | map(select(.online == false)) | length),
+            staleBackups: (backup_values | map(select((.lastSuccessAgeSeconds == null) or (.lastSuccessAgeSeconds > 93600))) | length)
+          }
+          | .mode = (
+              if (.failedUnits > 0) or (.downServices > 0) or (.staleBackups > 0) then "alarm"
+              elif (.unknownServices > 0) or (.offlinePeers > 0) then "watch"
+              else "calm"
+              end
+            )
+          | .label = (
+              if .mode == "alarm" then "ALARM"
+              elif .mode == "watch" then "WATCH"
+              else "CALM"
+              end
+            )
+          | "\(.mode)\t\(.label)\t\(.tracked)"
+        ' /var/lib/homepage/public/status.json)
+        EOF
+
+        case "$badge_mode" in
+          alarm)
+            badge_fill="#d86958"
+            badge_bg="#2a1715"
+            ;;
+          watch)
+            badge_fill="#d9a44f"
+            badge_bg="#2a2213"
+            ;;
+          *)
+            badge_fill="#79c08f"
+            badge_bg="#13251b"
+            ;;
+        esac
+
+        cat >"$badge_tmp" <<EOF
+        <svg xmlns="http://www.w3.org/2000/svg" width="180" height="32" viewBox="0 0 180 32" role="img" aria-label="Homepage status ''${badge_label}, ''${badge_tracked} tracked services">
+          <rect width="180" height="32" rx="10" fill="#10120f"/>
+          <rect x="1" y="1" width="178" height="30" rx="9" fill="''${badge_bg}" stroke="#2f352e"/>
+          <circle cx="18" cy="16" r="6" fill="''${badge_fill}"/>
+          <text x="31" y="20" fill="#f3efe3" font-family="ui-monospace, monospace" font-size="12" font-weight="700">''${badge_label}</text>
+          <text x="166" y="20" fill="#d7d1c2" font-family="ui-monospace, monospace" font-size="11" text-anchor="end">''${badge_tracked} svc</text>
+        </svg>
+        EOF
+        mv "$badge_tmp" /var/lib/homepage/public/status.svg
+        chmod 0644 /var/lib/homepage/public/status.svg
       '';
       serviceConfig = {
         Type = "oneshot";
