@@ -192,7 +192,7 @@ missing_ports_json="$(
     '$expected - $actual'
 )"
 if [[ "$(jq 'length' <<<"$missing_ports_json")" -gt 0 ]]; then
-  record_failure "missing listening TCP ports: expected $(jq -r 'join(\", \")' <<<"$missing_ports_json") from networking.firewall.interfaces.tailscale0.allowedTCPPorts"
+  record_failure "missing listening TCP ports: expected $(jq -r 'join(", ")' <<<"$missing_ports_json") from networking.firewall.interfaces.tailscale0.allowedTCPPorts"
 fi
 
 if [[ $strict_tcp_port_set == "true" ]]; then
@@ -203,7 +203,7 @@ if [[ $strict_tcp_port_set == "true" ]]; then
       '$actual - $expected'
   )"
   if [[ "$(jq 'length' <<<"$extra_ports_json")" -gt 0 ]]; then
-    record_failure "unexpected non-loopback listening TCP ports: $(jq -r 'join(\", \")' <<<"$extra_ports_json"); review host service modules or manual changes"
+    record_failure "unexpected non-loopback listening TCP ports: $(jq -r 'join(", ")' <<<"$extra_ports_json"); review host service modules or manual changes"
   fi
 fi
 

@@ -193,6 +193,35 @@
   systemd.services = {
     "systemd-networkd-wait-online".enable = lib.mkForce false;
     "NetworkManager-wait-online".enable = lib.mkForce false;
+
+    # Remote deploys arrive over Tailscale, usually through the Broadcom Wi-Fi
+    # path below. Stopping any of these during switch cuts the SSH session
+    # before deploy-rs can confirm activation, causing magic rollback and a
+    # console-looking failure on the Mac.
+    NetworkManager = {
+      restartIfChanged = false;
+      stopIfChanged = false;
+    };
+    dhcpcd = {
+      restartIfChanged = false;
+      stopIfChanged = false;
+    };
+    systemd-resolved = {
+      restartIfChanged = false;
+      stopIfChanged = false;
+    };
+    tailscaled = {
+      restartIfChanged = false;
+      stopIfChanged = false;
+    };
+    sshd = {
+      restartIfChanged = false;
+      stopIfChanged = false;
+    };
+    wpa_supplicant = {
+      restartIfChanged = false;
+      stopIfChanged = false;
+    };
   };
 
   environment.systemPackages = with pkgs; [
@@ -210,6 +239,8 @@
   systemd.services.wpa-supplicant-wlp3s0 = {
     description = "WPA Supplicant for wlp3s0 (wext driver, campus WPA-EAP)";
     wantedBy = [ "multi-user.target" ];
+    restartIfChanged = false;
+    stopIfChanged = false;
     after = [
       "network-pre.target"
       "sops-install-secrets.service"
@@ -253,7 +284,7 @@
         owner = "root";
         group = "root";
         mode = "0400";
-        restartUnits = [ "wpa-supplicant-wlp3s0.service" ];
+        restartUnits = [ ];
       };
       luks_keyfile = {
         format = "binary";
