@@ -606,26 +606,6 @@ def _default_state():
     }
 
 
-def gather_state():
-    now = time.localtime()
-    return {
-        "time": f"{now.tm_hour:02d}:{now.tm_min:02d}",
-        "hostname": os.uname().nodename if hasattr(os, "uname") else "",
-        "wifi": gather_wifi(),
-        "bluetooth": gather_bluetooth(),
-        "audio": gather_audio(),
-        "battery": gather_battery(),
-        "brightness": gather_brightness(),
-        "power_profile": gather_power_profile(),
-        "dnd": gather_dnd(),
-        "tailscale": gather_tailscale(),
-        "mullvad": gather_mullvad(),
-        "cpu_temp": gather_cpu_temp(),
-        "now_playing": gather_now_playing(),
-        "active_theme": gather_active_theme(),
-        "keep_awake": gather_keep_awake(),
-        "night_light": gather_night_light(),
-    }
 
 
 def gather_fast_state(previous=None):

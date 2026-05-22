@@ -287,7 +287,8 @@ let
     mainBtrbkPolicyMatchesLocalSnapshotIntent
   ];
 
-  homeserverAccessInvariants = [
+  # Invariants shared by all deploy-rs targets (passwordless wheel, SSH tailnet-only).
+  deployTargetAccessInvariants = [
     {
       name = "passwordless sudo enabled";
       check =
@@ -299,6 +300,17 @@ let
       name = "firewall enabled";
       check = cfg: require cfg.networking.firewall.enable "networking.firewall.enable must be true";
     }
+    {
+      name = "sops uses SSH host key for decryption";
+      check =
+        cfg:
+        require (
+          cfg.sops.age.sshKeyPaths != [ ]
+        ) "sops.age.sshKeyPaths must contain at least one SSH host key path";
+    }
+  ];
+
+  homeserverAccessInvariants = deployTargetAccessInvariants ++ [
     {
       name = "SSH and HTTPS are not globally open";
       check = cfg: invariants.checkNoGlobalTCPPorts [ 22 443 ] cfg;
@@ -315,36 +327,15 @@ let
           ];
         } cfg;
     }
-    {
-      name = "sops uses SSH host key for decryption";
-      check =
-        cfg:
-        require (
-          cfg.sops.age.sshKeyPaths != [ ]
-        ) "sops.age.sshKeyPaths must contain at least one SSH host key path";
-    }
   ];
 
   homeserverBackupInvariants = [
     homeserverGcpB2BackupUsesCriticalPolicy
   ];
 
-  # mac is a companion workstation: deploy-rs target like homeserver-gcp
-  # (passwordless wheel, SSH tailnet-only) but interactive like main (USBGuard
-  # absent for now, no published HTTPS service). Reuse the homeserver access
-  # invariants minus the HTTPS port assertion.
-  macAccessInvariants = [
-    {
-      name = "passwordless sudo enabled";
-      check =
-        cfg:
-        require (!cfg.security.sudo.wheelNeedsPassword)
-          "security.sudo.wheelNeedsPassword must be false (deploy-rs needs passwordless sudo; access is SSH-key-only over Tailscale)";
-    }
-    {
-      name = "firewall enabled";
-      check = cfg: require cfg.networking.firewall.enable "networking.firewall.enable must be true";
-    }
+  # mac is a deploy-rs target like homeserver-gcp (passwordless wheel, SSH tailnet-only)
+  # but does not publish HTTPS, so only SSH ports are checked.
+  macAccessInvariants = deployTargetAccessInvariants ++ [
     {
       name = "SSH is not globally open";
       check = cfg: invariants.checkNoGlobalTCPPorts [ 22 ] cfg;
@@ -358,15 +349,23 @@ let
           ports = [ 22 ];
         } cfg;
     }
-    {
-      name = "sops uses SSH host key for decryption";
-      check =
-        cfg:
-        require (
-          cfg.sops.age.sshKeyPaths != [ ]
-        ) "sops.age.sshKeyPaths must contain at least one SSH host key path";
-    }
   ];
+
+  mkSopsBootstrapCheck =
+    hostName: secretsDir:
+    let
+      hasKey = builtins.pathExists (secretsDir + "/ssh_host_ed25519_key.enc");
+      hasPub = builtins.pathExists (secretsDir + "/ssh_host_ed25519_key.pub.enc");
+    in
+    if hasKey && hasPub then
+      pkgs.runCommand "${hostName}-sops-bootstrap-check" { } "touch $out"
+    else
+      pkgs.runCommand "${hostName}-sops-bootstrap-check" { } ''
+        echo "${hostName} sops bootstrap incomplete — missing pre-baked host key files:"
+        ${lib.optionalString (!hasKey) ''echo "  hosts/${hostName}/secrets/ssh_host_ed25519_key.enc"''}
+        ${lib.optionalString (!hasPub) ''echo "  hosts/${hostName}/secrets/ssh_host_ed25519_key.pub.enc"''}
+        exit 1
+      '';
 in
 {
   invariantChecks = {
@@ -389,39 +388,9 @@ in
       commonSystemInvariants ++ macAccessInvariants ++ registryAssertionsFor "mac"
     ) allNixosConfigs.mac.config;
 
-    homeserver-gcp-sops-bootstrap =
-      let
-        secretsDir = ../hosts/homeserver-gcp/secrets;
-        hasKey = builtins.pathExists (secretsDir + "/ssh_host_ed25519_key.enc");
-        hasPub = builtins.pathExists (secretsDir + "/ssh_host_ed25519_key.pub.enc");
-      in
-      if hasKey && hasPub then
-        pkgs.runCommand "homeserver-gcp-sops-bootstrap-check" { } "touch $out"
-      else
-        pkgs.runCommand "homeserver-gcp-sops-bootstrap-check" { } ''
-          echo "homeserver-gcp sops bootstrap incomplete — missing pre-baked host key files:"
-          ${lib.optionalString (!hasKey) ''echo "  hosts/homeserver-gcp/secrets/ssh_host_ed25519_key.enc"''}
-          ${lib.optionalString (
-            !hasPub
-          ) ''echo "  hosts/homeserver-gcp/secrets/ssh_host_ed25519_key.pub.enc"''}
-          exit 1
-        '';
+    homeserver-gcp-sops-bootstrap = mkSopsBootstrapCheck "homeserver-gcp" ../hosts/homeserver-gcp/secrets;
 
-    mac-sops-bootstrap =
-      let
-        secretsDir = ../hosts/mac/secrets;
-        hasKey = builtins.pathExists (secretsDir + "/ssh_host_ed25519_key.enc");
-        hasPub = builtins.pathExists (secretsDir + "/ssh_host_ed25519_key.pub.enc");
-      in
-      if hasKey && hasPub then
-        pkgs.runCommand "mac-sops-bootstrap-check" { } "touch $out"
-      else
-        pkgs.runCommand "mac-sops-bootstrap-check" { } ''
-          echo "mac sops bootstrap incomplete — missing pre-baked host key files:"
-          ${lib.optionalString (!hasKey) ''echo "  hosts/mac/secrets/ssh_host_ed25519_key.enc"''}
-          ${lib.optionalString (!hasPub) ''echo "  hosts/mac/secrets/ssh_host_ed25519_key.pub.enc"''}
-          exit 1
-        '';
+    mac-sops-bootstrap = mkSopsBootstrapCheck "mac" ../hosts/mac/secrets;
   };
 
   cveReportPackagesFor =

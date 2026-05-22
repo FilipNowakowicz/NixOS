@@ -2,6 +2,7 @@
   deploy-rs,
   lib,
   hostRegistry,
+  allNixosConfigs,
   ciNixosConfigs,
 }:
 let
@@ -21,7 +22,7 @@ let
       };
     }) deployableHosts;
 
-  allDeployNodes = mkDeployNodes ciNixosConfigs;
+  allDeployNodes = mkDeployNodes allNixosConfigs;
 
   ciDeployNodes = mkDeployNodes ciNixosConfigs;
 in

@@ -33,7 +33,7 @@ Commands:
   docs               Check repository Markdown links
   flake-eval         Run flake evaluation only (no builds)
   light              Build lightweight blocking checks
-  host <name>        Build one host closure: main-ci, homeserver-gcp, mac
+  host <name>        Build one host closure: main-ci, main, homeserver-gcp, mac
   hosts              Build all host system closures used in CI
   package <name>     Build one package output used in CI
   profile-test <name>
@@ -53,6 +53,9 @@ build_host() {
   case "$1" in
   main-ci)
     build_attrs ".#nixosConfigurations.main-ci.config.system.build.toplevel"
+    ;;
+  main | main-full)
+    build_attrs ".#nixosConfigurations.main.config.system.build.toplevel"
     ;;
   homeserver-gcp)
     build_attrs ".#nixosConfigurations.homeserver-gcp.config.system.build.toplevel"
@@ -107,6 +110,10 @@ flake-eval)
   ;;
 
 light)
+  # The pre-commit derivation is intentionally excluded from CI: its hooks
+  # (statix, deadnix, treefmt, shellcheck, secrets-directory) are already
+  # covered by the lint job and the secrets-directory check below. The
+  # plaintext-secrets scan unique to pre-commit runs in the lint job.
   build_attrs \
     ".#checks.${system}.deploy-activate" \
     ".#checks.${system}.deploy-schema" \
@@ -114,13 +121,13 @@ light)
     ".#checks.${system}.invariants-homeserver-gcp" \
     ".#checks.${system}.invariants-main" \
     ".#checks.${system}.invariants-mac" \
-    ".#checks.${system}.pre-commit" \
     ".#checks.${system}.lib-generators" \
     ".#checks.${system}.lib-generators-structured" \
     ".#checks.${system}.lib-acl" \
     ".#checks.${system}.lib-invariants" \
     ".#checks.${system}.mac-sops-bootstrap" \
-    ".#checks.${system}.secrets-directory"
+    ".#checks.${system}.secrets-directory" \
+    ".#checks.${system}.lib-scan-plaintext-secrets"
   ;;
 
 host)

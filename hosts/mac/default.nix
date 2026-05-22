@@ -6,27 +6,6 @@
   hostRegistry,
   ...
 }:
-let
-  expectedTrustedUsers = [
-    "root"
-    "user"
-  ];
-  actualTrustedUsers = config.nix.settings.trusted-users or [ ];
-  missingTrustedUsers = lib.filter (
-    user: !(builtins.elem user actualTrustedUsers)
-  ) expectedTrustedUsers;
-  unexpectedTrustedUsers = lib.filter (
-    user: !(builtins.elem user expectedTrustedUsers)
-  ) actualTrustedUsers;
-  trustedUserViolations = lib.filter (msg: msg != "") [
-    (lib.optionalString (
-      missingTrustedUsers != [ ]
-    ) "missing trusted users: ${lib.concatStringsSep ", " missingTrustedUsers}")
-    (lib.optionalString (
-      unexpectedTrustedUsers != [ ]
-    ) "unexpected trusted users: ${lib.concatStringsSep ", " unexpectedTrustedUsers}")
-  ];
-in
 {
   imports = [
     inputs.disko.nixosModules.disko
@@ -135,13 +114,6 @@ in
   # this target is therefore root-equivalent; keep SSH Tailscale-scoped and
   # key-only. Same posture as homeserver-gcp.
   security.sudo.wheelNeedsPassword = false;
-
-  assertions = [
-    {
-      assertion = trustedUserViolations == [ ];
-      message = "mac nix.settings.trusted-users must stay scoped to the local admin user: ${lib.concatStringsSep "; " trustedUserViolations}";
-    }
-  ];
 
   # deploy-rs passes store settings for remote builds; trust the local admin
   # user so the daemon accepts those restricted options without warning.

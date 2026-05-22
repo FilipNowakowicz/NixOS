@@ -18,24 +18,7 @@ let
         }
         {
           name = "SSH hosts enforce hardened fail2ban";
-          check =
-            c:
-            let
-              violations = lib.filter (msg: msg != "") [
-                (lib.optionalString (!c.services.fail2ban.enable) "services.fail2ban.enable must be true")
-                (lib.optionalString (c.services.fail2ban.maxretry > 3) "services.fail2ban.maxretry must be <= 3")
-                (lib.optionalString (
-                  c.services.fail2ban.bantime != "30m"
-                ) "services.fail2ban.bantime must be \"30m\"")
-                (lib.optionalString (
-                  !c.services.fail2ban."bantime-increment".enable
-                ) "services.fail2ban.bantime-increment.enable must be true")
-                (lib.optionalString (
-                  c.services.fail2ban."bantime-increment".maxtime == null
-                ) "services.fail2ban.bantime-increment.maxtime must be set")
-              ];
-            in
-            if !c.services.openssh.enable then true else violations == [ ];
+          check = c: if !c.services.openssh.enable then true else invariants.checkHardenedFail2ban c;
         }
         {
           name = "observability client uses canonical ingest username";
@@ -169,8 +152,6 @@ let
       inherit (meta) status;
       closurePath = builtins.unsafeDiscardStringContext (toString c.system.build.toplevel);
       inherit (c.system) stateVersion;
-      tailscaleTag = meta.tailscale.tag or null;
-      tailnetFQDN = meta.tailnetFQDN or null;
       tailscaleTracked = (meta ? tailscale) || (meta ? tailnetFQDN);
       ip = meta.ip or null;
       deployable = meta ? deploy;
@@ -190,12 +171,6 @@ let
         timer = backup.timerConfig.OnCalendar or null;
         initialize = backup.initialize or false;
       }) resticBackups;
-      profiles = {
-        desktop = c.programs.hyprland.enable or false;
-        security = c.services.fail2ban.enable or false;
-        observability = c.profiles.observability.enable or false;
-        observabilityClient = c.profiles.observability-client.enable or false;
-      };
       services = {
         openssh = c.services.openssh.enable;
         tailscale = c.services.tailscale.enable;

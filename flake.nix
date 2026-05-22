@@ -131,6 +131,7 @@
           deploy-rs
           lib
           hostRegistry
+          allNixosConfigs
           ciNixosConfigs
           ;
       };

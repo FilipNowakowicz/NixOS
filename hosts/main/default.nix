@@ -39,26 +39,6 @@ let
     exec ${pkgs.nix}/bin/nix-collect-garbage --delete-older-than 14d
   '';
 
-  expectedTrustedUsers = [
-    "root"
-    "user"
-  ];
-  actualTrustedUsers = config.nix.settings.trusted-users or [ ];
-  missingTrustedUsers = lib.filter (
-    user: !(builtins.elem user actualTrustedUsers)
-  ) expectedTrustedUsers;
-  unexpectedTrustedUsers = lib.filter (
-    user: !(builtins.elem user expectedTrustedUsers)
-  ) actualTrustedUsers;
-  trustedUserViolations = lib.filter (msg: msg != "") [
-    (lib.optionalString (
-      missingTrustedUsers != [ ]
-    ) "missing trusted users: ${lib.concatStringsSep ", " missingTrustedUsers}")
-    (lib.optionalString (
-      unexpectedTrustedUsers != [ ]
-    ) "unexpected trusted users: ${lib.concatStringsSep ", " unexpectedTrustedUsers}")
-  ];
-
   tailscaleBypassRules = pkgs.writeShellScript "tailscale-bypass-rules" ''
     set -eu
 
@@ -226,13 +206,6 @@ in
       greetd.fprintAuth = true;
     };
   };
-
-  assertions = [
-    {
-      assertion = trustedUserViolations == [ ];
-      message = "main nix.settings.trusted-users must stay scoped to the local admin user: ${lib.concatStringsSep "; " trustedUserViolations}";
-    }
-  ];
 
   boot = {
     # Lanzaboote (Secure Boot)
