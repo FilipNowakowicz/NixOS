@@ -65,6 +65,17 @@ in
     };
   };
 
+  systemd.services.nix-daemon.serviceConfig = {
+    # Nix builds can legitimately use all available CPU. Keep them responsive
+    # enough for manual work, but bias scheduling away from interactive desktop
+    # processes so transient evaluations/builds do not dominate thermals.
+    CPUWeight = 50;
+    Nice = 10;
+    IOWeight = 50;
+    IOSchedulingClass = "best-effort";
+    IOSchedulingPriority = lib.mkForce 6;
+  };
+
   # ── Localization ───────────────────────────────────────────────────────────
   time.timeZone = lib.mkDefault "Europe/Warsaw";
   i18n.defaultLocale = lib.mkDefault "en_GB.UTF-8";

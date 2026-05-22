@@ -66,6 +66,9 @@
         "media.ffmpeg.vaapi.enabled" = true;
         "media.hardware-video-decoding.force-enabled" = true;
         "widget.wayland-dmabuf-vaapi.enabled" = true;
+        # Comet Lake exposes VA-API decode for VP9/H.264/HEVC but not AV1;
+        # avoid Firefox falling back to CPU-bound AV1 playback.
+        "media.av1.enabled" = false;
 
         # Keep memory pressure behavior explicit; avoid legacy CPU/rendering tweaks.
         "browser.tabs.unloadOnLowMemory" = true;

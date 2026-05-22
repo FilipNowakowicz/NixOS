@@ -46,7 +46,7 @@ class ControlCenter(
     VolumeViewMixin,
     MicrophoneViewMixin,
 ):
-    FAST_POLL_MS = 750
+    FAST_POLL_MS = 2000
     SLOW_POLL_MS = 5000
     PENDING_TTL_S = 6
 
