@@ -1,4 +1,8 @@
 { config, pkgs, ... }:
+let
+  mesaEglVendor = "${pkgs.mesa}/share/glvnd/egl_vendor.d/50_mesa.json";
+  intelVulkanIcds = "${pkgs.mesa}/share/vulkan/icd.d/intel_icd.x86_64.json:${pkgs.mesa}/share/vulkan/icd.d/intel_hasvk_icd.x86_64.json";
+in
 {
   # ── Graphics ────────────────────────────────────────────────────────────────
   # NVIDIA GPU with Intel iGPU PRIME offload
@@ -34,7 +38,9 @@
       prime = {
         offload = {
           enable = true;
-          enableOffloadCmd = true; # adds `nvidia-offload` wrapper to $PATH
+          # Provide our own wrapper below so it can undo the default Mesa/Intel
+          # pins before opting an application into the NVIDIA GPU.
+          enableOffloadCmd = false;
         };
         intelBusId = "PCI:0:2:0";
         nvidiaBusId = "PCI:1:0:0";
@@ -53,12 +59,29 @@
     SUBSYSTEM=="drm", KERNEL=="card*", KERNELS=="0000:00:02.0", SYMLINK+="dri/intel-igpu"
   '';
 
+  environment.systemPackages = [
+    (pkgs.writeShellScriptBin "nvidia-offload" ''
+      unset __EGL_VENDOR_LIBRARY_FILENAMES
+      unset VK_DRIVER_FILES
+      unset VK_ICD_FILENAMES
+      export __NV_PRIME_RENDER_OFFLOAD=1
+      export __NV_PRIME_RENDER_OFFLOAD_PROVIDER=NVIDIA-G0
+      export __GLX_VENDOR_LIBRARY_NAME=nvidia
+      export __VK_LAYER_NV_optimus=NVIDIA_only
+      exec "$@"
+    '')
+  ];
+
   # ── Intel iGPU / Wayland env vars ──────────────────────────────────────────
-  # Pins the session to the Intel iGPU. NVIDIA is available on-demand via nvidia-offload.
+  # Pins the normal session to the Intel iGPU. NVIDIA is available on-demand via
+  # nvidia-offload, but passive EGL/Vulkan vendor probing should not wake it.
   environment.sessionVariables = {
     NIXOS_OZONE_WL = "1"; # Electron apps: use Wayland backend
     LIBVA_DRIVER_NAME = "iHD"; # VA-API → Intel Media Driver
     __GLX_VENDOR_LIBRARY_NAME = "mesa"; # GLX → Mesa (Intel) by default
+    __EGL_VENDOR_LIBRARY_FILENAMES = mesaEglVendor;
+    VK_DRIVER_FILES = intelVulkanIcds;
+    VK_ICD_FILENAMES = intelVulkanIcds;
     # Pins Hyprland's primary GPU to the Intel iGPU via a stable udev symlink.
     AQ_DRM_DEVICES = "/dev/dri/intel-igpu";
   };
