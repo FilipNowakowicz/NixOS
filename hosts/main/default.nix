@@ -154,9 +154,17 @@ in
 
   time.timeZone = "Europe/London";
 
-  # deploy-rs passes store settings for remote builds; trust the local admin
-  # user so the daemon accepts those restricted options without warning.
-  profiles.nix.extraTrustedUsers = [ "user" ];
+  profiles = {
+    # deploy-rs passes store settings for remote builds; trust the local admin
+    # user so the daemon accepts those restricted options without warning.
+    nix.extraTrustedUsers = [ "user" ];
+
+    observability-client = {
+      enable = true;
+      remoteEndpoint.host = hostRegistry.homeserver-gcp.tailnetFQDN;
+    };
+    observability.collectors.metrics.scrapeInterval = "60s";
+  };
 
   nix.settings = {
     extra-substituters = [ "https://pub-706604c9179043ac98604d6de4c65c2c.r2.dev" ];
@@ -402,11 +410,6 @@ in
       passwordFile = config.sops.secrets.restic_password.path;
       environmentFile = config.sops.secrets.b2_credentials.path;
     };
-  };
-
-  profiles.observability-client = {
-    enable = true;
-    remoteEndpoint.host = hostRegistry.homeserver-gcp.tailnetFQDN;
   };
 
   services.hardened = {
