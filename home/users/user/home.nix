@@ -384,9 +384,9 @@ in
       systemdTarget = "nixos-fake-graphical-session.target";
       settings = {
         general = {
-          after-sleep-cmd = "hyprctl dispatch dpms on";
-          before-sleep-cmd = "loginctl lock-session";
-          lock-cmd = "pidof hyprlock || ${pkgs.hyprlock}/bin/hyprlock";
+          after_sleep_cmd = "hyprctl dispatch dpms on";
+          before_sleep_cmd = "loginctl lock-session";
+          lock_cmd = "pidof hyprlock || ${pkgs.hyprlock}/bin/hyprlock";
         };
         listener = [
           {

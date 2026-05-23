@@ -213,6 +213,11 @@ in
   options.profiles.observability.collectors = {
     metrics = {
       enable = lib.mkEnableOption "Prometheus metrics collection";
+      scrapeInterval = lib.mkOption {
+        type = lib.types.str;
+        default = "15s";
+        description = "Default Prometheus scrape interval for local metric collection.";
+      };
       remoteWriteURL = lib.mkOption {
         type = with lib.types; nullOr str;
         default = null;
@@ -444,7 +449,7 @@ in
         port = 9090;
         retentionTime = "24h";
         globalConfig = {
-          scrape_interval = "15s";
+          scrape_interval = cfg.collectors.metrics.scrapeInterval;
           external_labels.host = config.networking.hostName;
         };
 

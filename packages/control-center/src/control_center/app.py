@@ -167,6 +167,8 @@ class ControlCenter(
         self._visible = True
         self.win.present()
         self._write_presence()
+        self._tick_fast()
+        self._tick_slow()
 
     def _hide_window(self):
         if self.win is None:
@@ -195,6 +197,8 @@ class ControlCenter(
     # ── Refresh loop ──────────────────────────────────────────
 
     def _tick_fast(self):
+        if not self._visible:
+            return True
         if self._fast_gathering:
             return True
         self._fast_gathering = True
@@ -209,6 +213,8 @@ class ControlCenter(
         return True
 
     def _tick_slow(self):
+        if not self._visible:
+            return True
         if self._slow_gathering:
             return True
         self._slow_gathering = True
