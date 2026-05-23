@@ -273,7 +273,14 @@ in
   services = {
     resolved = {
       enable = true;
-      settings.Resolve.DNSSEC = "false"; # Tailscale manages its own trust chain
+      settings.Resolve = {
+        DNSSEC = "false"; # Tailscale manages its own trust chain
+        # Do not publish main.local on hostile/shared LANs. Tailscale MagicDNS
+        # remains the durable host-discovery path and avoids resolved's
+        # conflict-renaming loop when another peer already owns main.local.
+        LLMNR = "false";
+        MulticastDNS = "false";
+      };
     };
 
     sunshine = {

@@ -5,6 +5,73 @@
 }:
 let
   inherit (hostMeta) tailnetFQDN;
+  eventStreamPort = 9273;
+  statusEventStream = pkgs.writeText "homepage-status-events.py" ''
+    import json
+    import os
+    import time
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    STATUS_PATH = "/var/lib/homepage/public/status.json"
+    PORT = ${toString eventStreamPort}
+
+
+    class Handler(BaseHTTPRequestHandler):
+      protocol_version = "HTTP/1.1"
+
+      def log_message(self, format, *args):
+        return
+
+      def do_GET(self):
+        if self.path != "/":
+          self.send_response(404)
+          self.end_headers()
+          return
+
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Connection", "keep-alive")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+
+        last_event_id = self.headers.get("Last-Event-ID") or None
+        keepalive = 0
+
+        while True:
+          try:
+            stat_result = os.stat(STATUS_PATH)
+            event_id = str(stat_result.st_mtime_ns)
+            if event_id != last_event_id:
+              with open(STATUS_PATH, "r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+              body = json.dumps(
+                {"generatedAt": payload.get("generatedAt")},
+                separators=(",", ":"),
+              )
+              self.wfile.write(f"id: {event_id}\n".encode("utf-8"))
+              self.wfile.write(b"event: status\n")
+              self.wfile.write(f"data: {body}\n\n".encode("utf-8"))
+              self.wfile.flush()
+              last_event_id = event_id
+
+            keepalive += 1
+            if keepalive >= 15:
+              self.wfile.write(b": keepalive\n\n")
+              self.wfile.flush()
+              keepalive = 0
+
+            time.sleep(1)
+          except (BrokenPipeError, ConnectionResetError):
+            return
+          except FileNotFoundError:
+            time.sleep(1)
+          except Exception:
+            time.sleep(1)
+
+
+    ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+  '';
 in
 {
   systemd = {
@@ -65,6 +132,21 @@ in
             | ${pkgs.jq}/bin/jq -r '
                 if .status == "success" and (.data.result | length) > 0 then
                   (.data.result[0].value[1] | tonumber | floor)
+                else
+                  empty
+                end
+              ' 2>/dev/null || true
+        }
+
+        prometheus_query_label() {
+          local expr="$1"
+          local label="$2"
+          curl --silent --show-error --fail --get \
+            --data-urlencode "query=$expr" \
+            http://127.0.0.1:9009/prometheus/api/v1/query 2>/dev/null \
+            | ${pkgs.jq}/bin/jq -r --arg label "$label" '
+                if .status == "success" and (.data.result | length) > 0 then
+                  (.data.result[0].metric[$label] // empty)
                 else
                   empty
                 end
@@ -134,6 +216,10 @@ in
         vulnix_ts="$(metric /var/lib/node-exporter-textfiles/vulnix.prom vulnix_scan_timestamp_seconds)"
         vulnix_cves="$(metric /var/lib/node-exporter-textfiles/vulnix.prom vulnix_cve_total)"
         vulnix_packages="$(metric /var/lib/node-exporter-textfiles/vulnix.prom vulnix_affected_packages_total)"
+        homeserver_revision="$(cat /run/current-system/configuration-revision 2>/dev/null || true)"
+        homeserver_activated_at="$(metric /var/lib/node-exporter-textfiles/system_metadata.prom nixos_system_activated_at_seconds)"
+        main_system_revision="$(prometheus_query_label 'max by (revision) (nixos_system_revision_info{host="main"})' revision)"
+        main_system_activated_at="$(prometheus_query_value 'max(nixos_system_activated_at_seconds{host="main"})')"
         failed_units_json="$(systemctl --failed --plain --no-legend --no-pager | awk '{ print $1 }' | ${pkgs.jq}/bin/jq -R . | ${pkgs.jq}/bin/jq -s -c .)"
         tailscale_status_json="$(${pkgs.tailscale}/bin/tailscale status --json 2>/dev/null || printf '{}')"
         tailnet_devices_json="$(printf '%s' "$tailscale_status_json" | ${pkgs.jq}/bin/jq -c '
@@ -169,6 +255,7 @@ in
         main_online="$(tailscale_online_json main)"
 
         tmp="/var/lib/homepage/public/status.json.tmp"
+        badge_tmp="/var/lib/homepage/public/status.svg.tmp"
         ${pkgs.jq}/bin/jq -n \
           --argjson generatedAt "$now" \
           --arg fqdn "${tailnetFQDN}" \
@@ -197,6 +284,10 @@ in
           --argjson vulnixAge "$(age_json "$vulnix_ts")" \
           --argjson vulnixCves "$(number_json "$vulnix_cves")" \
           --argjson vulnixPackages "$(number_json "$vulnix_packages")" \
+          --arg homeserverRevision "$homeserver_revision" \
+          --argjson homeserverActivatedAt "$(number_json "$homeserver_activated_at")" \
+          --arg mainRevision "$main_system_revision" \
+          --argjson mainActivatedAt "$(number_json "$main_system_activated_at")" \
           --argjson failedUnits "$failed_units_json" \
           --argjson tailnetDevices "$tailnet_devices_json" \
           '{
@@ -212,6 +303,11 @@ in
                   online: $homeserverOnline,
                   state: $tailscaleState
                 },
+                system: (
+                  {}
+                  + (if $homeserverRevision == "" then {} else { revision: $homeserverRevision } end)
+                  + (if $homeserverActivatedAt == null then {} else { activatedAt: $homeserverActivatedAt } end)
+                ),
                 services: {
                   adguard: { active: $adguardActive, unit: "adguardhome.service" },
                   nginx: { active: $nginxActive, unit: "nginx.service" },
@@ -249,6 +345,11 @@ in
                 tailscale: {
                   online: $mainOnline
                 },
+                system: (
+                  {}
+                  + (if $mainRevision == "" then {} else { revision: $mainRevision } end)
+                  + (if $mainActivatedAt == null then {} else { activatedAt: $mainActivatedAt } end)
+                ),
                 backups: [
                   {
                     name: "local",
@@ -263,10 +364,78 @@ in
           }' > "$tmp"
         mv "$tmp" /var/lib/homepage/public/status.json
         chmod 0644 /var/lib/homepage/public/status.json
+
+        read -r badge_mode badge_label badge_tracked <<EOF
+        $(${pkgs.jq}/bin/jq -r '
+          def service_values:
+            [.hosts | to_entries[] | (.value.services // {} | to_entries[]) | .[]?];
+          def backup_values:
+            [.hosts | to_entries[] | (.value.backups // []) | .[]?];
+          {
+            tracked: (service_values | length),
+            failedUnits: (.failedUnits | length),
+            downServices: (service_values | map(select(.value.active == false)) | length),
+            unknownServices: (service_values | map(select(.value.active == null)) | length),
+            offlinePeers: ((.tailnet.devices // []) | map(select(.online == false)) | length),
+            staleBackups: (backup_values | map(select((.lastSuccessAgeSeconds == null) or (.lastSuccessAgeSeconds > 93600))) | length)
+          }
+          | .mode = (
+              if (.failedUnits > 0) or (.downServices > 0) or (.staleBackups > 0) then "alarm"
+              elif (.unknownServices > 0) or (.offlinePeers > 0) then "watch"
+              else "calm"
+              end
+            )
+          | .label = (
+              if .mode == "alarm" then "ALARM"
+              elif .mode == "watch" then "WATCH"
+              else "CALM"
+              end
+            )
+          | "\(.mode)\t\(.label)\t\(.tracked)"
+        ' /var/lib/homepage/public/status.json)
+        EOF
+
+        case "$badge_mode" in
+          alarm)
+            badge_fill="#d86958"
+            badge_bg="#2a1715"
+            ;;
+          watch)
+            badge_fill="#d9a44f"
+            badge_bg="#2a2213"
+            ;;
+          *)
+            badge_fill="#79c08f"
+            badge_bg="#13251b"
+            ;;
+        esac
+
+        cat >"$badge_tmp" <<EOF
+        <svg xmlns="http://www.w3.org/2000/svg" width="180" height="32" viewBox="0 0 180 32" role="img" aria-label="Homepage status ''${badge_label}, ''${badge_tracked} tracked services">
+          <rect width="180" height="32" rx="10" fill="#10120f"/>
+          <rect x="1" y="1" width="178" height="30" rx="9" fill="''${badge_bg}" stroke="#2f352e"/>
+          <circle cx="18" cy="16" r="6" fill="''${badge_fill}"/>
+          <text x="31" y="20" fill="#f3efe3" font-family="ui-monospace, monospace" font-size="12" font-weight="700">''${badge_label}</text>
+          <text x="166" y="20" fill="#d7d1c2" font-family="ui-monospace, monospace" font-size="11" text-anchor="end">''${badge_tracked} svc</text>
+        </svg>
+        EOF
+        mv "$badge_tmp" /var/lib/homepage/public/status.svg
+        chmod 0644 /var/lib/homepage/public/status.svg
       '';
       serviceConfig = {
         Type = "oneshot";
         RuntimeDirectory = "homepage-status";
+      };
+    };
+
+    services.homepage-status-events = {
+      description = "Stream homepage status updates over server-sent events";
+      after = [ "homepage-status.service" ];
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        ExecStart = "${pkgs.python3}/bin/python3 ${statusEventStream}";
+        Restart = "always";
+        RestartSec = "2s";
       };
     };
 

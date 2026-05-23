@@ -363,6 +363,36 @@ def gather_brightness():
 
 
 def gather_power_profile():
+    try:
+        props = Gio.DBusProxy.new_for_bus_sync(
+            Gio.BusType.SYSTEM,
+            Gio.DBusProxyFlags.DO_NOT_LOAD_PROPERTIES,
+            None,
+            "org.freedesktop.UPower.PowerProfiles",
+            "/org/freedesktop/UPower/PowerProfiles",
+            "org.freedesktop.DBus.Properties",
+            None,
+        )
+        profile = props.call_sync(
+            "Get",
+            GLib.Variant(
+                "(ss)",
+                (
+                    "org.freedesktop.UPower.PowerProfiles",
+                    "ActiveProfile",
+                ),
+            ),
+            Gio.DBusCallFlags.NONE,
+            500,
+            None,
+        ).unpack()[0]
+        if hasattr(profile, "unpack"):
+            profile = profile.unpack()
+        if isinstance(profile, str) and profile:
+            return profile
+    except (GLib.Error, Exception):
+        pass
+
     out, ok = _run(["powerprofilesctl", "get"])
     if ok:
         return out.strip()

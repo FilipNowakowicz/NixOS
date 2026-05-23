@@ -4,6 +4,7 @@ let
   gen = import ../../lib/generators.nix { inherit lib; };
   certDir = "/var/lib/nginx/certs";
   homepageDir = "/var/lib/homepage/public";
+  homepageEventsTarget = "http://127.0.0.1:9273/";
   proxy = gen.nginx.proxyLocation;
 in
 {
@@ -89,10 +90,23 @@ in
             return = "301 /home/";
           };
 
+          "= /home/index.html" = {
+            alias = "${homepageDir}/index.html";
+            extraConfig = ''
+              add_header Cache-Control "no-store" always;
+            '';
+          };
+
+          "~ ^/home/src/(?<asset>.+\\.[0-9a-f]{10}\\.(?:js|css))$" = {
+            alias = "${homepageDir}/src/$asset";
+            extraConfig = ''
+              add_header Cache-Control "public, max-age=31536000, immutable" always;
+            '';
+          };
+
           "/home/" = {
             alias = "${homepageDir}/";
             extraConfig = ''
-              add_header Cache-Control "no-store" always;
               try_files $uri $uri/ /home/index.html;
             '';
           };
@@ -101,6 +115,26 @@ in
             alias = "${homepageDir}/status.json";
             extraConfig = ''
               default_type application/json;
+              add_header Cache-Control "no-store";
+            '';
+          };
+
+          "= /home/status.events" = {
+            proxyPass = homepageEventsTarget;
+            extraConfig = ''
+              proxy_http_version 1.1;
+              proxy_set_header Connection "";
+              proxy_buffering off;
+              proxy_cache off;
+              add_header Cache-Control "no-store";
+              add_header X-Accel-Buffering "no";
+            '';
+          };
+
+          "= /home/status.svg" = {
+            alias = "${homepageDir}/status.svg";
+            extraConfig = ''
+              default_type image/svg+xml;
               add_header Cache-Control "no-store";
             '';
           };
