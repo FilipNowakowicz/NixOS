@@ -1,19 +1,3 @@
-vim.g.vimtex_view_method = "zathura"
-vim.g.vimtex_compiler_method = "latexmk"
-vim.g.tex_flavor = "latex"
-vim.g.vimtex_quickfix_open_on_warning = 0
-vim.g.vimtex_quickfix_mode = 2
-vim.g.vimtex_imaps_enabled = 0
-vim.g.vimtex_syntax_enabled = 0
-vim.g.vimtex_compiler_latexmk = {
-  options = {
-    "-pdf",
-    "-interaction=nonstopmode",
-    "-synctex=1",
-    "-outdir=build",
-  },
-}
-
 local tex_group = vim.api.nvim_create_augroup("tex_qol", { clear = true })
 vim.api.nvim_create_autocmd("FileType", {
   group = tex_group,
