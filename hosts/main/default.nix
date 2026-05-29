@@ -736,6 +736,35 @@ in
     {
       system.nixos.tags = [ "anonymous" ];
 
+      # Amnesic home: shadow the persistent @home with a tmpfs so every
+      # anonymous boot starts with no logins, cookies, shell history, or scan
+      # artifacts. Home Manager repopulates declarative dotfiles from the Nix
+      # store on boot (home-manager-user.service), so the configured
+      # environment survives while session data does not. The real @home is
+      # not wiped, only hidden while this specialisation is booted.
+      # NOTE: uid/gid assume `user` is 1000:users(100) — the first normal user,
+      # stable via /var/lib/nixos. If Home Manager activation fails on a fresh
+      # boot with permission errors, verify this assumption first.
+      fileSystems."/home/user" = {
+        device = "none";
+        fsType = "tmpfs";
+        options = [
+          "mode=0700"
+          "uid=1000"
+          "gid=100"
+        ];
+      };
+
+      # Fresh machine-id each anonymous boot: drop it from the persisted file
+      # set so systemd regenerates a transient random one on the ephemeral
+      # root. The SSH host key stays persisted (sops reads it directly from
+      # /persist; OpenSSH itself is disabled in this spec). Scoped to the
+      # specialisation — the normal boot keeps its stable machine-id.
+      environment.persistence."/persist".files = lib.mkForce [
+        "/etc/ssh/ssh_host_ed25519_key"
+        "/etc/ssh/ssh_host_ed25519_key.pub"
+      ];
+
       networking = {
         hostName = lib.mkForce "nixos";
         domain = lib.mkForce "";
@@ -776,7 +805,23 @@ in
         };
       };
 
-      programs.proxychains.enable = true;
+      # Route proxychained tools through the Tor SOCKS port. Without an
+      # explicit proxy the generated [ProxyList] is empty and `proxychains`
+      # silently connects direct, defeating the point. SOCKS carries TCP
+      # connect() only: use this for OSINT/recon TCP tools, NOT SYN/UDP/raw
+      # scans (nmap -sS, masscan, ping sweeps bypass SOCKS entirely). Active
+      # pentest scanning should exit via Mullvad, which hides the origin IP
+      # with full protocol support; Tor is for low-volume, origin-sensitive
+      # lookups and browsing (the latter belongs in Whonix).
+      programs.proxychains = {
+        enable = true;
+        proxies.tor = {
+          enable = true;
+          type = "socks5";
+          host = "127.0.0.1";
+          port = 9050;
+        };
+      };
 
       security.apparmor.enable = true;
 
@@ -821,6 +866,11 @@ in
             };
             script = ''
               ${pkgs.mullvad-vpn}/bin/mullvad auto-connect set on
+              # auto-connect only fires on daemon start; the daemon is already
+              # running this boot, so kick an explicit connect. Best effort —
+              # lockdown mode (set by mullvad-lockdown) keeps traffic
+              # fail-closed regardless of whether this succeeds.
+              ${pkgs.mullvad-vpn}/bin/mullvad connect || true
             '';
           };
         };
