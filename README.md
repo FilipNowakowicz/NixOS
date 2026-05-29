@@ -390,13 +390,15 @@ Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) and [age]
 ### Home Manager User Secrets
 
 User-scoped auth and identity files are backed up through the Home Manager
-`sops-nix` module on hosts where `userSecrets.enable = true`. The git
+`sops-nix` module on hosts where `userSecrets.enable = true`. Codex OAuth is
+excluded because the CLI refreshes `~/.codex/auth.json` dynamically, and
+restoring a stale token snapshot causes connector startup authentication
+failures. The git
 `user.name` and `user.email` are also rendered at activation from a sops
 template, so the literal identity values are never committed.
 
 Covered files:
 
-- `~/.codex/auth.json`
 - `~/.claude/.credentials.json`
 - `~/.gemini/oauth_creds.json`
 - `~/.config/gh/hosts.yml`

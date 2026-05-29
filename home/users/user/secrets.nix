@@ -23,13 +23,6 @@ in
       age.keyFile = "${configDir}/sops/age/keys.txt";
 
       secrets = {
-        codex-auth = {
-          format = "json";
-          sopsFile = ./secrets/codex-auth.json;
-          key = "";
-          path = "${homeDir}/.codex/auth.json";
-        };
-
         claude-credentials = {
           format = "json";
           sopsFile = ./secrets/claude-credentials.json;

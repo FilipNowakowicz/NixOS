@@ -230,6 +230,7 @@ in
       "iommu=force"
       "mem_sleep_default=deep"
     ];
+    blacklistedKernelModules = [ "btusb" ];
 
     initrd = {
       # Systemd in initrd (required for initrd SSH)
@@ -512,11 +513,29 @@ in
     user.services.blueman-applet.enable = false;
 
     services = {
-      # Policy.AutoEnable races the Intel CNVi adapter's MGMT init on this
-      # machine (bluetoothd logs "Failed to set default system config for hci0"
-      # at boot and leaves hci0 powered off). Force it on via D-Bus once the
-      # /org/bluez/hci0 object is exposed. bluetoothctl is unusable here: in
-      # non-interactive mode it silently no-ops and exits 0 regardless of state.
+      # This Intel CNVi adapter occasionally fails firmware download if btusb
+      # probes as soon as udev sees the USB device:
+      #
+      #   Bluetooth: hci0: Failed to send firmware data (-38)
+      #   usb 1-14: device descriptor read/64, error -71
+      #
+      # Keep btusb blacklisted above and load it here after early boot settles.
+      bluetooth-load-btusb = {
+        description = "Load Intel Bluetooth USB driver after early boot settles";
+        requiredBy = [ "bluetooth.service" ];
+        before = [ "bluetooth.service" ];
+        serviceConfig.Type = "oneshot";
+        script = ''
+          sleep 5
+          ${pkgs.kmod}/bin/modprobe btusb
+        '';
+      };
+
+      # Policy.AutoEnable can still race the adapter's MGMT init after firmware
+      # load (bluetoothd logs "Failed to set default system config for hci0" and
+      # leaves hci0 powered off). Force it on via D-Bus once the /org/bluez/hci0
+      # object is exposed. bluetoothctl is unusable here: in non-interactive
+      # mode it silently no-ops and exits 0 regardless of state.
       bluetooth-power-on = {
         description = "Power on Bluetooth controller after bluez is ready";
         wantedBy = [ "bluetooth.target" ];

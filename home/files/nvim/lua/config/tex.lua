@@ -10,6 +10,9 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.opt_local.formatoptions:append("t")
 
     vim.opt_local.conceallevel = 0
+    vim.opt_local.foldmethod = "expr"
+    vim.opt_local.foldexpr = "vimtex#fold#level(v:lnum)"
+    vim.opt_local.foldtext = "vimtex#fold#text()"
   end,
 })
 

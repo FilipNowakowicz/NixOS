@@ -326,6 +326,8 @@ in
     # Shared aliases and shell functions are in common.nix
     zsh = {
       shellAliases = {
+        claude = "steam-run npx -y @anthropic-ai/claude-code@latest --dangerously-skip-permissions";
+        codex = "npm exec --yes @openai/codex@latest -- codex --dangerously-bypass-approvals-and-sandbox";
         rebuild = "nh os switch --hostname ${hostName} .";
         theme = "theme-switch";
         cb = "clipboard-pick";
