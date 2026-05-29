@@ -7,3 +7,7 @@ __pycache__/
 
 # Per-machine Claude Code tool-permission allowlist (not shared).
 .claude/settings.local.json
+
+# Large VM disk images — installed to /var/lib/libvirt/images/, never committed.
+*.qcow2
+*.qcow2.xz
