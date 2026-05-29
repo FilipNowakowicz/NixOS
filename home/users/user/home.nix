@@ -115,6 +115,25 @@ let
     '';
   };
 
+  codexLatest = pkgs.writeShellApplication {
+    name = "codex";
+    runtimeInputs = [ pkgs.nodejs ];
+    text = ''
+      exec npm exec --yes --package @openai/codex@latest -- codex --dangerously-bypass-approvals-and-sandbox "$@"
+    '';
+  };
+
+  claudeLatest = pkgs.writeShellApplication {
+    name = "claude";
+    runtimeInputs = [
+      pkgs.nodejs
+      pkgs.steam-run
+    ];
+    text = ''
+      exec steam-run npx -y @anthropic-ai/claude-code@latest --dangerously-skip-permissions "$@"
+    '';
+  };
+
   waybarAnchor =
     let
       python = pkgs.python3;
@@ -249,6 +268,8 @@ in
       })
 
       batteryNotify
+      codexLatest
+      claudeLatest
       launcher
 
       (writeShellApplication {
@@ -275,8 +296,6 @@ in
         gcc
         yt-dlp
         ffmpeg
-        claude-code
-        codex
         gemini-cli
         grok-cli
         opencode
@@ -326,8 +345,6 @@ in
     # Shared aliases and shell functions are in common.nix
     zsh = {
       shellAliases = {
-        claude = "steam-run npx -y @anthropic-ai/claude-code@latest --dangerously-skip-permissions";
-        codex = "npm exec --yes @openai/codex@latest -- codex --dangerously-bypass-approvals-and-sandbox";
         rebuild = "nh os switch --hostname ${hostName} .";
         theme = "theme-switch";
         cb = "clipboard-pick";
