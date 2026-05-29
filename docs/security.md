@@ -299,3 +299,81 @@ persistent identities needed after a full reinstall: Codex and Claude state,
 Wi-Fi profiles, Mullvad account/device state, Tailscale node identity,
 Bluetooth pairings, fingerprint enrollment state, USBGuard rules, Secure Boot
 PKI, machine-id, and SSH host identity.
+
+## Mullvad and Tailscale Coexistence
+
+`main` runs Mullvad VPN and Tailscale concurrently. The two VPNs conflict at
+the routing and kill-switch layers; three mechanisms hold them together.
+
+**nftables kill-switch bypass.** Mullvad's kill-switch nftables chain (priority 0)
+blocks traffic that lacks its split-tunnel exclusion mark (`0x6d6f6c65`). The
+`tailscale-mullvad-compat` nftables table adds a chain at priority −1 that
+marks all outgoing `tailscale0` packets with that value before Mullvad's chain
+runs. This makes Mullvad's kill switch pass tailnet traffic unconditionally,
+without weakening it for clearnet traffic.
+
+**Policy routing priority.** Mullvad installs a broad policy routing rule that
+routes most traffic through its own table, which would also capture
+`100.64.0.0/10` CGNAT (Tailscale addresses). `tailscale-bypass-routing.service`
+(also fired in `tailscaled.postStart` and `mullvad-daemon.postStart`) adds
+destination-specific policy rules at pref 114 for `100.64.0.0/10` and
+`fd7a:115c:a1e0::/48`, pointing at Tailscale's routing table. These beat
+Mullvad's catch-all rule for tailnet destinations. The service retries up to
+five times to handle daemon startup ordering.
+
+**Reverse-path filtering.** The dual-VPN setup produces asymmetric routes that
+strict reverse-path filtering rejects as spoofed. `networking.firewall.checkReversePath`
+is set to `"loose"` for the main interface to allow the legitimate tunneled
+return traffic.
+
+In the anonymous specialisation Tailscale is fully disabled, so all three
+mechanisms are removed and `checkReversePath` is forced back to `"strict"`.
+
+## Anonymous Specialisation
+
+`main` has a boot-selectable `anonymous` specialisation for privacy-sensitive
+and security-lab work. It appears as a separate bootloader entry
+(`nixos-anonymous-...`); select it from the bootloader menu on boot.
+
+**Changes from normal boot:**
+
+| Area          | Normal                    | Anonymous                                                                             |
+| :------------ | :------------------------ | :------------------------------------------------------------------------------------ |
+| Hostname      | `main`                    | `nixos` (domain cleared)                                                              |
+| Wi-Fi MAC     | stable                    | random per connection                                                                 |
+| Ethernet MAC  | stable                    | random per link                                                                       |
+| Bluetooth     | enabled                   | disabled                                                                              |
+| SSH           | enabled (tailscale0 only) | disabled                                                                              |
+| Tailscale     | enabled                   | disabled                                                                              |
+| Observability | Prometheus, Alloy, OTel   | all disabled                                                                          |
+| Backups       | Restic + btrbk timers     | all disabled                                                                          |
+| AppArmor      | disabled                  | enabled                                                                               |
+| Mullvad       | running, manual connect   | running, auto-connect, lockdown always on                                             |
+| Tor           | not running               | SOCKS5 client on `127.0.0.1:9050`                                                     |
+| proxychains   | no system config          | `strict_chain` → Tor, `proxy_dns` on                                                  |
+| Kernel        | default                   | `dmesg_restrict=1`, `kptr_restrict=2`, `perf_event_paranoid=3`, `yama.ptrace_scope=1` |
+
+**Traffic model in anonymous mode:**
+
+- All clearnet traffic exits through Mullvad with kill-switch on; nothing
+  escapes if Mullvad disconnects.
+- `proxychains <tool>` routes the tool's TCP through Tor (Mullvad → Tor exit).
+  `proxy_dns` is on, so DNS also resolves through Tor.
+- `strict_chain` means `proxychains` fails closed — if Tor is still starting,
+  connections fail rather than leaking direct.
+- Whonix VMs route through the host network stack and therefore also through
+  Mullvad; their internal Tor traffic exits through Mullvad's tunnel.
+
+**Security shell and Tor.** `nix develop#security` provides network recon,
+web, password, and packet-analysis tools. In the anonymous specialisation,
+`proxychains <tool>` chains through Tor. In the normal boot, `proxychains`
+fails loudly because no Tor daemon is running — this is intentional; tools
+should not silently run direct while appearing to be proxied.
+
+**Whonix KVM.** Whonix-Gateway and Whonix-Workstation are installed as
+persistent KVM/libvirt VMs. Images live in `/var/lib/libvirt/images/`
+(bind-mounted from `/persist/var/lib/libvirt/` for impermanence survival).
+`Whonix-External` and `Whonix-Internal` libvirt networks autostart. Start
+Gateway before Workstation; updates run inside the VMs as `sysmaint` using
+`upgrade-nonroot` (the `user-sysmaint-split` feature blocks `sudo` from the
+normal `user` account).
