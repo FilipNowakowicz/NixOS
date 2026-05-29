@@ -8,28 +8,38 @@ in
   options.userSecrets.enable = lib.mkEnableOption "Home Manager-managed backup and restore for selected user auth files";
 
   config = lib.mkIf cfg.enable {
-    home.file = {
-      ".codex/.keep".text = "";
-      ".claude/.keep".text = "";
-      ".gemini/.keep".text = "";
-    };
+    home = {
+      file = {
+        ".codex/.keep".text = "";
+        ".claude/.keep".text = "";
+        ".gemini/.keep".text = "";
+      };
 
-    xdg.configFile = {
-      "gh/.keep".text = "";
-      "gcloud/.keep".text = "";
+      activation = {
+        removeLegacyCodexSopsAuth = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          auth_file="${homeDir}/.codex/auth.json"
+          legacy_target="${configDir}/sops-nix/secrets/codex-auth"
+
+          if [ -L "$auth_file" ] && [ "$(readlink "$auth_file")" = "$legacy_target" ]; then
+            $DRY_RUN_CMD rm "$auth_file"
+          fi
+        '';
+
+        removeLegacyClaudeSopsCredentials = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          creds_file="${homeDir}/.claude/.credentials.json"
+          legacy_target="${configDir}/sops-nix/secrets/claude-credentials"
+
+          if [ -L "$creds_file" ] && [ "$(readlink "$creds_file")" = "$legacy_target" ]; then
+            $DRY_RUN_CMD rm "$creds_file"
+          fi
+        '';
+      };
     };
 
     sops = {
       age.keyFile = "${configDir}/sops/age/keys.txt";
 
       secrets = {
-        claude-credentials = {
-          format = "json";
-          sopsFile = ./secrets/claude-credentials.json;
-          key = "";
-          path = "${homeDir}/.claude/.credentials.json";
-        };
-
         gemini-oauth-creds = {
           format = "json";
           sopsFile = ./secrets/gemini-oauth_creds.json;
