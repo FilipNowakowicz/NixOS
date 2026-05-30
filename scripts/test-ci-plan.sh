@@ -73,6 +73,11 @@ homeserver_output="$(run_plan $'hosts/homeserver-gcp/default.nix')"
 assert_contains "$homeserver_output" "tests=true"
 assert_contains "$homeserver_output" '{"name":"homeserver-gcp-smoke","command":"smoke-homeserver-gcp","target":""}'
 
+installer_output="$(run_plan $'hosts/installer/default.nix')"
+assert_contains "$installer_output" "hosts=true"
+assert_contains "$installer_output" '{"name":"installer"}'
+assert_not_contains "$installer_output" '{"name":"main-ci"}'
+
 package_output="$(run_plan $'packages/inventory-data.nix')"
 assert_contains "$package_output" "run_packages=true"
 assert_contains "$package_output" "hosts=false"

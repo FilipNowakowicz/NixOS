@@ -20,6 +20,27 @@ resource "google_compute_firewall" "tailscale" {
   source_ranges = ["0.0.0.0/0"]
 }
 
+# The "default" network auto-creates default-allow-ssh (TCP/22 from 0.0.0.0/0)
+# at priority 65534, which exposes the public NAT IP to the internet. SSH is
+# meant to be tailnet-only, so this higher-precedence deny (lower priority
+# number) blocks public TCP/22 at the GCP edge as defense-in-depth alongside
+# the in-guest nftables rule.
+#
+# NOTE: apply manually (NOT via terraform apply in this change):
+#   cd infra && tofu plan && tofu apply
+resource "google_compute_firewall" "deny_public_ssh" {
+  name     = "deny-public-ssh"
+  network  = "default"
+  priority = 500
+
+  deny {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+}
+
 # ── Disk snapshots ───────────────────────────────────────────────────────────
 
 resource "google_compute_resource_policy" "homeserver_boot_daily_snapshots" {

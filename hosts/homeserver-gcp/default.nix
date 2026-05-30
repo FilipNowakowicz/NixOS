@@ -2,6 +2,7 @@
   config,
   inputs,
   hostMeta,
+  pkgs,
   ...
 }:
 let
@@ -48,7 +49,14 @@ in
     };
   };
 
-  environment.enableAllTerminfo = true;
+  environment.systemPackages = [
+    # Keep common client terminal definitions available over SSH without pulling
+    # every terminfo package into the server closure.
+    pkgs.alacritty.terminfo
+    pkgs.foot.terminfo
+    pkgs.kitty.terminfo
+    pkgs.wezterm.terminfo
+  ];
 
   networking = {
     hostName = "homeserver-gcp";
@@ -80,6 +88,7 @@ in
 
     observability = {
       enable = true;
+      alertWebhookUrlFile = config.sops.secrets.alertmanager_webhook_url.path;
       grafana = {
         enable = true;
         adminPasswordFile = config.sops.secrets.grafana_admin_password.path;
@@ -92,6 +101,12 @@ in
         metrics.enable = true;
         logs.enable = true;
         audit.enable = true;
+        audit.extraSources.nginx = {
+          matches = "SYSLOG_IDENTIFIER=nginx";
+          eventType = "http";
+          scope = "edge-access";
+          formatAsJson = true;
+        };
         traces.enable = true;
         blackbox = {
           enable = true;
@@ -170,6 +185,8 @@ in
         ROCKET_ADDRESS = "127.0.0.1";
         ROCKET_PORT = 8222;
         SIGNUPS_ALLOWED = false;
+        INVITATIONS_ALLOWED = false;
+        # ADMIN_TOKEN intentionally omitted — the /admin endpoint is disabled.
         DOMAIN = "https://${tailnetFQDN}";
       };
     };
@@ -182,6 +199,10 @@ in
       tailscale_auth_key = { };
       grafana_admin_password.owner = "grafana";
       grafana_secret_key.owner = "grafana";
+      alertmanager_webhook_url = {
+        owner = "mimir";
+        group = "mimir";
+      };
       observability_ingest_htpasswd = {
         owner = config.services.nginx.user;
         inherit (config.services.nginx) group;
@@ -191,6 +212,20 @@ in
       b2_credentials = { };
     };
   };
+
+  # GCP VMs have no power supply subsystem; the power_supply collector fails to
+  # initialize when /sys/class/power_supply is empty. Override the shared profile
+  # list to drop it for this host only.
+  services.prometheus.exporters.node.enabledCollectors = pkgs.lib.mkForce [
+    "cpu"
+    "filesystem"
+    "loadavg"
+    "meminfo"
+    "netdev"
+    "systemd"
+    "textfile"
+    "thermal_zone"
+  ];
 
   users.users.user = {
     home = "/home/user";

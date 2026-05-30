@@ -148,23 +148,11 @@ EOF
 @define-color text #$text;
 EOF
 
-  cat >"$theme_dir/mako-config" <<EOF
-font=JetBrainsMono Nerd Font 11
-background-color=#$bg
-text-color=#$text
-border-color=#$orange
-border-radius=8
-border-size=2
-anchor=top-right
-margin=12
-padding=10,14
-width=300
-default-timeout=5000
-max-visible=5
-
-[mode=do-not-disturb]
-invisible=1
-EOF
+  sed \
+    -e "s/@bg@/$bg/g" \
+    -e "s/@text@/$text/g" \
+    -e "s/@orange@/$orange/g" \
+    "$MAKO_CONFIG_TEMPLATE" >"$theme_dir/mako-config"
 
   ln -sf "$REPO_WALLPAPERS_DIR/$wallpaper" "$theme_dir/wallpaper"
 }

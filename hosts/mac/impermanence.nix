@@ -17,6 +17,7 @@
   environment.persistence."/persist".directories = [
     "/var/lib/tailscale" # tailnet node identity + peers
     "/var/lib/bluetooth" # Bluetooth pairings
+    "/var/lib/fail2ban" # banned-IP database (resets to empty without this)
     "/etc/NetworkManager/system-connections" # saved Wi-Fi / VPN profiles
     # systemd state that affects boot-time behavior rather than runtime:
     "/var/lib/systemd/timers"

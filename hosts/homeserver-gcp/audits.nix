@@ -1,7 +1,13 @@
-{ lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   gen = import ../../lib/generators.nix { inherit lib; };
   inherit (gen.systemd) timer;
+  inherit (config.lib.profiles.observability) mkPromScript;
 in
 {
   systemd = {
@@ -12,7 +18,6 @@ in
           Type = "oneshot";
           ExecStart = pkgs.writeShellScript "lynis-audit" ''
             report=/tmp/lynis-report.dat
-            tmp=/var/lib/node-exporter-textfiles/lynis.prom.tmp
 
             ${pkgs.lynis}/bin/lynis audit system \
               --quiet --no-colors --report-file "$report" 2>/dev/null
@@ -28,21 +33,24 @@ in
             warning_count=$(grep -c "^warning\\[\\]=" "$report" || true)
             suggestion_count=$(grep -c "^suggestion\\[\\]=" "$report" || true)
             : "''${hardening_index:=0}"
-            {
-              echo "# HELP lynis_hardening_index Security hardening index (0-100)"
-              echo "# TYPE lynis_hardening_index gauge"
-              echo "lynis_hardening_index $hardening_index"
-              echo "# HELP lynis_warnings_total Number of lynis warnings"
-              echo "# TYPE lynis_warnings_total gauge"
-              echo "lynis_warnings_total $warning_count"
-              echo "# HELP lynis_suggestions_total Number of lynis suggestions"
-              echo "# TYPE lynis_suggestions_total gauge"
-              echo "lynis_suggestions_total $suggestion_count"
-              echo "# HELP lynis_scan_timestamp_seconds Unix timestamp of last successful audit"
-              echo "# TYPE lynis_scan_timestamp_seconds gauge"
-              echo "lynis_scan_timestamp_seconds $(date +%s)"
-            } > "$tmp"
-            mv "$tmp" /var/lib/node-exporter-textfiles/lynis.prom
+            export hardening_index warning_count suggestion_count
+            ${mkPromScript {
+              name = "lynis.prom";
+              lines = [
+                "# HELP lynis_hardening_index Security hardening index (0-100)"
+                "# TYPE lynis_hardening_index gauge"
+                "lynis_hardening_index $hardening_index"
+                "# HELP lynis_warnings_total Number of lynis warnings"
+                "# TYPE lynis_warnings_total gauge"
+                "lynis_warnings_total $warning_count"
+                "# HELP lynis_suggestions_total Number of lynis suggestions"
+                "# TYPE lynis_suggestions_total gauge"
+                "lynis_suggestions_total $suggestion_count"
+                "# HELP lynis_scan_timestamp_seconds Unix timestamp of last successful audit"
+                "# TYPE lynis_scan_timestamp_seconds gauge"
+                "lynis_scan_timestamp_seconds $(${pkgs.coreutils}/bin/date +%s)"
+              ];
+            }}
             rm -f "$report"
           '';
         };
@@ -56,7 +64,6 @@ in
           Type = "oneshot";
           ExecStart = pkgs.writeShellScript "vulnix-scan" ''
             whitelist=${./vulnix-whitelist.toml}
-            tmp=/var/lib/node-exporter-textfiles/vulnix.prom.tmp
 
             # --system scans /run/current-system; -j = JSON output
             # NVD data is downloaded and cached in /var/cache/vulnix
@@ -70,19 +77,22 @@ in
               echo "vulnix produced invalid output" >&2; exit 1;
             }
             cve_count=$(printf '%s' "$json" | ${pkgs.jq}/bin/jq '[.[].affected_by | length] | add // 0')
+            export pkg_count cve_count
 
-            {
-              echo "# HELP vulnix_affected_packages_total Packages with known CVEs after whitelist"
-              echo "# TYPE vulnix_affected_packages_total gauge"
-              echo "vulnix_affected_packages_total $pkg_count"
-              echo "# HELP vulnix_cve_total CVE findings after whitelist"
-              echo "# TYPE vulnix_cve_total gauge"
-              echo "vulnix_cve_total $cve_count"
-              echo "# HELP vulnix_scan_timestamp_seconds Unix timestamp of last successful scan"
-              echo "# TYPE vulnix_scan_timestamp_seconds gauge"
-              echo "vulnix_scan_timestamp_seconds $(date +%s)"
-            } > "$tmp"
-            mv "$tmp" /var/lib/node-exporter-textfiles/vulnix.prom
+            ${mkPromScript {
+              name = "vulnix.prom";
+              lines = [
+                "# HELP vulnix_affected_packages_total Packages with known CVEs after whitelist"
+                "# TYPE vulnix_affected_packages_total gauge"
+                "vulnix_affected_packages_total $pkg_count"
+                "# HELP vulnix_cve_total CVE findings after whitelist"
+                "# TYPE vulnix_cve_total gauge"
+                "vulnix_cve_total $cve_count"
+                "# HELP vulnix_scan_timestamp_seconds Unix timestamp of last successful scan"
+                "# TYPE vulnix_scan_timestamp_seconds gauge"
+                "vulnix_scan_timestamp_seconds $(${pkgs.coreutils}/bin/date +%s)"
+              ];
+            }}
           '';
         };
       };

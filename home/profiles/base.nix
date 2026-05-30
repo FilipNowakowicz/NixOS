@@ -38,6 +38,19 @@
         init.defaultBranch = "main";
         pull.ff = "only";
         core.editor = "nvim";
+        push.autoSetupRemote = true;
+        rebase.autosquash = true;
+        rerere.enabled = true;
+      };
+    };
+
+    # ── Delta (git diff pager) ─────────────────────────────────────────────────
+    delta = {
+      enable = true;
+      enableGitIntegration = true;
+      options = {
+        navigate = true;
+        line-numbers = true;
       };
     };
 
@@ -211,7 +224,7 @@
   xdg.userDirs = {
     enable = true;
     createDirectories = true;
-    download = "${config.home.homeDirectory}/downloads";
+    download = "${config.home.homeDirectory}/Downloads";
     desktop = null;
     documents = null;
     music = null;

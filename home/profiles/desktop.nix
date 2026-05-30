@@ -5,6 +5,9 @@
   enableSpotify ? true,
   ...
 }:
+let
+  isDark = (config.themes._activeThemeColorscheme or { }).background or "dark" == "dark";
+in
 {
   home.packages =
     with pkgs;
@@ -78,15 +81,24 @@
     };
   };
 
-  # GTK theming
+  # GTK theming — derived from the active theme's colorscheme.background.
   gtk = {
     enable = true;
-    gtk3.extraConfig.gtk-application-prefer-dark-theme = true;
-    gtk4.extraConfig.gtk-application-prefer-dark-theme = true;
+    theme = {
+      name = if isDark then "Adwaita-dark" else "Adwaita";
+      package = pkgs.gnome-themes-extra;
+    };
+    iconTheme = {
+      name = "Adwaita";
+      package = pkgs.adwaita-icon-theme;
+    };
+    gtk3.extraConfig.gtk-application-prefer-dark-theme = isDark;
+    gtk4.extraConfig.gtk-application-prefer-dark-theme = isDark;
   };
 
   # XDG color-scheme preference (read by GTK4, libadwaita, portals)
-  dconf.settings."org/gnome/desktop/interface".color-scheme = "prefer-dark";
+  dconf.settings."org/gnome/desktop/interface".color-scheme =
+    if isDark then "prefer-dark" else "prefer-light";
 
   # Cursor
   home.pointerCursor = {

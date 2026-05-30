@@ -16,7 +16,6 @@
 #   backup      — drives modules/nixos/profiles/backup.nix retention policy
 #     .class    — "critical" (14d/8w/6m/2y) | "standard" (7d/4w/3m); absent = no backup module
 #     .name     — restic backup job name; defaults to "local"
-#   ip          — static IP (e.g. microvm guest); consumed by host network config via hostMeta
 #   hardware    — host-local hardware identifiers
 #     .diskById — stable /dev/disk/by-id/* path for the primary disk (consumed by disko)
 let
@@ -28,7 +27,6 @@ let
     "tailscale"
     "homeManager"
     "backup"
-    "ip"
     "hardware"
   ];
 
@@ -45,7 +43,6 @@ let
 
   knownHomeManagerProfiles = [
     "desktop"
-    "workstation"
   ];
 
   knownHomeManagerPacks = [
@@ -148,9 +145,6 @@ let
           "${name}.backup: expected class \"critical\" or \"standard\" and optional non-empty string name, got ${
             builtins.toJSON (cfg.backup.class or null)
           }"
-        )
-        (ok (!p "ip" || builtins.isString cfg.ip)
-          "${name}.ip: must be a string, got ${builtins.typeOf (cfg.ip or null)}"
         )
         (ok (
           !p "hardware"

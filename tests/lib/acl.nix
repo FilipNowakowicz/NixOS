@@ -38,9 +38,24 @@ let
       };
       backup.class = "critical";
     };
+    metrics = {
+      role = "service";
+      tailscale = {
+        tag = "metrics";
+        acceptFrom = {
+          admin = [
+            "9090"
+            9091
+          ];
+          workstation = [
+            "8443"
+            8080
+          ];
+        };
+      };
+    };
     internal-vm = {
       role = "internal-vm";
-      ip = "10.0.100.2";
       # no tailscale — must be ignored by generator
     };
   };
@@ -60,7 +75,7 @@ let
 
     testTagOwnerCount = {
       expr = lib.length (lib.attrNames result.tagOwners);
-      expected = 2;
+      expected = 3;
     };
 
     testNoHostsKey = {
@@ -76,33 +91,48 @@ let
       ];
     };
 
-    # One grouped workstation rule, plus admin break-glass.
+    # Grouped source rules, plus admin break-glass.
     testAclCount = {
       expr = lib.length result.acls;
-      expected = 2;
+      expected = 3;
     };
 
     testFirstAclSrc = {
       expr = (lib.elemAt result.acls 0).src;
-      expected = [ "tag:workstation" ];
+      expected = [ "tag:admin" ];
     };
 
     testFirstAclDst = {
       expr = (lib.elemAt result.acls 0).dst;
       expected = [
+        "tag:metrics:9090"
+        "tag:metrics:9091"
+      ];
+    };
+
+    testSecondAclSrc = {
+      expr = (lib.elemAt result.acls 1).src;
+      expected = [ "tag:workstation" ];
+    };
+
+    testSecondAclDst = {
+      expr = (lib.elemAt result.acls 1).dst;
+      expected = [
+        "tag:metrics:8080"
+        "tag:metrics:8443"
         "tag:server:22"
         "tag:server:443"
         "tag:workstation:22"
       ];
     };
 
-    testSecondAclSrc = {
-      expr = (lib.elemAt result.acls 1).src;
+    testThirdAclSrc = {
+      expr = (lib.elemAt result.acls 2).src;
       expected = [ "autogroup:admin" ];
     };
 
-    testSecondAclDst = {
-      expr = (lib.elemAt result.acls 1).dst;
+    testThirdAclDst = {
+      expr = (lib.elemAt result.acls 2).dst;
       expected = [ "*:*" ];
     };
 
@@ -142,6 +172,25 @@ let
       expected = true;
     };
 
+    testHasUnusualPortConfigDestinations = {
+      expr = lib.any (
+        rule:
+        rule.src == [ "tag:workstation" ]
+        && builtins.elem "tag:metrics:8080" rule.dst
+        && builtins.elem "tag:metrics:8443" rule.dst
+      ) result.acls;
+      expected = true;
+    };
+
+    testAclRulesRemainSourceSortedBeforeBreakGlass = {
+      expr = map (rule: rule.src) result.acls;
+      expected = [
+        [ "tag:admin" ]
+        [ "tag:workstation" ]
+        [ "autogroup:admin" ]
+      ];
+    };
+
     testHasWorkstationPeerRule = {
       expr = lib.any (
         rule: rule.src == [ "tag:workstation" ] && builtins.elem "tag:workstation:22" rule.dst
@@ -152,12 +201,19 @@ let
     # Deduplication: duplicate ports in acceptFrom must not produce duplicate rules.
     testBackupMetadataDoesNotChangeAclCount = {
       expr = lib.length result.acls;
-      expected = 2;
+      expected = 3;
     };
 
     testNonTailscaleHostExcludedFromTagOwners = {
       expr = result.tagOwners ? "tag:internal-vm";
       expected = false;
+    };
+
+    testBreakGlassRulePresent = {
+      expr = lib.any (
+        rule: rule.action == "accept" && rule.src == [ "autogroup:admin" ] && rule.dst == [ "*:*" ]
+      ) result.acls;
+      expected = true;
     };
   };
 in

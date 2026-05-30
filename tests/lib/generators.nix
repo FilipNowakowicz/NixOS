@@ -10,6 +10,22 @@ let
   gen = import ../../lib/generators.nix { inherit lib; };
 
   failures = lib.runTests {
+    testEmptyComponentList = {
+      expr = gen.toAlloyHCL [ ];
+      expected = "";
+    };
+
+    testEmptyComponentBody = {
+      expr = gen.toAlloyHCL [
+        {
+          type = "prometheus.exporter.unix";
+          label = "local";
+          body = { };
+        }
+      ];
+      expected = "prometheus.exporter.unix \"local\" {\n\n}";
+    };
+
     testStringAttribute = {
       expr = gen.toAlloyHCL [
         {
@@ -104,6 +120,23 @@ let
         }
       ];
       expected = "loki.source.journal \"systemd\" {\n  labels = {\n    job = \"systemd-journal\",\n  }\n}";
+    };
+
+    testListMultipleItems = {
+      expr = gen.toAlloyHCL [
+        {
+          type = "x";
+          label = "y";
+          body = {
+            tags = [
+              "a"
+              "b"
+              "c"
+            ];
+          };
+        }
+      ];
+      expected = "x \"y\" {\n  tags = [\"a\", \"b\", \"c\",]\n}";
     };
 
     testMultipleComponents = {

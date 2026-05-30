@@ -6,6 +6,19 @@ let
   homepageDir = "/var/lib/homepage/public";
   homepageEventsTarget = "http://127.0.0.1:9273/";
   proxy = gen.nginx.proxyLocation;
+
+  # Security response headers. nginx add_header is per-block: once any
+  # add_header appears in a location, inherited server-level headers are
+  # dropped. So these are set at the server level (covering the proxy and
+  # return-only locations that have no add_header of their own) AND re-injected
+  # into every location below that already sets its own add_header directives.
+  securityHeaders = ''
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header Content-Security-Policy "default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https: wss:; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+  '';
 in
 {
   options.profiles.homeserverGcpNginx = {
@@ -42,11 +55,43 @@ in
       enable = true;
       recommendedProxySettings = true;
       recommendedTlsSettings = true;
+      appendHttpConfig = ''
+        log_format json_combined escape=json '{"time":"$time_iso8601","remote":"$remote_addr",'
+          '"method":"$request_method","uri":"$request_uri","status":$status,'
+          '"ua":"$http_user_agent","rt":$request_time}';
+        access_log syslog:server=unix:/dev/log,nohostname json_combined;
+      '';
+
+      # AdGuard Home web UI — HTTPS on tailscale0:3001, proxied to localhost:13001.
+      # Dedicated port keeps it separate from the main vhost while sharing the cert.
+      # onlySSL = true is required to trigger ssl_certificate/key insertion by the
+      # NixOS nginx module (hasSSL = onlySSL || addSSL || forceSSL; explicit listen
+      # alone does not set hasSSL).
+      virtualHosts."adguard-ui" = {
+        onlySSL = true;
+        serverName = cfg.fqdn;
+        listen = [
+          {
+            addr = "0.0.0.0";
+            port = 3001;
+            ssl = true;
+          }
+        ];
+        sslCertificate = "${certDir}/homeserver-gcp.crt";
+        sslCertificateKey = "${certDir}/homeserver-gcp.key";
+        extraConfig = securityHeaders;
+        locations."/" = proxy {
+          target = "http://127.0.0.1:13001";
+          websockets = true;
+        };
+      };
 
       virtualHosts.${cfg.fqdn} = {
         forceSSL = true;
         sslCertificate = "${certDir}/homeserver-gcp.crt";
         sslCertificateKey = "${certDir}/homeserver-gcp.key";
+
+        extraConfig = securityHeaders;
 
         locations = {
           "/" = proxy {
@@ -93,16 +138,21 @@ in
           "= /home/index.html" = {
             alias = "${homepageDir}/index.html";
             extraConfig = ''
+              ${securityHeaders}
               add_header Cache-Control "no-store" always;
             '';
           };
 
-          "~ ^/home/src/(?<asset>.+\\.[0-9a-f]{10}\\.(?:js|css))$" = {
-            alias = "${homepageDir}/src/$asset";
-            extraConfig = ''
-              add_header Cache-Control "public, max-age=31536000, immutable" always;
-            '';
-          };
+          # {n} quantifiers break nginx location parsing (treated as block delimiters).
+          # Spell out 10 hex-char repetitions explicitly instead.
+          "~ ^/home/src/(?<asset>.+\\.[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]\\.(?:js|css))$" =
+            {
+              alias = "${homepageDir}/src/$asset";
+              extraConfig = ''
+                ${securityHeaders}
+                add_header Cache-Control "public, max-age=31536000, immutable" always;
+              '';
+            };
 
           "/home/" = {
             alias = "${homepageDir}/";
@@ -114,6 +164,7 @@ in
           "= /home/status.json" = {
             alias = "${homepageDir}/status.json";
             extraConfig = ''
+              ${securityHeaders}
               default_type application/json;
               add_header Cache-Control "no-store";
             '';
@@ -122,6 +173,7 @@ in
           "= /home/status.events" = {
             proxyPass = homepageEventsTarget;
             extraConfig = ''
+              ${securityHeaders}
               proxy_http_version 1.1;
               proxy_set_header Connection "";
               proxy_buffering off;
@@ -134,6 +186,7 @@ in
           "= /home/status.svg" = {
             alias = "${homepageDir}/status.svg";
             extraConfig = ''
+              ${securityHeaders}
               default_type image/svg+xml;
               add_header Cache-Control "no-store";
             '';

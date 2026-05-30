@@ -9,18 +9,7 @@
   invariants,
 }:
 let
-  mkResult = passed: message: {
-    inherit passed message;
-  };
-
-  require = condition: message: mkResult condition message;
-
-  requirePaths =
-    actual: expected:
-    let
-      missing = lib.filter (path: !(builtins.elem path actual)) expected;
-    in
-    mkResult (missing == [ ]) "missing expected path(s): ${lib.concatStringsSep ", " missing}";
+  inherit (invariants) mkResult require requirePaths;
 
   registryAssertionsFor = hostName: invariants.mkRegistryAssertions hostName hostRegistry.${hostName};
 
@@ -66,53 +55,39 @@ let
       mkResult (violations == [ ]) (lib.concatStringsSep "; " violations);
   };
 
-  obsClientUsesCanonicalUsername = {
-    name = "observability client uses canonical ingest username";
+  # Pre-sorted so the check can compare directly without sorting a constant on every eval.
+  expectedAgentMaintenanceCommands = [
+    "/run/current-system/sw/bin/bootctl cleanup"
+    "/run/current-system/sw/bin/bootctl status --no-pager"
+    "/run/current-system/sw/bin/efibootmgr -b [0-9A-F][0-9A-F][0-9A-F][0-9A-F] -B"
+    "/run/current-system/sw/bin/nix-gc-14d"
+    "/run/current-system/sw/bin/systemctl start btrbk-local.service"
+    "/run/current-system/sw/bin/systemctl start restic-backups-local.service"
+    "/run/current-system/sw/bin/systemctl start restic-check-local.service"
+    "/run/current-system/sw/bin/systemctl status btrbk-local.service --no-pager"
+    "/run/current-system/sw/bin/systemctl status btrbk-local.timer --no-pager"
+    "/run/current-system/sw/bin/systemctl status restic-backups-local.service --no-pager"
+    "/run/current-system/sw/bin/systemctl status restic-backups-local.timer --no-pager"
+    "/run/current-system/sw/bin/systemctl status restic-check-local.service --no-pager"
+    "/run/current-system/sw/bin/systemctl status restic-check-local.timer --no-pager"
+  ];
+
+  mainAgentMaintenanceSudoAllowlist = {
+    name = "agent maintenance sudo allowlist stays narrow";
     check =
       cfg:
       let
-        clientEnabled = cfg.profiles.observability-client.enable;
-        inherit (cfg.profiles.observability.ingestAuth) username;
+        userRules = lib.filter (rule: rule.users or [ ] == [ "user" ]) (
+          cfg.security.sudo.extraRules or [ ]
+        );
+        commands = lib.concatMap (rule: rule.commands or [ ]) userRules;
+        actualCommands = lib.sort builtins.lessThan (map (command: command.command) commands);
+        expectedCommands = expectedAgentMaintenanceCommands;
+        invalidOptions = lib.filter (command: command.options or [ ] != [ "NOPASSWD" ]) commands;
       in
       require (
-        !clientEnabled || username == "telemetry"
-      ) "profiles.observability.ingestAuth.username must be 'telemetry', got '${username}'";
-  };
-
-  mainSshIsTailnetOnly = {
-    name = "main SSH stays tailnet-only";
-    check =
-      cfg:
-      let
-        violations = lib.filter (msg: msg != "") [
-          (lib.optionalString (!cfg.services.openssh.enable) "services.openssh.enable must be true")
-          (lib.optionalString cfg.services.openssh.openFirewall "services.openssh.openFirewall must be false")
-          (lib.optionalString (!cfg.services.tailscale.enable) "services.tailscale.enable must be true")
-          (lib.optionalString (
-            !cfg.services.tailscale.openFirewall
-          ) "services.tailscale.openFirewall must be true")
-        ];
-      in
-      mkResult (violations == [ ]) (lib.concatStringsSep "; " violations);
-  };
-
-  mainUsbguardIsDenyDefault = {
-    name = "main USBGuard stays deny-default";
-    check =
-      cfg:
-      let
-        rules = cfg.services.usbguard.rules or "";
-        violations = lib.filter (msg: msg != "") [
-          (lib.optionalString (!cfg.services.usbguard.enable) "services.usbguard.enable must be true")
-          (lib.optionalString (
-            !lib.hasInfix "allow id " rules
-          ) "services.usbguard.rules must whitelist at least one device")
-          (lib.optionalString (
-            !lib.hasInfix "reject" rules
-          ) "services.usbguard.rules must include a default reject rule")
-        ];
-      in
-      mkResult (violations == [ ]) (lib.concatStringsSep "; " violations);
+        actualCommands == expectedCommands && invalidOptions == [ ]
+      ) "main sudo extraRules must only grant NOPASSWD for the exact agent maintenance commands";
   };
 
   mainBackupPathsArePersisted = {
@@ -125,17 +100,24 @@ let
         persistedDirs = map (d: normalize d "directory") (persistence.directories or [ ]);
         persistedFiles = map (f: normalize f "file") (persistence.files or [ ]);
 
-        # /home, /nix, and /persist are independent btrfs subvolumes that are
-        # not rolled back. Anything under them already survives reboot.
-        persistentRoots = [
-          "/home/"
-          "/nix/"
-          "/persist/"
-        ];
+        subvolOptionFor =
+          fs: lib.findFirst (option: lib.hasPrefix "subvol=" option) null (fs.options or [ ]);
+        subvolFor =
+          fs:
+          let
+            option = subvolOptionFor fs;
+          in
+          if option == null then null else lib.removePrefix "subvol=" option;
+        persistentRoots = lib.mapAttrsToList (mountPoint: _: mountPoint) (
+          lib.filterAttrs (
+            _: fs: (fs.fsType or "") == "btrfs" && subvolFor fs != null && subvolFor fs != "/@root"
+          ) cfg.fileSystems
+        );
+        isUnderRoot = root: path: path == root || (root != "/" && lib.hasPrefix "${root}/" path);
 
         isPersistent =
           path:
-          lib.any (root: lib.hasPrefix root path) persistentRoots
+          lib.any (root: isUnderRoot root path) persistentRoots
           || lib.elem path persistedDirs
           || lib.elem path persistedFiles
           || lib.any (d: lib.hasPrefix (d + "/") path) persistedDirs;
@@ -144,32 +126,6 @@ let
       in
       mkResult (offenders == [ ])
         "backup path(s) not persisted (would be wiped on rollback boot): ${lib.concatStringsSep ", " offenders}";
-  };
-
-  mainLocalBackupProtectsCriticalPaths = {
-    name = "main local backup covers critical operator data";
-    check =
-      cfg:
-      let
-        backup = cfg.services.restic.backups.local;
-        expectedPaths = [
-          "/home/user/.ssh"
-          "/home/user/.gnupg"
-          "/home/user/nix"
-        ];
-        pathCheck = requirePaths backup.paths expectedPaths;
-        violations = lib.filter (msg: msg != "") [
-          (lib.optionalString (
-            !(lib.hasPrefix "/run/secrets/" (backup.passwordFile or ""))
-          ) "services.restic.backups.local.passwordFile must come from /run/secrets/*")
-          (lib.optionalString (!backup.initialize) "services.restic.backups.local.initialize must be true")
-          (lib.optionalString (
-            (backup.timerConfig.OnCalendar or null) != "daily"
-          ) "services.restic.backups.local.timerConfig.OnCalendar must be \"daily\"")
-          (lib.optionalString (!pathCheck.passed) pathCheck.message)
-        ];
-      in
-      mkResult (violations == [ ]) (lib.concatStringsSep "; " violations);
   };
 
   mainBtrbkPolicyMatchesLocalSnapshotIntent = {
@@ -249,7 +205,8 @@ let
         pathCheck = requirePaths backup.paths [
           "/var/lib/vaultwarden"
           "/var/lib/grafana"
-          "/var/lib/private/AdGuardHome"
+          "/var/lib/restic-backup-canary"
+          "/var/lib/restic-staging/adguardhome"
         ];
         violations = lib.filter (msg: msg != "") [
           (lib.optionalString (
@@ -275,11 +232,12 @@ let
   };
 
   commonSystemInvariants = [
-    {
-      name = "has stateVersion";
-      check = cfg: require (cfg.system.stateVersion != null) "system.stateVersion must be set";
-    }
+    invariants.hasStateVersion
     nixpkgsRegistryPinnedToFlakeInput
+    {
+      name = "impermanent hosts have matching disko config";
+      check = invariants.checkImpermanentHostHasDiskoConfig;
+    }
   ];
 
   mainAccessInvariants = [
@@ -288,61 +246,33 @@ let
       check =
         cfg: require cfg.security.sudo.wheelNeedsPassword "security.sudo.wheelNeedsPassword must be true";
     }
-    mainSshIsTailnetOnly
-    mainUsbguardIsDenyDefault
+    mainAgentMaintenanceSudoAllowlist
+    invariants.mainSshIsTailnetOnly
+    invariants.mainUsbguardIsDenyDefault
+    {
+      name = "anonymous specialisation persistence stays minimal";
+      check = invariants.checkAnonymousSpecialisationPersistence;
+    }
+    {
+      name = "Mullvad and Tailscale coexistence assumptions hold";
+      check = invariants.checkMullvadTailscaleCoexistence;
+    }
   ];
 
   mainExperienceInvariants = [
     mainInteractiveShellUsesNixIndexAndComma
-    obsClientUsesCanonicalUsername
+    invariants.obsClientUsesCanonicalUsername
   ];
 
   mainBackupInvariants = [
-    mainLocalBackupProtectsCriticalPaths
+    invariants.mainLocalBackupProtectsCriticalPaths
     mainBackupPathsArePersisted
     mainBtrbkPolicyMatchesLocalSnapshotIntent
   ];
 
-  # Invariants shared by all deploy-rs targets (passwordless wheel, SSH tailnet-only).
-  deployTargetAccessInvariants = [
-    {
-      name = "passwordless sudo enabled";
-      check =
-        cfg:
-        require (!cfg.security.sudo.wheelNeedsPassword)
-          "security.sudo.wheelNeedsPassword must be false (deploy-rs needs passwordless sudo; access is SSH-key-only over Tailscale)";
-    }
-    {
-      name = "firewall enabled";
-      check = cfg: require cfg.networking.firewall.enable "networking.firewall.enable must be true";
-    }
-    {
-      name = "sops uses SSH host key for decryption";
-      check =
-        cfg:
-        require (
-          cfg.sops.age.sshKeyPaths != [ ]
-        ) "sops.age.sshKeyPaths must contain at least one SSH host key path";
-    }
-  ];
-
-  homeserverAccessInvariants = deployTargetAccessInvariants ++ [
-    {
-      name = "SSH and HTTPS are not globally open";
-      check = cfg: invariants.checkNoGlobalTCPPorts [ 22 443 ] cfg;
-    }
-    {
-      name = "SSH and HTTPS stay Tailscale-only";
-      check =
-        cfg:
-        invariants.checkTCPPortsRestrictedToInterface {
-          interface = "tailscale0";
-          ports = [
-            22
-            443
-          ];
-        } cfg;
-    }
+  homeserverAccessInvariants = invariants.deployTargetAccessAssertions ++ [
+    invariants.homeserverSshAndHttpsNotGloballyOpen
+    invariants.homeserverSshAndHttpsTailscaleOnly
   ];
 
   homeserverBackupInvariants = [
@@ -351,21 +281,23 @@ let
 
   # mac is a deploy-rs target like homeserver-gcp (passwordless wheel, SSH tailnet-only)
   # but does not publish HTTPS, so only SSH ports are checked.
-  macAccessInvariants = deployTargetAccessInvariants ++ [
-    {
-      name = "SSH is not globally open";
-      check = cfg: invariants.checkNoGlobalTCPPorts [ 22 ] cfg;
-    }
-    {
-      name = "SSH stays Tailscale-only";
-      check =
-        cfg:
-        invariants.checkTCPPortsRestrictedToInterface {
-          interface = "tailscale0";
-          ports = [ 22 ];
-        } cfg;
-    }
+  macAccessInvariants = invariants.deployTargetAccessAssertions ++ [
+    invariants.macSshNotGloballyOpen
+    invariants.macSshTailscaleOnly
   ];
+
+  # Lint the Mimir ruler alert rules with promtool. Renders the exact same
+  # shared data the observability module deploys (lib/observability-alerts.nix)
+  # so a typo in a metric name, label, or expr fails the light lane instead of
+  # silently shipping a non-firing rule.
+  alertData = import ../lib/observability-alerts.nix;
+  rulesYaml = (pkgs.formats.yaml { }).generate "infrastructure-alerts.yaml" alertData.rules;
+  observabilityAlertsLint =
+    pkgs.runCommand "observability-alerts-lint" { nativeBuildInputs = [ pkgs.prometheus.cli ]; }
+      ''
+        promtool check rules ${rulesYaml}
+        touch $out
+      '';
 
   mkSopsBootstrapCheck =
     hostName: secretsDir:
@@ -382,16 +314,42 @@ let
         ${lib.optionalString (!hasPub) ''echo "  hosts/${hostName}/secrets/ssh_host_ed25519_key.pub.enc"''}
         exit 1
       '';
+
+  # Invariant list shared by the full `main` closure and the `main-ci`
+  # closure CI actually builds, so a `profiles.ci`-gated change to a
+  # security option cannot slip past either variant.
+  mainInvariants =
+    commonSystemInvariants
+    ++ mainAccessInvariants
+    ++ mainExperienceInvariants
+    ++ mainBackupInvariants
+    ++ registryAssertionsFor "main";
+
+  registrySecurityInvariants = [
+    {
+      name = "SOPS recipients match active host registry";
+      check = _: invariants.checkSopsRecipientParity hostRegistry (builtins.readFile ../.sops.yaml);
+    }
+    {
+      name = "deploy targets have tailnet addresses";
+      check = _: invariants.checkDeployTargetsHaveTailnetAddresses hostRegistry;
+    }
+  ];
 in
 {
   invariantChecks = {
-    invariants-main = invariants.mkInvariantCheck "main" (
-      commonSystemInvariants
-      ++ mainAccessInvariants
-      ++ mainExperienceInvariants
-      ++ mainBackupInvariants
-      ++ registryAssertionsFor "main"
-    ) allNixosConfigs.main.config;
+    invariants-registry-security =
+      invariants.mkInvariantCheck "registry-security" registrySecurityInvariants
+        { };
+
+    invariants-main = invariants.mkInvariantCheck "main" mainInvariants allNixosConfigs.main.config;
+
+    # CI ships `main-ci` (profiles.ci = true; skipHeavyPackages = true), not
+    # the full `main` closure; pin the same invariants to it so the gated
+    # build is what gets validated.
+    invariants-main-ci =
+      invariants.mkInvariantCheck "main-ci" mainInvariants
+        ciNixosConfigs.main-ci.config;
 
     invariants-homeserver-gcp = invariants.mkInvariantCheck "homeserver-gcp" (
       commonSystemInvariants
@@ -407,20 +365,9 @@ in
     homeserver-gcp-sops-bootstrap = mkSopsBootstrapCheck "homeserver-gcp" ../hosts/homeserver-gcp/secrets;
 
     mac-sops-bootstrap = mkSopsBootstrapCheck "mac" ../hosts/mac/secrets;
-  };
 
-  cveReportPackagesFor =
-    system:
-    let
-      targetPkgs = import nixpkgs {
-        inherit system;
-        config.allowUnfree = true;
-      };
-      targetCveChecks = import ../lib/cve-checks.nix { pkgs = targetPkgs; };
-    in
-    {
-      main = targetCveChecks.mkCveCheck "main" allNixosConfigs.main.config.system.build.toplevel;
-    };
+    observability-alerts-lint = observabilityAlertsLint;
+  };
 
   ciTestsFor = system: {
     homeserver-gcp-smoke = import ../tests/nixos/homeserver-gcp-smoke.nix {

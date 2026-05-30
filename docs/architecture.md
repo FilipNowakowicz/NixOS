@@ -40,7 +40,7 @@ graph TD
 
 Files that have **unconditional side-effects** (e.g., adding packages to `environment.systemPackages` or enabling heavy services for every host) **MUST NOT** be imported globally in `modules/nixos/default.nix`.
 
-- **Manual Opt-in:** Side-effectful NixOS profiles like `desktop.nix` and hardware modules like `hardware/nvidia-prime.nix` must be imported explicitly by the host. Home Manager extras such as `home/profiles/workstation.nix` are enabled through host metadata in `lib/hosts.nix`, not by global NixOS imports.
+- **Manual Opt-in:** Side-effectful NixOS profiles like `desktop.nix` and hardware modules like `hardware/nvidia-prime.nix` must be imported explicitly by the host. Home Manager workflow packs are enabled through host metadata in `lib/hosts.nix`, not by global NixOS imports.
 - **Host-specific Home Manager overlays:** small per-host user modules such as
   `home/users/user/main.nix` and `home/users/user/mac.nix` are imported by the
   host assembly layer when the host name matches. Use these for workstation

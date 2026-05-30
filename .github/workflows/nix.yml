@@ -191,6 +191,9 @@ jobs:
       - name: Check Markdown links
         run: bash scripts/validate.sh docs
 
+      - name: Lint GitHub Actions (actionlint)
+        run: nix run nixpkgs#actionlint
+
   packages:
     needs: [push-policy, changes]
     if: needs.changes.outputs.run_packages == 'true'
@@ -200,18 +203,18 @@ jobs:
 
       - uses: ./.github/actions/setup-nix
 
-      - name: Build inventory package
+      - name: Build package outputs
         env:
-          PATHS_FILE: ${{ runner.temp }}/inventory-paths.txt
+          PATHS_FILE: ${{ runner.temp }}/package-paths.txt
         run: |
           rm -f "$PATHS_FILE"
-          PRINT_PATHS=1 bash scripts/validate.sh package inventory-data | tee "$PATHS_FILE" >/dev/null
+          PRINT_PATHS=1 bash scripts/validate.sh package all | tee "$PATHS_FILE" >/dev/null
 
-      - name: Push inventory package to cache
+      - name: Push package outputs to cache
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         continue-on-error: true
         env:
-          PATHS_FILE: ${{ runner.temp }}/inventory-paths.txt
+          PATHS_FILE: ${{ runner.temp }}/package-paths.txt
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           CACHE_SIGNING_KEY: ${{ secrets.CACHE_SIGNING_KEY }}

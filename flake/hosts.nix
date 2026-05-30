@@ -22,7 +22,6 @@ let
 
   homeManagerProfileModules = {
     desktop = ../home/profiles/desktop.nix;
-    workstation = ../home/profiles/workstation.nix;
   };
 
   homeManagerHostModules = {
@@ -144,6 +143,7 @@ in
       modules = [
         inputs.sops-nix.homeManagerModules.sops
         ../home/users/user/home.nix
+        ../home/profiles/desktop.nix
       ];
     };
 

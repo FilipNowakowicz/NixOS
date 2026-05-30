@@ -12,7 +12,7 @@ Core pieces:
 - `blink.cmp` for completion, including GitHub Copilot suggestions.
 - `oil.nvim` for filesystem editing as a buffer.
 - `leap.nvim` and `telescope.nvim` for navigation and search.
-- Native LSP setup for `nixd`, `clangd`, `basedpyright`, and `ltex`.
+- Native LSP setup for `nixd`, `clangd`, `basedpyright`, `texlab`, and `ltex`.
 - `nvim-dap`, `neotest`, and `conform` for debugging, tests, and formatting.
 - Runtime theme integration with the Home Manager theme module.
 
@@ -56,6 +56,7 @@ That table currently carries:
 
 - enabled languages and language-specific options
 - enabled LSP servers and server settings
+- theme colorscheme intent from the active Home Manager theme
 - formatter mappings
 - linter mappings
 - neotest adapter config

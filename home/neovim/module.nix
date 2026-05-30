@@ -16,13 +16,17 @@ let
   mergeAttrSet = attrsList: lib.foldl' lib.recursiveUpdate { } attrsList;
 
   enabledPacks =
-    lib.optional cfg.languages.nix.enable (import ./packs/nix.nix { inherit pkgs; })
+    lib.optional cfg.languages.c.enable (import ./packs/c.nix { inherit pkgs; })
+    ++ lib.optional cfg.languages.nix.enable (import ./packs/nix.nix { inherit pkgs; })
     ++ lib.optional cfg.languages.python.enable (import ./packs/python.nix { inherit pkgs cfg; })
     ++ lib.optional cfg.languages.tex.enable (import ./packs/tex.nix { inherit lib pkgs cfg; });
 
   packPackages = lib.unique (lib.concatMap (pack: pack.packages or [ ]) enabledPacks);
 
   languageConfig = {
+    c = {
+      inherit (cfg.languages.c) enable;
+    };
     nix = {
       inherit (cfg.languages.nix) enable;
     };
@@ -49,8 +53,20 @@ let
     markers = projectMarkers;
   };
 
+  # Colorscheme selection comes from the active theme (home/theme), so a theme
+  # switch repaints Neovim instead of leaving a hardcoded gruvbox value.
+  themeColorscheme = config.themes._activeThemeColorscheme or { };
+
   generatedConfig = {
     languages = languageConfig;
+
+    ui = {
+      colorscheme = {
+        name = themeColorscheme.name or "gruvbox-material";
+        background = themeColorscheme.background or "dark";
+        contrast = themeColorscheme.contrast or "medium";
+      };
+    };
 
     lsp = {
       enable = lspEnable;
@@ -113,6 +129,10 @@ in
       };
 
     languages = {
+      c.enable = lib.mkEnableOption "C/C++ editor tooling (clangd LSP)" // {
+        default = false;
+      };
+
       nix.enable = lib.mkEnableOption "Nix editor tooling (nixd LSP, nixfmt formatter)" // {
         default = true;
       };
@@ -150,6 +170,10 @@ in
       pkgs.lazygit
       pkgs.stylua
       pkgs.tree-sitter
+    ]
+    ++ lib.optionals cfg.languages.c.enable [
+      pkgs.gcc
+      pkgs.gnumake
     ]
     ++ packPackages;
 

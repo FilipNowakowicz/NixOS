@@ -10,7 +10,7 @@
     };
 
     home-manager = {
-      url = "github:nix-community/home-manager";
+      url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -159,7 +159,6 @@
 
       inherit (checkOutputs)
         ciTestsFor
-        cveReportPackagesFor
         invariantChecks
         ;
     in
@@ -205,7 +204,6 @@
         # both outputs, which defeats path-gating and can trip VM-test eval.
         legacyPackages.${defaultSystem} = {
           ciTests = ciTestsFor defaultSystem;
-          ciReports = cveReportPackagesFor defaultSystem;
         };
 
         # ── Home Manager Configurations ─────────────────────────────────────
@@ -230,7 +228,6 @@
           profiles-base = import ./home/profiles/base.nix;
           profiles-desktop = import ./home/profiles/desktop.nix;
           profiles-workflow-packs = import ./home/profiles/workflow-packs;
-          profiles-workstation = import ./home/profiles/workstation.nix;
         };
       };
     };

@@ -1,4 +1,5 @@
 {
+  config,
   inputs,
   lib,
   pkgs,
@@ -7,31 +8,22 @@
 }:
 let
   configurationRevision = self.dirtyShortRev or self.shortRev or self.dirtyRev or self.rev or null;
+  inherit (config.lib.profiles.observability) mkPromScript;
 in
 {
   zramSwap.enable = true;
 
   system.configurationRevision = lib.mkDefault configurationRevision;
 
-  system.activationScripts.exportSystemMetadata.text = ''
-    install -d -m 0755 /var/lib/node-exporter-textfiles
-    activated_at="$(${pkgs.coreutils}/bin/date +%s)"
-    tmp="/var/lib/node-exporter-textfiles/system_metadata.prom.tmp"
-
-    cat >"$tmp" <<EOF
-    nixos_system_activated_at_seconds $activated_at
-    EOF
-
-  ''
-  + lib.optionalString (configurationRevision != null) ''
-    cat >>"$tmp" <<EOF
-    nixos_system_revision_info{revision="${configurationRevision}"} 1
-    EOF
-  ''
-  + ''
-    chmod 0644 "$tmp"
-    mv "$tmp" /var/lib/node-exporter-textfiles/system_metadata.prom
-  '';
+  system.activationScripts.exportSystemMetadata.text = "${mkPromScript {
+    name = "system_metadata.prom";
+    lines = [
+      "nixos_system_activated_at_seconds $(${pkgs.coreutils}/bin/date +%s)"
+    ]
+    ++ lib.optionals (configurationRevision != null) [
+      ''nixos_system_revision_info{revision="${configurationRevision}"} 1''
+    ];
+  }}";
 
   # None of the current hosts use ZFS for root import. Set the upcoming 26.11
   # default explicitly across the fleet to avoid evaluation-time warnings.

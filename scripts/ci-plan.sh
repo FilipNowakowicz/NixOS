@@ -17,6 +17,7 @@ docs_change='^(README\.md|docs/|.*\.md$|.*/CLAUDE\.md$|AGENTS\.md$)'
 package_change='^packages/'
 main_change='^hosts/main/'
 homeserver_change='^hosts/homeserver-gcp/'
+installer_change='^hosts/installer/'
 module_all_hosts='^modules/nixos/(default\.nix|services/|profiles/(base|backup|security|sops-base|user)\.nix)'
 module_desktop_hosts='^modules/nixos/(profiles/(desktop|observability-client)\.nix|hardware/nvidia-prime\.nix)'
 module_server_hosts='^modules/nixos/profiles/observability/'
@@ -33,12 +34,14 @@ run_lint=false
 run_light=false
 run_packages=false
 main_ci=false
+installer_build=false
 profile_tests=false
 homeserver_gcp_smoke=false
 closure_main=false
 
 select_all_hosts() {
   main_ci=true
+  installer_build=true
   closure_main=true
 }
 
@@ -127,6 +130,10 @@ if [[ -n $changed_files ]]; then
     homeserver_gcp_smoke=true
   fi
 
+  if grep -qE "${installer_change}" <<<"$changed_files"; then
+    installer_build=true
+  fi
+
   if grep -qE "${module_all_hosts}" <<<"$changed_files"; then
     select_all_hosts
     select_all_tests
@@ -182,9 +189,13 @@ fi
 hosts_matrix='{"include":['
 sep=""
 if [[ $main_ci == "true" ]]; then
-  hosts_matrix+='{"name":"main-ci"}'
+  hosts_matrix+="${sep}"'{"name":"main-ci"}'
   sep=","
   hosts_matrix+="${sep}"'{"name":"main-full"}'
+fi
+if [[ $installer_build == "true" ]]; then
+  hosts_matrix+="${sep}"'{"name":"installer"}'
+  sep=","
 fi
 hosts_matrix+=']}'
 
@@ -202,7 +213,7 @@ if [[ $profile_tests == "true" ]]; then
 fi
 tests_matrix+=']}'
 
-if [[ $main_ci == "true" ]]; then
+if [[ $main_ci == "true" || $installer_build == "true" ]]; then
   emit_bool hosts true
 else
   emit_bool hosts false

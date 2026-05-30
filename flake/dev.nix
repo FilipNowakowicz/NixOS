@@ -100,11 +100,14 @@ in
           nixd
           statix
           deadnix
+          git
+          jq
           sops
           ssh-to-age
           python3
           vulnix
           direnv
+          nh
           opentofu
           google-cloud-sdk
         ])

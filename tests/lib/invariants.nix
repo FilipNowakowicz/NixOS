@@ -40,15 +40,100 @@ let
       openssh.enable = true;
       tailscale.enable = true;
       restic.backups.local.repository = "/persist/restic-repo";
+      restic.backups.local.paths = [ "/home/user" ];
     };
-    systemd.network.networks."20-eth".networkConfig.Address = "10.0.100.2/24";
   };
 
   hostMeta = {
     deploy.sshUser = "user";
     backup.class = "critical";
     tailscale.tag = "server";
-    ip = "10.0.100.2";
+  };
+
+  hostRegistry = {
+    main = {
+      status = "active";
+      tailnetFQDN = "main.tail.example";
+      tailscale.tag = "workstation";
+    };
+    homeserver-gcp = {
+      status = "active";
+      deploy.sshUser = "user";
+      tailscale.tag = "server";
+    };
+    old = {
+      status = "inactive";
+      tailnetFQDN = "old.tail.example";
+    };
+  };
+
+  matchingSopsYaml = ''
+    keys:
+      - &user age1user
+      - &main_host age1main
+      - &homeserver_gcp_host age1homeserver
+    creation_rules:
+      - path_regex: hosts/main/secrets/.*
+        key_groups:
+          - age:
+              - *user
+              - *main_host
+      - path_regex: hosts/homeserver-gcp/secrets/.*
+        key_groups:
+          - age:
+              - *user
+              - *homeserver_gcp_host
+  '';
+
+  impermanentConfig = {
+    environment.persistence."/persist".directories = [ "/var/lib/nixos" ];
+    disko.devices.disk.main.content.subvolumes."/@persist".mountpoint = "/persist";
+  };
+
+  anonymousConfig = {
+    specialisation.anonymous.configuration.environment.persistence."/persist" = {
+      directories = [
+        "/var/lib/nixos"
+        "/var/lib/systemd/backlight"
+        "/var/lib/systemd/rfkill"
+      ];
+      files = [
+        "/etc/ssh/ssh_host_ed25519_key"
+        "/etc/ssh/ssh_host_ed25519_key.pub"
+      ];
+    };
+  };
+
+  mullvadTailscaleConfig = {
+    networking = {
+      firewall.checkReversePath = "loose";
+      nftables.tables."tailscale-mullvad-compat".content = ''
+        chain output {
+          type filter hook output priority filter - 1;
+          oifname "tailscale0" ct mark set 0x00000f41 meta mark set 0x6d6f6c65
+        }
+      '';
+    };
+    services = {
+      mullvad-vpn.enable = true;
+      tailscale.enable = true;
+    };
+    systemd.services = {
+      tailscale-bypass-routing = {
+        after = [
+          "tailscaled.service"
+          "mullvad-daemon.service"
+        ];
+        wants = [
+          "tailscaled.service"
+          "mullvad-daemon.service"
+        ];
+        wantedBy = [ "multi-user.target" ];
+      };
+      tailscaled.postStart = "tailscale-bypass-rules || true";
+      mullvad-daemon.postStart = "tailscale-bypass-rules || true";
+      mullvad-lockdown = { };
+    };
   };
 
   assertions = invariants.mkRegistryAssertions "homeserver-gcp" hostMeta;
@@ -122,11 +207,27 @@ let
           services = baseConfig.services // {
             restic.backups.local = {
               repositoryFile = "/run/secrets/restic_repository";
+              paths = [ "/home/user" ];
             };
           };
         }
       );
       expected = true;
+    };
+
+    backupMetadataRequiresPaths = {
+      expr = runAssertion "backup metadata configures Restic backup target" (
+        baseConfig
+        // {
+          services = baseConfig.services // {
+            restic.backups.local = {
+              repository = "/persist/restic-repo";
+              paths = [ ];
+            };
+          };
+        }
+      );
+      expected = false;
     };
 
     tailnetMetadataRequiresTailscale = {
@@ -141,19 +242,102 @@ let
       expected = false;
     };
 
-    staticIpMatchesConfiguredAddress = {
-      expr = runAssertion "static IP metadata matches configured address" baseConfig;
+    sopsRecipientParityPasses = {
+      expr = (invariants.checkSopsRecipientParity hostRegistry matchingSopsYaml).passed;
       expected = true;
     };
 
-    staticIpMismatchFails = {
-      expr = runAssertion "static IP metadata matches configured address" (
-        baseConfig
-        // {
-          systemd.network.networks."20-eth".networkConfig.Address = "10.0.100.3/24";
-        }
-      );
-      expected = false;
+    sopsRecipientParityRejectsMissingAndStaleHosts = {
+      expr =
+        (invariants.checkSopsRecipientParity hostRegistry ''
+          keys:
+            - &main_host age1main
+            - &old_host age1old
+          creation_rules:
+            - path_regex: hosts/main/secrets/.*
+            - path_regex: hosts/old/secrets/.*
+        '').message;
+      expected = ".sops.yaml missing host secret rule(s): homeserver-gcp; .sops.yaml has stale host secret rule(s): old; .sops.yaml missing host recipient key(s): homeserver-gcp; .sops.yaml has stale host recipient key(s): old";
+    };
+
+    deployTargetsHaveTailnetAddressesPasses = {
+      expr = (invariants.checkDeployTargetsHaveTailnetAddresses hostRegistry).passed;
+      expected = true;
+    };
+
+    deployTargetsHaveTailnetAddressesRejectsMissingTailnetMetadata = {
+      expr =
+        (invariants.checkDeployTargetsHaveTailnetAddresses (
+          hostRegistry
+          // {
+            mac = {
+              status = "active";
+              deploy.sshUser = "user";
+            };
+          }
+        )).message;
+      expected = "deploy target(s) missing tailnetFQDN or tailscale metadata: mac";
+    };
+
+    impermanentHostsHaveDiskoConfigPasses = {
+      expr = (invariants.checkImpermanentHostHasDiskoConfig impermanentConfig).passed;
+      expected = true;
+    };
+
+    impermanentHostsHaveDiskoConfigRejectsMissingMountpoint = {
+      expr =
+        (invariants.checkImpermanentHostHasDiskoConfig (
+          impermanentConfig
+          // {
+            disko.devices = { };
+          }
+        )).message;
+      expected = "environment.persistence root(s) missing matching disko mountpoint: /persist";
+    };
+
+    anonymousSpecialisationPersistencePasses = {
+      expr = (invariants.checkAnonymousSpecialisationPersistence anonymousConfig).passed;
+      expected = true;
+    };
+
+    anonymousSpecialisationPersistenceRejectsExtraPersistedDirectory = {
+      expr =
+        (invariants.checkAnonymousSpecialisationPersistence (
+          anonymousConfig
+          // {
+            specialisation.anonymous.configuration.environment.persistence."/persist" =
+              anonymousConfig.specialisation.anonymous.configuration.environment.persistence."/persist"
+              // {
+                directories =
+                  anonymousConfig.specialisation.anonymous.configuration.environment.persistence."/persist".directories
+                  ++ [ "/var/lib/tailscale" ];
+              };
+          }
+        )).message;
+      expected = "anonymous specialisation persists unexpected dir(s): /var/lib/tailscale";
+    };
+
+    mullvadTailscaleCoexistencePasses = {
+      expr = (invariants.checkMullvadTailscaleCoexistence mullvadTailscaleConfig).passed;
+      expected = true;
+    };
+
+    mullvadTailscaleCoexistenceRejectsMissingMarks = {
+      expr =
+        (invariants.checkMullvadTailscaleCoexistence (
+          mullvadTailscaleConfig
+          // {
+            networking = mullvadTailscaleConfig.networking // {
+              nftables.tables."tailscale-mullvad-compat".content = ''
+                chain output {
+                  type filter hook output priority filter - 1;
+                  oifname "tailscale0" meta mark set 0x6d6f6c65
+                }
+              '';
+            };
+          }
+        )).message;
+      expected = "tailscale-mullvad-compat nftables chain must set Mullvad's conntrack bypass mark";
     };
 
     trustedUsersMatchExpectedSet = {
