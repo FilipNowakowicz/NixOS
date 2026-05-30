@@ -58,6 +58,11 @@
         "/var/lib/fprint"
         "/var/lib/sbctl"
         "/var/lib/usbguard"
+        # libvirt domain definitions + Whonix KVM disk images. Persisted only
+        # here, so disk loss would otherwise destroy the VMs with no off-host
+        # copy. Large/volatile/re-derivable bulk (installer ISOs, transient
+        # snapshots, runtime save/dump images) is excluded below.
+        "/var/lib/libvirt"
       ];
       exclude = [
         # Token/credential caches — not durable; regenerated on next gcloud auth
@@ -65,6 +70,15 @@
         "/home/user/.config/gcloud/credentials.db"
         "/home/user/.config/gcloud/logs"
         "/home/user/.config/gcloud/legacy_credentials"
+        # libvirt: skip large, volatile, or re-derivable artefacts. Installer
+        # ISOs are re-downloadable upstream; *.snap are transient disk
+        # snapshots; save/dump/ram are runtime hibernation + crash images.
+        "/var/lib/libvirt/images/*.iso"
+        "/var/lib/libvirt/images/*.snap"
+        "/var/lib/libvirt/qemu/save"
+        "/var/lib/libvirt/qemu/dump"
+        "/var/lib/libvirt/qemu/ram"
+        "/var/lib/libvirt/qemu/snapshot"
       ];
       repositoryFile = config.sops.secrets.restic_repository.path;
       passwordFile = config.sops.secrets.restic_password.path;
