@@ -33,7 +33,7 @@ Commands:
   docs               Check repository Markdown links
   flake-eval         Run flake evaluation only (no builds)
   light              Build lightweight blocking checks
-  host <name>        Build one host closure: main-ci, main, homeserver-gcp, mac
+  host <name>        Build one host closure: main-ci, main, homeserver-gcp, mac, installer
   hosts              Build all host system closures used in CI
   package <name>     Build one package output used in CI
   profile-test <name>
@@ -62,6 +62,9 @@ build_host() {
     ;;
   mac)
     build_attrs ".#nixosConfigurations.mac.config.system.build.toplevel"
+    ;;
+  installer)
+    build_attrs ".#packages.${system}.installer-iso"
     ;;
   *)
     echo "Unknown host target: $1" >&2
@@ -127,6 +130,7 @@ light)
     ".#checks.${system}.lib-acl" \
     ".#checks.${system}.lib-invariants" \
     ".#checks.${system}.mac-sops-bootstrap" \
+    ".#checks.${system}.observability-alerts-lint" \
     ".#checks.${system}.secrets-directory" \
     ".#checks.${system}.lib-scan-plaintext-secrets"
   ;;
@@ -143,7 +147,8 @@ hosts)
   build_attrs \
     ".#nixosConfigurations.main-ci.config.system.build.toplevel" \
     ".#nixosConfigurations.homeserver-gcp.config.system.build.toplevel" \
-    ".#nixosConfigurations.mac.config.system.build.toplevel"
+    ".#nixosConfigurations.mac.config.system.build.toplevel" \
+    ".#packages.${system}.installer-iso"
   ;;
 
 smoke-homeserver-gcp)
