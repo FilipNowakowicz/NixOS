@@ -41,7 +41,7 @@ Commands:
   light              Build lightweight blocking checks
   host <name>        Build one host closure: main-ci, main, homeserver-gcp, mac, installer
   hosts              Build all host system closures used in CI
-  package <name>     Build one package output used in CI
+  package <name>     Build one package output used in CI, or package all
   profile-test <name>
                      Build one profile test: profile-security, profile-observability, profile-hardening
   smoke-homeserver-gcp
@@ -99,8 +99,24 @@ build_profile_test() {
 
 build_package() {
   case "$1" in
+  all)
+    build_attrs \
+      ".#packages.${system}.inventory-data" \
+      ".#packages.${system}.control-center" \
+      ".#packages.${system}.tailscale-acl" \
+      ".#packages.${system}.installer-iso"
+    ;;
   inventory-data)
     build_attrs ".#packages.${system}.inventory-data"
+    ;;
+  control-center)
+    build_attrs ".#packages.${system}.control-center"
+    ;;
+  tailscale-acl)
+    build_attrs ".#packages.${system}.tailscale-acl"
+    ;;
+  installer-iso)
+    build_attrs ".#packages.${system}.installer-iso"
     ;;
   *)
     echo "Unknown package target: $1" >&2

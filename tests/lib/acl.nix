@@ -40,7 +40,6 @@ let
     };
     internal-vm = {
       role = "internal-vm";
-      ip = "10.0.100.2";
       # no tailscale — must be ignored by generator
     };
   };

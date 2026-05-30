@@ -147,8 +147,8 @@ not on `mac`. Every reboot clears all bans.
 | D      | [OPEN] AdGuard `mutableSettings = true` — blocklists, admin creds, client rules are wizard artifacts on disk, not in git. No blocklists declared declaratively                                             |
 | D      | [OPEN] No TLS certificate expiry monitoring — a silent renewal failure breaks all HTTPS at ~90 days, surfacing only via the null-receiver alert                                                            |
 | D      | [DONE] `hosts/installer/default.nix` opens TCP/22 globally with `PermitRootLogin = "yes"` and `PasswordAuthentication` not explicitly set to `false`, no hardening profile                                 |
-| E      | [OPEN] Treesitter/`telescope-fzf-native` need a C compiler at runtime; works on workstation by accident (gcc in heavy packages) but silently breaks LSP features on WSL                                    |
-| E      | [OPEN] `homeConfigurations.user` (standalone) imports the desktop role without the `desktop.nix` profile — half-configured desktop (waybar/hypr but no kitty/firefox/GTK)                                  |
+| E      | [DONE] Treesitter/`telescope-fzf-native` need a C compiler at runtime; works on workstation by accident (gcc in heavy packages) but silently breaks LSP features on WSL                                    |
+| E      | [DONE] `homeConfigurations.user` (standalone) imports the desktop role without the `desktop.nix` profile — half-configured desktop (waybar/hypr but no kitty/firefox/GTK)                                  |
 | E      | [DONE] `workstation.nix` profile is entirely dead — no host lists it; the `lib/hosts.nix` comment referencing it is stale                                                                                  |
 | F      | [DONE] PromQL alert rules (`alerts.nix`) are never validated with `promtool check rules` — a metric-name typo ships silently and alerts never fire                                                         |
 | F      | [OPEN] No test that impermanence actually loses state on reboot — the defining property of `main` and `mac` is untested                                                                                    |
@@ -159,23 +159,23 @@ not on `mac`. Every reboot clears all bans.
 
 ## P2 — Optimization / Quality
 
-| Domain | Finding                                                                                                                                                                                                                |
-| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A      | [PARTIAL] `ip` field in host registry is validated, invariant-checked, and inventory-projected but set by no host and consumed by no module — PR 62 removed part of the stale surface, but inventory still projects it |
-| A      | [PARTIAL] `installer-iso`, `control-center`, and `tailscale-acl` outputs have zero CI build coverage — PR 62 adds installer coverage; control-center/tailscale-acl remain open                                         |
-| A      | [DONE] Dev shell missing `nh` (documented `rebuild` alias), `jq`, and `git`                                                                                                                                            |
-| B      | [DONE] Grafana dashboards provisioned from store are `editable=true; disableDeletion=false` — UI edits silently lost on redeploy                                                                                       |
-| B      | [DONE] `impermanence-base.nix` rollback-root parses btrfs output with fragile `cut -f 9 -d ' '` (field position is version-dependent)                                                                                  |
-| B      | [OPEN] Backup `restic check` never tests an actual restore; backup invariant doesn't verify `paths != []`, so empty backup stamps fresh timestamp                                                                      |
-| C      | [DONE] `tailscale-bypass-routing` script exits 0 on all errors — firewall exceptions for Tailscale could silently fail to apply                                                                                        |
-| D      | [DONE] Grafana SQLite database backed up live (risk of torn-DB backup)                                                                                                                                                 |
-| D      | [OPEN] AdGuard state at dynamic UID path backed up raw (UID mismatch on restore)                                                                                                                                       |
-| D      | [OPEN] nginx access logs not shipped to Loki — no log data for incident response                                                                                                                                       |
-| E      | [DONE] GTK theme never set — GTK apps fall back to stock Adwaita despite `gnome-themes-extra` being installed                                                                                                          |
-| E      | [DONE] `clangd` hardcoded-enabled in `lsp.lua` with no matching neovim pack; `clang-tools` only present behind `skipHeavyPackages`                                                                                     |
-| E      | [DONE] `mako` notification config has three sources of truth (theme module + inline block in `theme-switch.sh`)                                                                                                        |
-| F      | [OPEN] Smoke test hard-fails (vs skips) when `/dev/kvm` is unavailable                                                                                                                                                 |
-| F      | [DONE] Three drifting copies of the secret-scan regex across two scripts and the pre-commit hook — PR 62 unifies the scanner/pre-commit pattern; `check-secrets-directory.sh` remains separate                         |
+| Domain | Finding                                                                                                                                                                                                             |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A      | [DONE] `ip` field in host registry is validated, invariant-checked, and inventory-projected but set by no host and consumed by no module — PR 62 removed part of the stale surface, but inventory still projects it |
+| A      | [DONE] `installer-iso`, `control-center`, and `tailscale-acl` outputs have zero CI build coverage — PR 62 adds installer coverage; control-center/tailscale-acl remain open                                         |
+| A      | [DONE] Dev shell missing `nh` (documented `rebuild` alias), `jq`, and `git`                                                                                                                                         |
+| B      | [DONE] Grafana dashboards provisioned from store are `editable=true; disableDeletion=false` — UI edits silently lost on redeploy                                                                                    |
+| B      | [DONE] `impermanence-base.nix` rollback-root parses btrfs output with fragile `cut -f 9 -d ' '` (field position is version-dependent)                                                                               |
+| B      | [OPEN] Backup `restic check` never tests an actual restore; backup invariant doesn't verify `paths != []`, so empty backup stamps fresh timestamp                                                                   |
+| C      | [DONE] `tailscale-bypass-routing` script exits 0 on all errors — firewall exceptions for Tailscale could silently fail to apply                                                                                     |
+| D      | [DONE] Grafana SQLite database backed up live (risk of torn-DB backup)                                                                                                                                              |
+| D      | [OPEN] AdGuard state at dynamic UID path backed up raw (UID mismatch on restore)                                                                                                                                    |
+| D      | [OPEN] nginx access logs not shipped to Loki — no log data for incident response                                                                                                                                    |
+| E      | [DONE] GTK theme never set — GTK apps fall back to stock Adwaita despite `gnome-themes-extra` being installed                                                                                                       |
+| E      | [DONE] `clangd` hardcoded-enabled in `lsp.lua` with no matching neovim pack; `clang-tools` only present behind `skipHeavyPackages`                                                                                  |
+| E      | [DONE] `mako` notification config has three sources of truth (theme module + inline block in `theme-switch.sh`)                                                                                                     |
+| F      | [OPEN] Smoke test hard-fails (vs skips) when `/dev/kvm` is unavailable                                                                                                                                              |
+| F      | [DONE] Three drifting copies of the secret-scan regex across two scripts and the pre-commit hook — PR 62 unifies the scanner/pre-commit pattern; `check-secrets-directory.sh` remains separate                      |
 
 ---
 

@@ -166,7 +166,9 @@ in
   config = lib.mkIf cfg.enable {
     home.packages = [
       cfg.package
+      pkgs.gcc
       pkgs.glow
+      pkgs.gnumake
       pkgs.lazygit
       pkgs.stylua
       pkgs.tree-sitter

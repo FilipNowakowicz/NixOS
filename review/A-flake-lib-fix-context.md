@@ -16,8 +16,7 @@ Repo root: `/home/user/nix`. Reach the dev shell with `nix develop` (provides
 - `[DONE]` FIX 4: deploy confirm timeouts landed.
 - `[DONE]` FIX 9 landed.
 - `[OPEN]` FIX 5/6/10 remain open.
-- `[PARTIAL]` FIX 7/8: the stale `ip` surface and package CI coverage were
-  partly reduced, but not fully resolved.
+- `[DONE]` FIX 7/8 landed.
 
 ---
 

@@ -41,14 +41,12 @@ let
       tailscale.enable = true;
       restic.backups.local.repository = "/persist/restic-repo";
     };
-    systemd.network.networks."20-eth".networkConfig.Address = "10.0.100.2/24";
   };
 
   hostMeta = {
     deploy.sshUser = "user";
     backup.class = "critical";
     tailscale.tag = "server";
-    ip = "10.0.100.2";
   };
 
   assertions = invariants.mkRegistryAssertions "homeserver-gcp" hostMeta;
@@ -136,21 +134,6 @@ let
           services = baseConfig.services // {
             tailscale.enable = false;
           };
-        }
-      );
-      expected = false;
-    };
-
-    staticIpMatchesConfiguredAddress = {
-      expr = runAssertion "static IP metadata matches configured address" baseConfig;
-      expected = true;
-    };
-
-    staticIpMismatchFails = {
-      expr = runAssertion "static IP metadata matches configured address" (
-        baseConfig
-        // {
-          systemd.network.networks."20-eth".networkConfig.Address = "10.0.100.3/24";
         }
       );
       expected = false;

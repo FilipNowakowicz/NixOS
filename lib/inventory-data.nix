@@ -153,7 +153,6 @@ let
       closurePath = builtins.unsafeDiscardStringContext (toString c.system.build.toplevel);
       inherit (c.system) stateVersion;
       tailscaleTracked = (meta ? tailscale) || (meta ? tailnetFQDN);
-      ip = meta.ip or null;
       deployable = meta ? deploy;
       deployUser = meta.deploy.sshUser or null;
       backupClass = meta.backup.class or null;

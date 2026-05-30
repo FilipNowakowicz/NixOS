@@ -548,7 +548,7 @@ The repository uses GitHub Actions (`.github/workflows/nix.yml` and `flake-updat
 | **Flake Evaluation** | Runs `bash scripts/validate.sh flake-eval`, which keeps `nix flake check --no-build` as a fast evaluation gate for flake outputs and configs. |
 | **Light Checks**     | Runs `bash scripts/validate.sh light` for deploy checks, invariants, SOPS bootstrap validation, and lightweight library tests.                |
 | **Linting**          | Runs `statix` (Nix), `deadnix` (dead code), `treefmt` (formatting), `shellcheck` (shell scripts), and Markdown link checks.                   |
-| **Package Builds**   | Builds repo-native package outputs used in CI, currently `nix build '.#packages.x86_64-linux.inventory-data'`.                                |
+| **Package Builds**   | Builds repo-native package outputs used in CI via `bash scripts/validate.sh package all`.                                                     |
 | **Host Builds**      | Matrix-builds each host closure via `bash scripts/validate.sh host <name>`.                                                                   |
 | **Smoke Tests**      | Runs `bash scripts/validate.sh smoke-homeserver-gcp` in a full NixOS environment when relevant paths change.                                  |
 | **Profile Tests**    | Matrix-builds each profile test via `bash scripts/validate.sh profile-test <name>`.                                                           |

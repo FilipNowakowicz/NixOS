@@ -18,6 +18,7 @@ host. Themes: there are 8 under `home/theme/themes/*.nix`, each exposing
 ## Status after PR 62
 
 - `[DONE]` FIX 1, FIX 2, FIX 3, FIX 4, FIX 5, FIX 6, FIX 7, and FIX 9 landed.
+  Standalone `homeConfigurations.user` now also imports the desktop profile.
 - `[OPEN]` FIX 8, FIX 10, FIX 11, FIX 12, and FIX 13
   remain open.
 

@@ -1,22 +1,5 @@
 { lib, pkgs }:
 let
-  staticAddressesFor =
-    cfg:
-    lib.concatMap (
-      network:
-      let
-        address = network.networkConfig.Address or null;
-      in
-      if address == null then
-        [ ]
-      else if builtins.isList address then
-        address
-      else
-        [ address ]
-    ) (lib.attrValues (cfg.systemd.network.networks or { }));
-
-  stripPrefixLength = address: builtins.head (lib.splitString "/" address);
-
   hasResticBackup =
     backupName: cfg:
     builtins.hasAttr backupName cfg.services.restic.backups
@@ -229,17 +212,6 @@ rec {
       {
         name = "tailnet metadata enables Tailscale";
         check = cfg: cfg.services.tailscale.enable;
-      }
-    ]
-    ++ lib.optionals (hostMeta ? ip) [
-      {
-        name = "static IP metadata matches configured address";
-        check =
-          cfg:
-          let
-            expectedIp = hostMeta.ip;
-          in
-          lib.any (address: stripPrefixLength address == expectedIp) (staticAddressesFor cfg);
       }
     ];
 }

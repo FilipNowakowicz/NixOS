@@ -143,6 +143,7 @@ in
       modules = [
         inputs.sops-nix.homeManagerModules.sops
         ../home/users/user/home.nix
+        ../home/profiles/desktop.nix
       ];
     };
 
