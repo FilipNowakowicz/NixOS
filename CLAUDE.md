@@ -70,8 +70,9 @@ Managed with sops-nix + age. Edit secrets with `sops <file>`.
 - Personal age key: `~/.config/sops/age/keys.txt`.
 - Add a host key: `ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub` → append to `.sops.yaml`.
 - `.sops.yaml` defines key groups per path regex.
-- `boot.initrd.secrets` MUST only point to sops-managed paths
-  (e.g., `config.sops.secrets.X.path`) — enforced by an invariant check.
+- `boot.initrd.secrets` MUST only point to sops-managed `/run/secrets/*`
+  paths (e.g., `config.sops.secrets.X.path`) — enforced by a native NixOS
+  assertion in `modules/nixos/profiles/sops-base.nix`.
 
 See [`docs/security.md`](docs/security.md) for the full secrets/exposure model.
 

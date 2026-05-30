@@ -135,7 +135,7 @@ not on `mac`. Every reboot clears all bans.
 
 | Domain | Finding                                                                                                                                                                                                    |
 | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A      | [OPEN] CLAUDE.md claims `boot.initrd.secrets` is enforced by an invariant — no such invariant exists anywhere in the codebase                                                                              |
+| A      | [DONE] CLAUDE.md claims `boot.initrd.secrets` is enforced by an invariant — no such invariant exists anywhere in the codebase                                                                              |
 | A      | [OPEN] `inventory-data.nix` re-implements invariants by hand and has already drifted from the canonical ones in `flake/checks.nix` — two parallel definitions of the same security policy                  |
 | A      | [DONE] Deploy config applies fixed rollback settings with no per-host `confirmTimeout`; on `mac` (Tailscale-only, ephemeral) magic-rollback can roll back a correct deploy if `tailscale0` comes up slowly |
 | B      | [DONE] `machine-dev.nix` broad passwordless sudo + trusted Nix user is unconditional — gated only by a comment. `microvm-guest.nix` imports it transitively. Should be `mkIf`-gated                        |
@@ -145,7 +145,7 @@ not on `mac`. Every reboot clears all bans.
 | C      | [DONE] `restic-check-local` orders on `network-online.target` but `main` force-disables both wait-online providers — the network dependency is a no-op                                                     |
 | D      | [PARTIAL] No HSTS, CSP, or X-Frame-Options on nginx virtualHosts serving Vaultwarden (password manager); PR 62 adds HSTS/XFO/XCTO/Referrer-Policy, but not CSP                                             |
 | D      | [OPEN] AdGuard `mutableSettings = true` — blocklists, admin creds, client rules are wizard artifacts on disk, not in git. No blocklists declared declaratively                                             |
-| D      | [OPEN] No TLS certificate expiry monitoring — a silent renewal failure breaks all HTTPS at ~90 days, surfacing only via the null-receiver alert                                                            |
+| D      | [DONE] No TLS certificate expiry monitoring — a silent renewal failure breaks all HTTPS at ~90 days, surfacing only via the null-receiver alert                                                            |
 | D      | [DONE] `hosts/installer/default.nix` opens TCP/22 globally with `PermitRootLogin = "yes"` and `PasswordAuthentication` not explicitly set to `false`, no hardening profile                                 |
 | E      | [DONE] Treesitter/`telescope-fzf-native` need a C compiler at runtime; works on workstation by accident (gcc in heavy packages) but silently breaks LSP features on WSL                                    |
 | E      | [DONE] `homeConfigurations.user` (standalone) imports the desktop role without the `desktop.nix` profile — half-configured desktop (waybar/hypr but no kitty/firefox/GTK)                                  |

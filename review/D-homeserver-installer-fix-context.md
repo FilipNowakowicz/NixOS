@@ -20,7 +20,8 @@ statix check . && deadnix .
   webhook is set.
 - `[PARTIAL]` P1-1 landed for HSTS, X-Frame-Options, X-Content-Type-Options,
   and Referrer-Policy; CSP remains open.
-- `[OPEN]` P1-2, P1-4, P1-7, P1-8, P1-9, P1-10, P2-3, and P3 items remain open.
+- `[DONE]` P1-9 landed as a TLS expiry alert over the existing HTTPS blackbox probes.
+- `[OPEN]` P1-2, P1-4, P1-7, P1-8, P1-10, P2-3, and P3 items remain open.
 
 ---
 

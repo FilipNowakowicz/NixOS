@@ -13,6 +13,7 @@
 #   LynisScoreLow     — hardening index < 60 for 0 m
 #   LynisScanStale    — no successful audit in 26 h (daily + 2 h buffer)
 #   BlackboxProbeFailed — blackbox HTTP probe failing for 5 min
+#   TLSCertificateExpiresSoon — HTTPS certificate expires within 7 d
 {
   rules = {
     groups = [
@@ -108,6 +109,16 @@
             annotations = {
               summary = "Blackbox probe failed for {{ $labels.probe }}";
               description = "Synthetic check to {{ $labels.instance }} has failed for more than 5 minutes. Review nginx routing, TLS, auth boundary, and upstream service health.";
+            };
+          }
+          {
+            alert = "TLSCertificateExpiresSoon";
+            expr = ''probe_ssl_earliest_cert_expiry{job=~"blackbox-.*"} - time() < 7 * 24 * 3600'';
+            for = "0m";
+            labels.severity = "warning";
+            annotations = {
+              summary = "TLS certificate expires soon for {{ $labels.instance }}";
+              description = "The earliest certificate in the probed TLS chain expires in less than 7 days. Check tailscale-cert.service and nginx reload status.";
             };
           }
         ];

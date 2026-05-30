@@ -12,7 +12,8 @@ Repo root: `/home/user/nix`. Reach the dev shell with `nix develop` (provides
 - `[PARTIAL]` FIX 1: workflow, stderr capture, and `homeserver-gcp` scan landed;
   advisories still warn rather than fail a merge-gating check.
 - `[DONE]` FIX 2: `invariants-main-ci` landed.
-- `[OPEN]` FIX 3: registry/sops/impermanence invariants remain open.
+- `[PARTIAL]` FIX 3: the initrd-secret claim is now documented as a native
+  NixOS assertion; registry/impermanence invariant work remains open.
 - `[DONE]` FIX 4: deploy confirm timeouts landed.
 - `[DONE]` FIX 9 landed.
 - `[OPEN]` FIX 5/6/10 remain open.
