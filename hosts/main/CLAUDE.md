@@ -99,7 +99,7 @@ deterministically. Treat as code, not state:
 2. Add the path to `environment.persistence."/persist".directories` (or
    `.files`) in `hosts/main/impermanence.nix`.
 3. If the path also needs to survive disk loss, add it to
-   `services.restic.backups.local.paths` in `hosts/main/default.nix`. The
+   `services.restic.backups.local.paths` in `hosts/main/backups.nix`. The
    `main backup paths are persisted or on a persistent fs` invariant in
    `flake/checks.nix` enforces backup ⊆ persistence — a backed-up path that
    isn't persisted would silently lose state on rollback and back up the empty
@@ -119,6 +119,9 @@ Important covered state:
 - Wi-Fi profiles, Mullvad account/device state, Tailscale node identity,
   Bluetooth pairings, fingerprint enrollments, USBGuard state, Secure Boot PKI,
   machine-id, and SSH host identity.
+- Libvirt/Whonix VM state under `/var/lib/libvirt`; large transient artifacts
+  such as installer ISOs, snapshots, save/dump images, and RAM state are
+  excluded.
 
 Manual verification:
 
@@ -346,6 +349,9 @@ Full details: `docs/security.md` § Anonymous Specialisation.
 Whonix-Gateway and Whonix-Workstation are installed as persistent KVM/libvirt
 VMs. Images live at `/var/lib/libvirt/images/` (bind-mounted from
 `/persist/var/lib/libvirt/` so they survive the ephemeral-root rollback).
+`/var/lib/libvirt` is included in the main B2 restic backup so configured VMs
+survive disk loss; large transient artifacts are excluded in
+`hosts/main/backups.nix`.
 
 ```bash
 # Check VM and network state

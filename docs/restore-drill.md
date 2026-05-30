@@ -91,7 +91,7 @@ ls "$TARGET/var/lib/grafana/"
 Verify the Grafana database is intact:
 
 ```bash
-sqlite3 "$TARGET/var/lib/grafana/grafana.db" "SELECT COUNT(*) FROM dashboard;"
+sqlite3 "$TARGET/var/lib/grafana/grafana.db.backup" "SELECT COUNT(*) FROM dashboard;"
 ```
 
 Clean up:
@@ -105,6 +105,7 @@ Real recovery:
 ```bash
 sudo systemctl stop grafana.service
 sudo restic restore "$SNAP" --target / --include /var/lib/grafana
+sudo install -o grafana -g grafana -m 0600 /var/lib/grafana/grafana.db.backup /var/lib/grafana/grafana.db
 sudo chown -R grafana:grafana /var/lib/grafana
 sudo systemctl start grafana.service
 sudo systemctl status grafana.service --no-pager

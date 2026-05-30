@@ -224,6 +224,10 @@ bash scripts/validate.sh heavy
 bash scripts/validate.sh cve-reports
 ```
 
+The CVE report workflow also runs weekly and on PRs that touch `flake.lock`.
+It scans both `main` and `homeserver-gcp` and uploads the report artifact; vulnix
+advisories are surfaced as workflow warnings, not as merge-gating failures.
+
 Rules of thumb:
 
 - Shared flake, library, or global module changes: run `light` and affected host builds; use `hosts` when impact is broad.

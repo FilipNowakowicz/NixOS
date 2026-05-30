@@ -119,6 +119,9 @@ the next rollback boot may bind an empty directory over the live path.
 Tailscale is the primary remote-access layer.
 
 - `homeserver-gcp` exposes SSH and HTTPS only on `tailscale0`; it does not globally open TCP `22` or `443`.
+- Terraform adds a high-priority GCP firewall deny for public TCP `22` on the
+  default VPC, so the tailnet-only SSH boundary is enforced at the cloud edge as
+  well as by the in-guest firewall.
 - `homeserver-gcp` obtains TLS material through `tailscale-cert.service`; ACME is not used.
 - `homeserver-gcp` exposes HTTPS on the tailnet FQDN from `lib/hosts.nix`.
 - Observability ingest is limited to exact push endpoints protected with basic auth sourced from sops:
@@ -294,11 +297,13 @@ defaults to `local`. `main` uses `local`; `homeserver-gcp` uses `b2` for
 Backblaze B2 off-site backups.
 
 `main` extends the shared backup profile with workstation-specific paths in
-`hosts/main/default.nix`. The backup covers selected user state plus the
+`hosts/main/backups.nix`. The backup covers selected user state plus the
 persistent identities needed after a full reinstall: Codex and Claude state,
 Wi-Fi profiles, Mullvad account/device state, Tailscale node identity,
 Bluetooth pairings, fingerprint enrollment state, USBGuard rules, Secure Boot
-PKI, machine-id, and SSH host identity.
+PKI, machine-id, SSH host identity, and libvirt/Whonix VM state. Large or
+volatile libvirt artifacts such as ISOs, snapshots, save/dump images, and RAM
+state are excluded.
 
 ## Mullvad and Tailscale Coexistence
 
@@ -377,7 +382,15 @@ starts with no logins, cookies, shell history, or scan artifacts. Home Manager
 repopulates declarative dotfiles from the Nix store on boot, so the _configured_
 environment survives while session _data_ does not. The real `@home` is not
 wiped — it is shadowed by the tmpfs while this spec is booted, and reappears on
-a normal boot. Anything you want to keep from an anonymous session (loot, notes)
+a normal boot.
+
+The anonymous specialisation also overrides the normal persistence directory
+list down to the minimum required system state. Persistent Tailscale identity,
+saved Wi-Fi/VPN profiles, Bluetooth pairings, fingerprint enrollment, Mullvad
+account/device state, logs, and libvirt state are not bind-mounted into the
+anonymous boot.
+
+Anything you want to keep from an anonymous session (loot, notes)
 must be copied off-host before reboot; there is no persistent scratch directory
 by default.
 
@@ -413,6 +426,10 @@ persistent KVM/libvirt VMs. Images live in `/var/lib/libvirt/images/`
 Gateway before Workstation; updates run inside the VMs as `sysmaint` using
 `upgrade-nonroot` (the `user-sysmaint-split` feature blocks `sudo` from the
 normal `user` account).
+
+The main B2 restic backup includes `/var/lib/libvirt` so the configured VMs can
+survive disk loss; installer ISOs, transient snapshots, and runtime
+save/dump/RAM artifacts are excluded from that backup.
 
 Whonix is kept **persistent** on purpose — it is the configured, updated
 anonymity appliance, not throwaway. That means Tor Browser state accumulates

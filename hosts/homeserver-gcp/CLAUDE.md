@@ -10,7 +10,8 @@ Status: **active** — deployed on GCP and accessible via Tailscale.
 - **Vaultwarden** — `127.0.0.1:8222`, proxied via Nginx over HTTPS
 - **LGTM stack** — Grafana (sub-path `/grafana/`, Tailscale identity via nginx auth proxy), Loki, Mimir, Tempo (full observability)
 - **Nginx** — reverse proxy, TLS via Tailscale cert
-- **SSH** — firewall exposure limited to `tailscale0`
+- **SSH** — in-guest firewall exposure limited to `tailscale0`; Terraform also
+  adds a high-priority GCP firewall deny for public TCP/22 on the default VPC.
 - **Tailscale** — auth key from sops secret `tailscale_auth_key`
 - **AdGuard Home** — DNS (TCP/UDP 53) + web UI (HTTP port 3001), tailscale0 only; state is exposed at `/var/lib/AdGuardHome` and stored by systemd at `/var/lib/private/AdGuardHome`
 - **Restic/B2** — off-site backups to Backblaze B2 (`/var/lib/vaultwarden`, `/var/lib/grafana`, `/var/lib/private/AdGuardHome`)
@@ -125,5 +126,12 @@ deploy '.#homeserver-gcp'
   for independent off-site application recovery.
 - **Off-site backup via B2** — `services.restic.backups.b2` uses the shared
   `backup.class = "critical"` policy from `modules/nixos/profiles/backup.nix`.
-- **AdGuard DNS failure** — if `adguardhome.service` crashes, tailnet clients using it as DNS lose resolution. Recovery: in Tailscale admin → DNS, temporarily remove the nameserver override to fall back to default resolver. The existing systemd failed-unit alert fires within 2 minutes.
+- **Alert delivery** — Alertmanager defaults to a null receiver. Set
+  `profiles.observability.alertWebhookUrlFile` to a sops-backed webhook URL to
+  deliver alerts off-host.
+- **AdGuard DNS failure** — if `adguardhome.service` crashes, tailnet clients
+  using it as DNS lose resolution. Recovery: in Tailscale admin → DNS,
+  temporarily remove the nameserver override to fall back to default resolver.
+  The failed-unit alert fires within 2 minutes, but it only leaves the box when
+  a real Alertmanager receiver is configured.
 - **AdGuard web UI** — HTTP only (port 3001 on tailscale0). No TLS needed; WireGuard encrypts tailnet traffic.
