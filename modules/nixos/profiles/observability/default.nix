@@ -123,8 +123,11 @@ in
               orgId = 1;
               folder = "Overview";
               type = "file";
-              disableDeletion = false;
-              editable = true;
+              # Dashboards are provisioned declaratively from the Nix store.
+              # Lock down the UI so manual edits/deletions don't survive a
+              # redeploy and silently diverge from the source of truth.
+              disableDeletion = true;
+              editable = false;
               options.path = "/etc/grafana-dashboards";
             }
           ];
