@@ -1,7 +1,12 @@
 { config, pkgs, ... }:
 {
   systemd.services = {
+    # Stamp the freshness metric only when the restic backup ExecStart exits 0.
+    # ExecStartPost runs for every ExecStart result (including a partial or
+    # prune-failed run), so gate on $EXIT_STATUS to avoid reporting a
+    # false-fresh timestamp that would mask a broken backup in alerts/badges.
     restic-backups-b2.serviceConfig.ExecStartPost = pkgs.writeShellScript "restic-backup-metrics" ''
+      [ "''${EXIT_STATUS:-}" = "0" ] || exit 0
       tmp=/var/lib/node-exporter-textfiles/restic_backup.prom.tmp
       {
         echo "# HELP restic_last_backup_timestamp_seconds Unix timestamp of last successful restic backup"
@@ -47,6 +52,17 @@
       "/var/lib/vaultwarden"
       "/var/lib/grafana"
       "/var/lib/private/AdGuardHome"
+    ];
+    # Grafana keeps live SQLite state (grafana.db + WAL) at /var/lib/grafana.
+    # Backing up the live file risks capturing a torn mid-write state, so emit a
+    # consistent snapshot with sqlite3 .backup and exclude the live db/WAL files.
+    backupPrepareCommand = ''
+      ${pkgs.sqlite}/bin/sqlite3 /var/lib/grafana/grafana.db ".backup '/var/lib/grafana/grafana.db.backup'"
+    '';
+    exclude = [
+      "/var/lib/grafana/grafana.db"
+      "/var/lib/grafana/grafana.db-wal"
+      "/var/lib/grafana/grafana.db-shm"
     ];
     repositoryFile = config.sops.secrets.restic_repository.path;
     passwordFile = config.sops.secrets.restic_password.path;
