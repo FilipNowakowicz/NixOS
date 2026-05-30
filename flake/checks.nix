@@ -369,23 +369,6 @@ in
     observability-alerts-lint = observabilityAlertsLint;
   };
 
-  cveReportPackagesFor =
-    system:
-    let
-      targetPkgs = import nixpkgs {
-        inherit system;
-        config.allowUnfree = true;
-      };
-      targetCveChecks = import ../lib/cve-checks.nix {
-        pkgs = targetPkgs;
-        whitelist = ../cve-whitelist.toml;
-      };
-    in
-    {
-      main = targetCveChecks.mkCveCheck "main" allNixosConfigs.main.config.system.build.toplevel;
-      homeserver-gcp = targetCveChecks.mkCveCheck "homeserver-gcp" ciNixosConfigs.homeserver-gcp.config.system.build.toplevel;
-    };
-
   ciTestsFor = system: {
     homeserver-gcp-smoke = import ../tests/nixos/homeserver-gcp-smoke.nix {
       inherit nixpkgs system inputs;

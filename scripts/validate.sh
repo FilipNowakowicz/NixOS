@@ -48,7 +48,7 @@ Commands:
                      Build the homeserver-gcp endpoint smoke test
   profile-tests      Build all profile NixOS tests
   heavy              Build all smoke and profile tests
-  cve-reports        Build and print the CVE report outputs
+  cve-reports        Run vulnix CVE scan for each host (requires vulnix in PATH)
 EOF
 }
 
@@ -201,9 +201,22 @@ heavy)
   ;;
 
 cve-reports)
-  show_report_attrs \
-    ".#legacyPackages.${system}.ciReports.main" \
-    ".#legacyPackages.${system}.ciReports.homeserver-gcp"
+  # vulnix must be in PATH (dev shell provides it; CI wraps with nix shell).
+  # Running vulnix inside a nix build derivation fails because the Nix daemon
+  # rejects nix-store -qd connections from build processes.
+  for spec in \
+    "main:.#nixosConfigurations.main.config.system.build.toplevel" \
+    "homeserver-gcp:.#nixosConfigurations.homeserver-gcp.config.system.build.toplevel"; do
+    host="${spec%%:*}"
+    attr="${spec#*:}"
+    echo "=== CVE Scan for '$host' ==="
+    closure=$(nix build --no-link --print-out-paths "$attr")
+    if vulnix -R -j --whitelist "$repo_root/cve-whitelist.toml" "$closure" 2>&1; then
+      echo "VULNIX_ADVISORIES=0"
+    else
+      echo "VULNIX_ADVISORIES=1"
+    fi
+  done
   ;;
 
 "" | -h | --help | help)

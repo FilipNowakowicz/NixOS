@@ -159,7 +159,6 @@
 
       inherit (checkOutputs)
         ciTestsFor
-        cveReportPackagesFor
         invariantChecks
         ;
     in
@@ -205,7 +204,6 @@
         # both outputs, which defeats path-gating and can trip VM-test eval.
         legacyPackages.${defaultSystem} = {
           ciTests = ciTestsFor defaultSystem;
-          ciReports = cveReportPackagesFor defaultSystem;
         };
 
         # ── Home Manager Configurations ─────────────────────────────────────
