@@ -53,6 +53,17 @@
       "/var/lib/grafana"
       "/var/lib/private/AdGuardHome"
     ];
+    # Grafana keeps live SQLite state (grafana.db + WAL) at /var/lib/grafana.
+    # Backing up the live file risks capturing a torn mid-write state, so emit a
+    # consistent snapshot with sqlite3 .backup and exclude the live db/WAL files.
+    backupPrepareCommand = ''
+      ${pkgs.sqlite}/bin/sqlite3 /var/lib/grafana/grafana.db ".backup '/var/lib/grafana/grafana.db.backup'"
+    '';
+    exclude = [
+      "/var/lib/grafana/grafana.db"
+      "/var/lib/grafana/grafana.db-wal"
+      "/var/lib/grafana/grafana.db-shm"
+    ];
     repositoryFile = config.sops.secrets.restic_repository.path;
     passwordFile = config.sops.secrets.restic_password.path;
     environmentFile = config.sops.secrets.b2_credentials.path;
