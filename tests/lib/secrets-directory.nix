@@ -17,6 +17,8 @@ pkgs.runCommand "secrets-directory-check"
     ];
   }
   ''
+    export PLAINTEXT_MARKER_PATTERN_FILE="$src/scripts/lib/plaintext-secret-pattern.txt"
+
     cd "$src"
     bash ${../../scripts/check-secrets-directory.sh} --working-tree
 

@@ -36,6 +36,8 @@ repo_root="$(
 cd "$repo_root"
 
 has_failed=0
+marker_pattern_file="${PLAINTEXT_MARKER_PATTERN_FILE:-scripts/lib/plaintext-secret-pattern.txt}"
+marker_pattern="$(<"$marker_pattern_file")"
 
 file_contents() {
   local path="$1"
@@ -72,15 +74,7 @@ has_sops_json_block() {
 }
 
 has_plaintext_secret_marker() {
-  grep -E \
-    -e 'github_pat_[A-Za-z0-9_]{20,}' \
-    -e 'gh[pousr]_[A-Za-z0-9_]{20,}' \
-    -e 'ya29\.[A-Za-z0-9._-]{20,}' \
-    -e 'sk-(proj-)?[A-Za-z0-9_-]{20,}' \
-    -e 'xox[baprs]-[A-Za-z0-9-]{20,}' \
-    -e 'glpat-[A-Za-z0-9_-]{20,}' \
-    -e 'AKIA[0-9A-Z]{16}' \
-    -e 'age-secret-key-[a-z0-9]{50,}'
+  grep -Ei "$marker_pattern"
 }
 
 validate_sops_file() {

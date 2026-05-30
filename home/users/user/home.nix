@@ -167,6 +167,7 @@ in
         ];
         text = ''
           NIX_REPO="${nixRepo}"
+          MAKO_CONFIG_TEMPLATE="${../../theme/mako-config.template}"
         ''
         + builtins.readFile ../../files/scripts/theme-switch.sh;
       })
@@ -317,6 +318,7 @@ in
     enable = lib.mkDefault config.workflowPacks.latex.enable;
     grammar = lib.mkDefault config.workflowPacks.latex.enable;
   };
+  my.neovim.languages.c.enable = lib.mkDefault (!skipHeavyPackages);
 
   gtk.gtk4.theme = null;
 

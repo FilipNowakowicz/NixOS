@@ -60,7 +60,7 @@ in
 
           delete_subvolume_recursively() {
             IFS=$'\n'
-            for i in $(btrfs subvolume list -o "$1" | cut -f 9 -d ' '); do
+            for i in $(btrfs subvolume list -o "$1" | sed -n 's/.* path //p'); do
               delete_subvolume_recursively "/btrfs_tmp/$i"
             done
             btrfs subvolume delete "$1"

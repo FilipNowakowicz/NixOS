@@ -16,13 +16,17 @@ let
   mergeAttrSet = attrsList: lib.foldl' lib.recursiveUpdate { } attrsList;
 
   enabledPacks =
-    lib.optional cfg.languages.nix.enable (import ./packs/nix.nix { inherit pkgs; })
+    lib.optional cfg.languages.c.enable (import ./packs/c.nix { inherit pkgs; })
+    ++ lib.optional cfg.languages.nix.enable (import ./packs/nix.nix { inherit pkgs; })
     ++ lib.optional cfg.languages.python.enable (import ./packs/python.nix { inherit pkgs cfg; })
     ++ lib.optional cfg.languages.tex.enable (import ./packs/tex.nix { inherit lib pkgs cfg; });
 
   packPackages = lib.unique (lib.concatMap (pack: pack.packages or [ ]) enabledPacks);
 
   languageConfig = {
+    c = {
+      inherit (cfg.languages.c) enable;
+    };
     nix = {
       inherit (cfg.languages.nix) enable;
     };
@@ -125,6 +129,10 @@ in
       };
 
     languages = {
+      c.enable = lib.mkEnableOption "C/C++ editor tooling (clangd LSP)" // {
+        default = false;
+      };
+
       nix.enable = lib.mkEnableOption "Nix editor tooling (nixd LSP, nixfmt formatter)" // {
         default = true;
       };

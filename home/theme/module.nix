@@ -5,6 +5,7 @@ let
   # Directory where themes are stored
   themeDir = ./.;
   themesDir = themeDir + /themes;
+  makoTemplate = builtins.readFile (themeDir + /mako-config.template);
 
   # Auto-discover all theme files
   themeFiles = builtins.readDir themesDir;
@@ -152,23 +153,19 @@ let
     '';
 
     # Mako notification colors
-    "themes/${themeName}/mako-config".text = ''
-      font=JetBrainsMono Nerd Font 11
-      background-color=#${theme.colors.bg}
-      text-color=#${theme.colors.text}
-      border-color=#${theme.colors.orange}
-      border-radius=8
-      border-size=2
-      anchor=top-right
-      margin=12
-      padding=10,14
-      width=300
-      default-timeout=5000
-      max-visible=5
-
-      [mode=do-not-disturb]
-      invisible=1
-    '';
+    "themes/${themeName}/mako-config".text =
+      lib.replaceStrings
+        [
+          "@bg@"
+          "@text@"
+          "@orange@"
+        ]
+        [
+          theme.colors.bg
+          theme.colors.text
+          theme.colors.orange
+        ]
+        makoTemplate;
 
     # Wallpaper symlink
     "themes/${themeName}/wallpaper".source = theme.wallpaper;

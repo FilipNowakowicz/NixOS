@@ -5,9 +5,7 @@ local generated = require("config.generated")
 -----------------------------------------------------------
 local capabilities = require("blink.cmp").get_lsp_capabilities()
 
-vim.lsp.config("clangd", { capabilities = capabilities })
-
-local enabled_servers = { "clangd" }
+local enabled_servers = {}
 for _, server in ipairs(generated.lsp.enable or {}) do
 	local server_settings = generated.lsp.settings and generated.lsp.settings[server]
 	vim.lsp.config(
