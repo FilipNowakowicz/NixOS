@@ -115,6 +115,40 @@ let
       mkResult (violations == [ ]) (lib.concatStringsSep "; " violations);
   };
 
+  expectedAgentMaintenanceCommands = [
+    "/run/current-system/sw/bin/systemctl start restic-backups-local.service"
+    "/run/current-system/sw/bin/systemctl start restic-check-local.service"
+    "/run/current-system/sw/bin/systemctl status restic-backups-local.service --no-pager"
+    "/run/current-system/sw/bin/systemctl status restic-backups-local.timer --no-pager"
+    "/run/current-system/sw/bin/systemctl status restic-check-local.service --no-pager"
+    "/run/current-system/sw/bin/systemctl status restic-check-local.timer --no-pager"
+    "/run/current-system/sw/bin/systemctl start btrbk-local.service"
+    "/run/current-system/sw/bin/systemctl status btrbk-local.service --no-pager"
+    "/run/current-system/sw/bin/systemctl status btrbk-local.timer --no-pager"
+    "/run/current-system/sw/bin/bootctl status --no-pager"
+    "/run/current-system/sw/bin/bootctl cleanup"
+    "/run/current-system/sw/bin/efibootmgr -b [0-9A-F][0-9A-F][0-9A-F][0-9A-F] -B"
+    "/run/current-system/sw/bin/nix-gc-14d"
+  ];
+
+  mainAgentMaintenanceSudoAllowlist = {
+    name = "agent maintenance sudo allowlist stays narrow";
+    check =
+      cfg:
+      let
+        userRules = lib.filter (rule: rule.users or [ ] == [ "user" ]) (
+          cfg.security.sudo.extraRules or [ ]
+        );
+        commands = lib.concatMap (rule: rule.commands or [ ]) userRules;
+        actualCommands = lib.sort builtins.lessThan (map (command: command.command) commands);
+        expectedCommands = lib.sort builtins.lessThan expectedAgentMaintenanceCommands;
+        invalidOptions = lib.filter (command: command.options or [ ] != [ "NOPASSWD" ]) commands;
+      in
+      require (
+        actualCommands == expectedCommands && invalidOptions == [ ]
+      ) "main sudo extraRules must only grant NOPASSWD for the exact agent maintenance commands";
+  };
+
   mainBackupPathsArePersisted = {
     name = "main backup paths are persisted or on a persistent fs";
     check =
@@ -288,6 +322,7 @@ let
       check =
         cfg: require cfg.security.sudo.wheelNeedsPassword "security.sudo.wheelNeedsPassword must be true";
     }
+    mainAgentMaintenanceSudoAllowlist
     mainSshIsTailnetOnly
     mainUsbguardIsDenyDefault
   ];

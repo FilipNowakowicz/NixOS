@@ -40,6 +40,7 @@ let
       openssh.enable = true;
       tailscale.enable = true;
       restic.backups.local.repository = "/persist/restic-repo";
+      restic.backups.local.paths = [ "/home/user" ];
     };
   };
 
@@ -120,11 +121,27 @@ let
           services = baseConfig.services // {
             restic.backups.local = {
               repositoryFile = "/run/secrets/restic_repository";
+              paths = [ "/home/user" ];
             };
           };
         }
       );
       expected = true;
+    };
+
+    backupMetadataRequiresPaths = {
+      expr = runAssertion "backup metadata configures Restic backup target" (
+        baseConfig
+        // {
+          services = baseConfig.services // {
+            restic.backups.local = {
+              repository = "/persist/restic-repo";
+              paths = [ ];
+            };
+          };
+        }
+      );
+      expected = false;
     };
 
     tailnetMetadataRequiresTailscale = {

@@ -12,7 +12,9 @@ change (see CLAUDE.md). Fast gate is
 - `[DONE]` P0-1, P1-2, P1-3, P1-4, P1-5, and P1-6 landed.
 - `[PARTIAL]` P0-2 landed as an optional webhook receiver, but
   `homeserver-gcp` is not yet wired to a real receiver in checked code.
-- `[OPEN]` P0-3, P1-1, P2-2, P2-3/P2-4, P2-5, P2-1/P3-2, and P3-5
+- `[PARTIAL]` P2-3/P2-4 now rejects empty Restic backup path lists; the restore
+  canary remains open.
+- `[OPEN]` P0-3, P1-1, P2-2, P2-5, P2-1/P3-2, and P3-5
   remain open.
 
 ---

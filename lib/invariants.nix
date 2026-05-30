@@ -7,8 +7,11 @@ let
       let
         backup = cfg.services.restic.backups.${backupName};
       in
-      (backup ? repository && backup.repository != null)
-      || (backup ? repositoryFile && backup.repositoryFile != null)
+      (backup.paths or [ ]) != [ ]
+      && (
+        (backup ? repository && backup.repository != null)
+        || (backup ? repositoryFile && backup.repositoryFile != null)
+      )
     );
 in
 rec {

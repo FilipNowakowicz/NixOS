@@ -7,11 +7,12 @@ unrelated targets unless validating.
 ## Status after PR 62
 
 - `[DONE]` P0-1, P0-2, and installer CI coverage from P0-3/P1-4 landed.
+- `[DONE]` P1-6 and P2-1 landed.
 - `[PARTIAL]` P0-4/P1-1 landed as scheduled and `flake.lock` PR CVE reports,
   but advisory findings warn rather than fail a merge-gating check.
 - `[DONE]` P2-5 landed; the main scanner, pre-commit hook, and
   secrets-directory checker now share one pattern.
-- `[OPEN]` P1-2, P1-3, P1-5, P1-6, P2-1, P2-2, P2-6/P2-3, P3-1/P3-2, and
+- `[OPEN]` P1-2, P1-3, P1-5, P2-2, P2-6/P2-3, P3-1/P3-2, and
   P3-4/P3-6 remain open.
 
 ---

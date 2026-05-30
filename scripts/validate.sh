@@ -174,6 +174,10 @@ hosts)
   ;;
 
 smoke-homeserver-gcp)
+  if [[ ! -e /dev/kvm ]]; then
+    echo "KVM not available: /dev/kvm missing; skipping homeserver-gcp smoke test." >&2
+    exit 0
+  fi
   build_attrs ".#legacyPackages.${system}.ciTests.homeserver-gcp-smoke"
   ;;
 

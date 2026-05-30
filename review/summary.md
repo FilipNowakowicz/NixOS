@@ -152,7 +152,7 @@ not on `mac`. Every reboot clears all bans.
 | E      | [DONE] `workstation.nix` profile is entirely dead — no host lists it; the `lib/hosts.nix` comment referencing it is stale                                                                                  |
 | F      | [DONE] PromQL alert rules (`alerts.nix`) are never validated with `promtool check rules` — a metric-name typo ships silently and alerts never fire                                                         |
 | F      | [OPEN] No test that impermanence actually loses state on reboot — the defining property of `main` and `mac` is untested                                                                                    |
-| F      | [OPEN] `agentMaintenanceCommands` NOPASSWD sudo allowlist (a real privesc surface) has no test                                                                                                             |
+| F      | [DONE] `agentMaintenanceCommands` NOPASSWD sudo allowlist (a real privesc surface) has no test                                                                                                             |
 | F      | [DONE] `installer` host is built by no CI job                                                                                                                                                              |
 
 ---
@@ -166,7 +166,7 @@ not on `mac`. Every reboot clears all bans.
 | A      | [DONE] Dev shell missing `nh` (documented `rebuild` alias), `jq`, and `git`                                                                                                                                         |
 | B      | [DONE] Grafana dashboards provisioned from store are `editable=true; disableDeletion=false` — UI edits silently lost on redeploy                                                                                    |
 | B      | [DONE] `impermanence-base.nix` rollback-root parses btrfs output with fragile `cut -f 9 -d ' '` (field position is version-dependent)                                                                               |
-| B      | [OPEN] Backup `restic check` never tests an actual restore; backup invariant doesn't verify `paths != []`, so empty backup stamps fresh timestamp                                                                   |
+| B      | [PARTIAL] Backup `restic check` never tests an actual restore; backup invariant doesn't verify `paths != []`, so empty backup stamps fresh timestamp                                                                |
 | C      | [DONE] `tailscale-bypass-routing` script exits 0 on all errors — firewall exceptions for Tailscale could silently fail to apply                                                                                     |
 | D      | [DONE] Grafana SQLite database backed up live (risk of torn-DB backup)                                                                                                                                              |
 | D      | [OPEN] AdGuard state at dynamic UID path backed up raw (UID mismatch on restore)                                                                                                                                    |
@@ -174,7 +174,7 @@ not on `mac`. Every reboot clears all bans.
 | E      | [DONE] GTK theme never set — GTK apps fall back to stock Adwaita despite `gnome-themes-extra` being installed                                                                                                       |
 | E      | [DONE] `clangd` hardcoded-enabled in `lsp.lua` with no matching neovim pack; `clang-tools` only present behind `skipHeavyPackages`                                                                                  |
 | E      | [DONE] `mako` notification config has three sources of truth (theme module + inline block in `theme-switch.sh`)                                                                                                     |
-| F      | [OPEN] Smoke test hard-fails (vs skips) when `/dev/kvm` is unavailable                                                                                                                                              |
+| F      | [DONE] Smoke test hard-fails (vs skips) when `/dev/kvm` is unavailable                                                                                                                                              |
 | F      | [DONE] Three drifting copies of the secret-scan regex across two scripts and the pre-commit hook — PR 62 unifies the scanner/pre-commit pattern; `check-secrets-directory.sh` remains separate                      |
 
 ---
