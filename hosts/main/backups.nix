@@ -111,11 +111,24 @@
 
       restic-check-local = {
         description = "Restic workstation repository integrity check";
-        after = [ "network-online.target" ];
-        wants = [ "network-online.target" ];
+        # network-online.target is a no-op here: main force-disables both
+        # wait-online providers (see networking.nix), so the target is reached
+        # immediately and orders against nothing. Probe the B2 backend directly
+        # with a bounded retry in ExecStartPre instead, so the check waits for
+        # real connectivity rather than relying on a target that never blocks.
         environment.RESTIC_PASSWORD_FILE = config.sops.secrets.restic_password.path;
         serviceConfig = {
           Type = "oneshot";
+          ExecStartPre = pkgs.writeShellScript "restic-check-wait-repo" ''
+            for _ in $(${pkgs.coreutils}/bin/seq 1 30); do
+              ${pkgs.restic}/bin/restic cat config \
+                --repository-file=${config.sops.secrets.restic_repository.path} \
+                >/dev/null 2>&1 && exit 0
+              ${pkgs.coreutils}/bin/sleep 10
+            done
+            echo "restic-check-local: B2 repo unreachable after ~5min" >&2
+            exit 1
+          '';
           ExecStart = "${pkgs.restic}/bin/restic check --repository-file=${config.sops.secrets.restic_repository.path} --read-data-subset=1G";
           ExecStartPost = pkgs.writeShellScript "restic-check-metrics" ''
             tmp=/var/lib/node-exporter-textfiles/restic_check.prom.tmp
