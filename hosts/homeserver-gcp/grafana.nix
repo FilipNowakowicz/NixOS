@@ -73,7 +73,7 @@ in
       header_name = "X-WEBAUTH-USER";
       header_property = "email";
       auto_sign_up = true;
-      sync_ttl = 0;
+      sync_ttl = 60;
       whitelist = "127.0.0.1";
       headers = "Name:X-WEBAUTH-NAME Role:X-WEBAUTH-ROLE Email:X-WEBAUTH-EMAIL";
     };

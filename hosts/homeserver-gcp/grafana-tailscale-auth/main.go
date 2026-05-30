@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -18,6 +19,41 @@ type whoisResponse struct {
 		LoginName   string `json:"LoginName"`
 		DisplayName string `json:"DisplayName"`
 	} `json:"UserProfile"`
+}
+
+// whoisCache dedups concurrent tailscale whois calls for the same IP.
+// Without this, a single Grafana page load triggers 5–10 simultaneous
+// auth_request subrequests, each spawning a whois subprocess; the daemon
+// queues them serially and the later ones hit the 5s timeout.
+type whoisCache struct {
+	mu      sync.Mutex
+	entries map[string]whoisEntry
+}
+
+type whoisEntry struct {
+	who *whoisResponse
+	err error
+	exp time.Time
+}
+
+var cache = &whoisCache{entries: make(map[string]whoisEntry)}
+
+const cacheTTL = 5 * time.Minute
+
+func (c *whoisCache) lookup(ctx context.Context, tailscaleBin, addr string) (*whoisResponse, error) {
+	c.mu.Lock()
+	if e, ok := c.entries[addr]; ok && time.Now().Before(e.exp) {
+		c.mu.Unlock()
+		return e.who, e.err
+	}
+	c.mu.Unlock()
+
+	who, err := lookupWhois(ctx, tailscaleBin, addr)
+
+	c.mu.Lock()
+	c.entries[addr] = whoisEntry{who: who, err: err, exp: time.Now().Add(cacheTTL)}
+	c.mu.Unlock()
+	return who, err
 }
 
 func main() {
@@ -40,7 +76,7 @@ func main() {
 			return
 		}
 
-		who, err := lookupWhois(r.Context(), tailscaleBin, remoteAddr)
+		who, err := cache.lookup(r.Context(), tailscaleBin, remoteAddr)
 		if err != nil {
 			log.Printf("whois %q failed: %v", remoteAddr, err)
 			http.Error(w, "tailscale identity lookup failed", http.StatusUnauthorized)

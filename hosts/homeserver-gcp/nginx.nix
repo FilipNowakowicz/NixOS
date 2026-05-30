@@ -120,6 +120,21 @@ in
             '';
           };
 
+          # Grafana 13.x auth proxy sessions carry no persistent user_auth_token,
+          # so the rotate endpoint always returns 401 ("user token not found").
+          # The SPA treats that as an expired session and reloads immediately,
+          # creating an infinite loop. Auth is still enforced by auth_request;
+          # returning 200 here is safe because the proxy re-validates identity
+          # on every upstream request anyway — there is nothing real to rotate.
+          "= /grafana/api/user/auth-tokens/rotate" = lib.mkIf (cfg.grafanaAuthRequestUrl != null) {
+            extraConfig = ''
+              auth_request /_grafana_auth;
+              ${securityHeaders}
+              add_header Content-Type "application/json" always;
+              return 200 '{}';
+            '';
+          };
+
           "= /_grafana_auth" = lib.mkIf (cfg.grafanaAuthRequestUrl != null) {
             proxyPass = cfg.grafanaAuthRequestUrl;
             extraConfig = ''
