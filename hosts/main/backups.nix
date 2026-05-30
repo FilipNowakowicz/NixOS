@@ -1,4 +1,7 @@
 { config, pkgs, ... }:
+let
+  inherit (config.lib.profiles.observability) mkPromScript;
+in
 {
   # Hidden maintenance mount for the filesystem top-level. btrbk snapshots
   # subvolumes by their real top-level names (`@home`, `@persist`) rather than
@@ -88,15 +91,14 @@
 
   systemd = {
     services = {
-      restic-backups-local.serviceConfig.ExecStartPost = pkgs.writeShellScript "restic-backup-metrics" ''
-        tmp=/var/lib/node-exporter-textfiles/restic_backup.prom.tmp
-        {
-          echo "# HELP restic_last_backup_timestamp_seconds Unix timestamp of last successful restic backup"
-          echo "# TYPE restic_last_backup_timestamp_seconds gauge"
-          echo "restic_last_backup_timestamp_seconds $(date +%s)"
-        } > "$tmp"
-        mv "$tmp" /var/lib/node-exporter-textfiles/restic_backup.prom
-      '';
+      restic-backups-local.serviceConfig.ExecStartPost = mkPromScript {
+        name = "restic_backup.prom";
+        lines = [
+          "# HELP restic_last_backup_timestamp_seconds Unix timestamp of last successful restic backup"
+          "# TYPE restic_last_backup_timestamp_seconds gauge"
+          "restic_last_backup_timestamp_seconds $(${pkgs.coreutils}/bin/date +%s)"
+        ];
+      };
 
       btrbk-local-snapshot-dir = {
         description = "Ensure btrbk local snapshot directory exists";
@@ -130,15 +132,14 @@
             exit 1
           '';
           ExecStart = "${pkgs.restic}/bin/restic check --repository-file=${config.sops.secrets.restic_repository.path} --read-data-subset=1G";
-          ExecStartPost = pkgs.writeShellScript "restic-check-metrics" ''
-            tmp=/var/lib/node-exporter-textfiles/restic_check.prom.tmp
-            {
-              echo "# HELP restic_last_check_timestamp_seconds Unix timestamp of last successful restic integrity check"
-              echo "# TYPE restic_last_check_timestamp_seconds gauge"
-              echo "restic_last_check_timestamp_seconds $(date +%s)"
-            } > "$tmp"
-            mv "$tmp" /var/lib/node-exporter-textfiles/restic_check.prom
-          '';
+          ExecStartPost = mkPromScript {
+            name = "restic_check.prom";
+            lines = [
+              "# HELP restic_last_check_timestamp_seconds Unix timestamp of last successful restic integrity check"
+              "# TYPE restic_last_check_timestamp_seconds gauge"
+              "restic_last_check_timestamp_seconds $(${pkgs.coreutils}/bin/date +%s)"
+            ];
+          };
           EnvironmentFile = config.sops.secrets.b2_credentials.path;
         };
       };

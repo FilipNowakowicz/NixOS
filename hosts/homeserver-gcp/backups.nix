@@ -3,6 +3,7 @@ let
   canaryDir = "/var/lib/restic-backup-canary";
   canaryFile = "${canaryDir}/homeserver-gcp.txt";
   canaryContent = "restic restore canary: homeserver-gcp";
+  inherit (config.lib.profiles.observability) mkPromScript;
 in
 {
   systemd = {
@@ -11,15 +12,14 @@ in
       # reaching this script already means the backup completed cleanly — stamp
       # the freshness metric unconditionally. ($EXIT_STATUS is only exported to
       # ExecStop/ExecStopPost, never to ExecStartPost, so it cannot gate here.)
-      restic-backups-b2.serviceConfig.ExecStartPost = pkgs.writeShellScript "restic-backup-metrics" ''
-        tmp=/var/lib/node-exporter-textfiles/restic_backup.prom.tmp
-        {
-          echo "# HELP restic_last_backup_timestamp_seconds Unix timestamp of last successful restic backup"
-          echo "# TYPE restic_last_backup_timestamp_seconds gauge"
-          echo "restic_last_backup_timestamp_seconds $(date +%s)"
-        } > "$tmp"
-        mv "$tmp" /var/lib/node-exporter-textfiles/restic_backup.prom
-      '';
+      restic-backups-b2.serviceConfig.ExecStartPost = mkPromScript {
+        name = "restic_backup.prom";
+        lines = [
+          "# HELP restic_last_backup_timestamp_seconds Unix timestamp of last successful restic backup"
+          "# TYPE restic_last_backup_timestamp_seconds gauge"
+          "restic_last_backup_timestamp_seconds $(${pkgs.coreutils}/bin/date +%s)"
+        ];
+      };
 
       restic-check-b2 = {
         description = "Restic B2 repository integrity check";
@@ -29,15 +29,14 @@ in
         serviceConfig = {
           Type = "oneshot";
           ExecStart = "${pkgs.restic}/bin/restic check --repository-file=${config.sops.secrets.restic_repository.path} --read-data-subset=1G";
-          ExecStartPost = pkgs.writeShellScript "restic-check-metrics" ''
-            tmp=/var/lib/node-exporter-textfiles/restic_check.prom.tmp
-            {
-              echo "# HELP restic_last_check_timestamp_seconds Unix timestamp of last successful restic integrity check"
-              echo "# TYPE restic_last_check_timestamp_seconds gauge"
-              echo "restic_last_check_timestamp_seconds $(date +%s)"
-            } > "$tmp"
-            mv "$tmp" /var/lib/node-exporter-textfiles/restic_check.prom
-          '';
+          ExecStartPost = mkPromScript {
+            name = "restic_check.prom";
+            lines = [
+              "# HELP restic_last_check_timestamp_seconds Unix timestamp of last successful restic integrity check"
+              "# TYPE restic_last_check_timestamp_seconds gauge"
+              "restic_last_check_timestamp_seconds $(${pkgs.coreutils}/bin/date +%s)"
+            ];
+          };
           EnvironmentFile = config.sops.secrets.b2_credentials.path;
         };
       };
@@ -61,13 +60,14 @@ in
               dump latest "$canary_path" > "$workdir/canary.txt"
             ${pkgs.gnugrep}/bin/grep -qx '${canaryContent}' "$workdir/canary.txt"
 
-            tmp=/var/lib/node-exporter-textfiles/restic_restore_canary.prom.tmp
-            {
-              echo "# HELP restic_last_restore_test_timestamp_seconds Unix timestamp of last successful restic restore canary"
-              echo "# TYPE restic_last_restore_test_timestamp_seconds gauge"
-              echo "restic_last_restore_test_timestamp_seconds $(date +%s)"
-            } > "$tmp"
-            mv "$tmp" /var/lib/node-exporter-textfiles/restic_restore_canary.prom
+            ${mkPromScript {
+              name = "restic_restore_canary.prom";
+              lines = [
+                "# HELP restic_last_restore_test_timestamp_seconds Unix timestamp of last successful restic restore canary"
+                "# TYPE restic_last_restore_test_timestamp_seconds gauge"
+                "restic_last_restore_test_timestamp_seconds $(${pkgs.coreutils}/bin/date +%s)"
+              ];
+            }}
           '';
         };
       };

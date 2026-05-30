@@ -15,6 +15,33 @@ let
   nodeExporterTextfileDir = "/var/lib/node-exporter-textfiles";
   prometheusPort = 9090;
   nodeExporterPort = 9100;
+  mkPromScript =
+    {
+      name,
+      lines,
+    }:
+    let
+      filename = if lib.hasSuffix ".prom" name then name else "${name}.prom";
+      scriptName = "write-${lib.removeSuffix ".prom" filename}";
+      content = lib.concatStringsSep "\n" lines;
+    in
+    pkgs.writeShellScript scriptName ''
+      set -eu
+
+      ${pkgs.coreutils}/bin/install -d -m 0755 ${nodeExporterTextfileDir}
+      tmp="$(${pkgs.coreutils}/bin/mktemp "${nodeExporterTextfileDir}/${filename}.tmp.XXXXXX")"
+      cleanup() {
+        ${pkgs.coreutils}/bin/rm -f "$tmp"
+      }
+      trap cleanup EXIT
+
+      cat >"$tmp" <<EOF
+      ${content}
+      EOF
+      ${pkgs.coreutils}/bin/chmod 0644 "$tmp"
+      ${pkgs.coreutils}/bin/mv -f "$tmp" "${nodeExporterTextfileDir}/${filename}"
+      trap - EXIT
+    '';
   ingestAuthGroups = lib.optionals (shouldUseIngestAuth && cfg.ingestAuth.group != null) [
     cfg.ingestAuth.group
   ];
@@ -576,6 +603,10 @@ in
 
     environment.etc = lib.mkIf cfg.collectors.logs.enable {
       "alloy/config.alloy".text = alloyConfig;
+    };
+
+    lib.profiles.observability = {
+      inherit mkPromScript nodeExporterTextfileDir;
     };
 
     systemd = {
