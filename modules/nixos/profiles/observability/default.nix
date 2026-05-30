@@ -18,6 +18,18 @@ in
   options.profiles.observability = {
     enable = lib.mkEnableOption "LGTM observability profile";
 
+    alertWebhookUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      description = ''
+        Webhook URL for Alertmanager notifications (e.g. an ntfy.sh topic URL).
+        When non-empty, a webhook receiver is configured and alerts are routed
+        to it. When empty (the default), alerts route to a null receiver so
+        deployments without a configured URL keep working.
+      '';
+      example = "https://ntfy.sh/my-alerts-topic";
+    };
+
     grafana = {
       enable = lib.mkEnableOption "Grafana";
       adminUser = lib.mkOption {
