@@ -108,23 +108,23 @@ let
       inactive_tab_background #${theme.colors.bg}
       tab_bar_background      #${theme.colors.bg}
 
-      # 16 colors — extended palette
-      color0  #${theme.colors.bg}
-      color8  #${theme.colors.brown}
-      color1  #cc241d
-      color9  #fb4934
-      color2  #98971a
-      color10 #b8bb26
-      color3  #${theme.colors.amber}
-      color11 #fabd2f
-      color4  #458588
-      color12 #83a598
-      color5  #b16286
-      color13 #d3869b
-      color6  #689d6a
-      color14 #8ec07c
-      color7  #${theme.colors.text}
-      color15 #fbf1c7
+      # 16 colors — ANSI palette derived per-theme (see theme's ansiColors).
+      color0  #${theme.ansiColors.color0}
+      color8  #${theme.ansiColors.color8}
+      color1  #${theme.ansiColors.color1}
+      color9  #${theme.ansiColors.color9}
+      color2  #${theme.ansiColors.color2}
+      color10 #${theme.ansiColors.color10}
+      color3  #${theme.ansiColors.color3}
+      color11 #${theme.ansiColors.color11}
+      color4  #${theme.ansiColors.color4}
+      color12 #${theme.ansiColors.color12}
+      color5  #${theme.ansiColors.color5}
+      color13 #${theme.ansiColors.color13}
+      color6  #${theme.ansiColors.color6}
+      color14 #${theme.ansiColors.color14}
+      color7  #${theme.ansiColors.color7}
+      color15 #${theme.ansiColors.color15}
     '';
 
     # Hyprland colors
@@ -197,10 +197,19 @@ in
       internal = true;
       description = "Color palette of the active theme, exposed for other modules to consume (e.g. generated configs).";
     };
+    _activeThemeColorscheme = lib.mkOption {
+      type = lib.types.attrs;
+      internal = true;
+      description = ''
+        Neovim colorscheme selection of the active theme (attrs with `name` and
+        `background`), exposed for the neovim module to consume.
+      '';
+    };
   };
 
   config = {
     themes._activeThemeColors = activeTheme.colors;
+    themes._activeThemeColorscheme = activeTheme.colorscheme;
     xdg.configFile = themeConfigs // {
       "themes/links.sh".text = themeLinksSnippet;
     };
