@@ -219,6 +219,7 @@ bash scripts/validate.sh light
 bash scripts/validate.sh host main-ci
 bash scripts/validate.sh host homeserver-gcp
 bash scripts/validate.sh hosts
+bash scripts/validate.sh package all
 bash scripts/validate.sh profile-tests
 bash scripts/validate.sh heavy
 bash scripts/validate.sh cve-reports
@@ -231,6 +232,8 @@ advisories are surfaced as workflow warnings, not as merge-gating failures.
 Rules of thumb:
 
 - Shared flake, library, or global module changes: run `light` and affected host builds; use `hosts` when impact is broad.
+- Package/app output changes: run `bash scripts/validate.sh package all`, or
+  `bash scripts/validate.sh package <name>` for a narrow check.
 - Desktop profile/Home Manager changes: build `main-ci`.
 - Server profile/GCP changes: build `homeserver-gcp`.
 - Docs changes: run `bash scripts/validate.sh docs`; CI runs this even for docs-only PRs.

@@ -16,11 +16,14 @@ bash scripts/validate.sh host mac       # build mac closure
 statix check . && deadnix .
 ```
 
-## Status after PR 62
+## Current Status
 
 - `[DONE]` P0-1, P1-1, P1-2, P1-4, and P2-1 landed.
-- `[OPEN]` P1-3, P2-2, P2-3, P2-4, P2-5/P2-\* docs-only additions, and P3
-  remain open unless covered by separate future work.
+- `[DONE]` P1-3 landed by adding `/var/lib/libvirt` to the `main` B2 backup
+  boundary.
+- `[DONE]` P3-1 landed for `homeserver-gcp` as a daily restic restore canary.
+- `[OPEN]` P2-2, P2-3, P2-4, P2-5/P2-\* docs-only additions, and remaining P3
+  ideas remain open unless covered by separate future work.
 
 ---
 

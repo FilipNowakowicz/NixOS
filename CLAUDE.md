@@ -44,6 +44,7 @@ Home Manager, backup, and hardware identifiers.
 | `bash scripts/validate.sh host <name>`          | Build a single host closure.                           |
 | `bash scripts/validate.sh profile-tests`        | Build all profile-specific NixOS tests.                |
 | `bash scripts/validate.sh smoke-homeserver-gcp` | Booted smoke test for the homeserver routing surface.  |
+| `bash scripts/validate.sh package all`          | Build CI package outputs and installer ISO.            |
 | `bash scripts/validate.sh heavy`                | Full KVM-backed suite.                                 |
 | `bash scripts/validate.sh cve-reports`          | CVE scan reports for each host.                        |
 | `statix check .` / `deadnix .`                  | Nix lint.                                              |
@@ -56,7 +57,16 @@ all affected hosts.
 ## CI
 
 - Weekly `flake.lock` updates (`flake-update.yml`) auto-merge if `merge-gate` passes.
-- `merge-gate` consolidates flake-check, invariants, and smoke tests into one required status for branch protection.
+- `merge-gate` consolidates flake evaluation, light checks, package builds,
+  host builds, and selected smoke/profile tests into one required status for
+  branch protection.
+
+## Review Ledger
+
+The `review/` directory is a historical config-review ledger. Treat
+`review/summary.md` as the current status index; the per-domain
+`*-fix-context.md` files preserve original prompts plus status notes for any
+remaining work.
 
 ## Agents
 

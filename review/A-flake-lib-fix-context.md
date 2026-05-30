@@ -7,16 +7,19 @@ of the whole flake blindly — use the targeted commands given.
 Repo root: `/home/user/nix`. Reach the dev shell with `nix develop` (provides
 `statix`, `deadnix`, `deploy-rs`, etc.).
 
-## Status after PR 62
+## Current Status
 
 - `[PARTIAL]` FIX 1: workflow, stderr capture, and `homeserver-gcp` scan landed;
   advisories still warn rather than fail a merge-gating check.
 - `[DONE]` FIX 2: `invariants-main-ci` landed.
-- `[PARTIAL]` FIX 3: the initrd-secret claim is now documented as a native
-  NixOS assertion; registry/impermanence invariant work remains open.
+- `[PARTIAL]` FIX 3: the initrd-secret claim is enforced by a native NixOS
+  assertion, and registry assertions feed both flake checks and inventory
+  health; sops-recipient and impermanence-host invariants remain future work.
 - `[DONE]` FIX 4: deploy confirm timeouts landed.
 - `[DONE]` FIX 9 landed.
-- `[OPEN]` FIX 5/6/10 remain open.
+- `[DONE]` FIX 5/6 landed by sharing invariant helpers with inventory health and
+  removing the stale registry `ip` surface.
+- `[OPEN]` FIX 10 remains open.
 - `[DONE]` FIX 7/8 landed.
 
 ---

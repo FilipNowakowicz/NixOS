@@ -4,15 +4,15 @@ Reviewed by 6 parallel Opus 4.8 agents across all domains. Each domain has a
 `*-findings.md` (severity-tagged) and `*-fix-context.md` (ready-to-use fix prompt)
 in this directory.
 
-## Status after PR 62
+## Current Status
 
-PR 62 addresses most of the original P0 fix batches and a focused subset of the
-P1/P2 items. Status markers below mean:
+The recent `fix/config-review` commits have closed the original P0 fix batches
+and most P1/P2 items. Status markers below mean:
 
-- `[DONE]` The PR contains a matching code/config change.
-- `[PARTIAL]` The PR improves the issue but does not fully satisfy the original
+- `[DONE]` The branch contains a matching code/config change.
+- `[PARTIAL]` The branch improves the issue but does not fully satisfy the original
   finding.
-- `[OPEN]` No matching PR 62 change was found in the current diff.
+- `[OPEN]` No matching branch change was found.
 
 ---
 
@@ -47,7 +47,7 @@ alert rules (backup stale, CVE found, unit failed, probe failed) routes to a
 `null` Alertmanager receiver. Grafana has no contact points provisioned either.
 The entire alerting stack is a write-only system. On an unattended server this
 is the single most operationally dangerous gap.
-→ PR 62 adds an Alertmanager webhook option and `homeserver-gcp` now wires it
+→ The branch adds an Alertmanager webhook option and `homeserver-gcp` wires it
 to a sops-backed off-host webhook URL. See
 `B-modules-fix-context.md` and `D-homeserver-installer-fix-context.md`.
 
@@ -79,7 +79,7 @@ CLAUDE.md and README as an operated security signal, but:
 - It has a redirect bug: `2>&1 >> $out` sends vulnix stderr findings to the
   terminal, not the report file.
 - Only scans `main`, omitting internet-adjacent `homeserver-gcp`.
-  → PR 62 adds a scheduled/flake.lock PR workflow, fixes the stderr capture,
+  → The branch adds a scheduled/flake.lock PR workflow, fixes the stderr capture,
   and scans both `main` and `homeserver-gcp`. Staying informational (not
   merge-gating) is intentional: vulnix advisories are noisy and transitive;
   a hard gate would create friction that gets bypassed. Reports remain visible
@@ -145,7 +145,7 @@ not on `mac`. Every reboot clears all bans.
 | B      | [DONE] `security.nix` missing standard hardening sysctls: `kptr_restrict`, `dmesg_restrict`, `yama.ptrace_scope`, `bpf_jit_harden`, `kexec_load_disabled`                                                  |
 | C      | [DONE] Libvirt/KVM images (`/var/lib/libvirt`) persisted on `main` but not in the restic/B2 backup list — disk loss destroys them with no off-host copy                                                    |
 | C      | [DONE] `restic-check-local` orders on `network-online.target` but `main` force-disables both wait-online providers — the network dependency is a no-op                                                     |
-| D      | [DONE] No HSTS, CSP, or X-Frame-Options on nginx virtualHosts serving Vaultwarden (password manager); PR 62 adds HSTS/XFO/XCTO/Referrer-Policy and CSP                                                     |
+| D      | [DONE] No HSTS, CSP, or X-Frame-Options on nginx virtualHosts serving Vaultwarden (password manager); the branch adds HSTS/XFO/XCTO/Referrer-Policy and CSP                                                |
 | D      | [DONE] AdGuard `mutableSettings = true` — blocklists, admin creds, client rules are wizard artifacts on disk, not in git. Blocklists and user rules are now declared                                       |
 | D      | [DONE] No TLS certificate expiry monitoring — a silent renewal failure breaks all HTTPS at ~90 days, surfacing only via the null-receiver alert                                                            |
 | D      | [DONE] `hosts/installer/default.nix` opens TCP/22 globally with `PermitRootLogin = "yes"` and `PasswordAuthentication` not explicitly set to `false`, no hardening profile                                 |
@@ -161,23 +161,23 @@ not on `mac`. Every reboot clears all bans.
 
 ## P2 — Optimization / Quality
 
-| Domain | Finding                                                                                                                                                                                                             |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A      | [DONE] `ip` field in host registry is validated, invariant-checked, and inventory-projected but set by no host and consumed by no module — PR 62 removed part of the stale surface, but inventory still projects it |
-| A      | [DONE] `installer-iso`, `control-center`, and `tailscale-acl` outputs have zero CI build coverage — PR 62 adds installer coverage; control-center/tailscale-acl remain open                                         |
-| A      | [DONE] Dev shell missing `nh` (documented `rebuild` alias), `jq`, and `git`                                                                                                                                         |
-| B      | [DONE] Grafana dashboards provisioned from store are `editable=true; disableDeletion=false` — UI edits silently lost on redeploy                                                                                    |
-| B      | [DONE] `impermanence-base.nix` rollback-root parses btrfs output with fragile `cut -f 9 -d ' '` (field position is version-dependent)                                                                               |
-| B      | [DONE] Backup `restic check` never tests an actual restore; backup invariant doesn't verify `paths != []`, so empty backup stamps fresh timestamp                                                                   |
-| C      | [DONE] `tailscale-bypass-routing` script exits 0 on all errors — firewall exceptions for Tailscale could silently fail to apply                                                                                     |
-| D      | [DONE] Grafana SQLite database backed up live (risk of torn-DB backup)                                                                                                                                              |
-| D      | [DONE] AdGuard state at dynamic UID path backed up raw (UID mismatch on restore)                                                                                                                                    |
-| D      | [DONE] nginx access logs not shipped to Loki — no log data for incident response                                                                                                                                    |
-| E      | [DONE] GTK theme never set — GTK apps fall back to stock Adwaita despite `gnome-themes-extra` being installed                                                                                                       |
-| E      | [DONE] `clangd` hardcoded-enabled in `lsp.lua` with no matching neovim pack; `clang-tools` only present behind `skipHeavyPackages`                                                                                  |
-| E      | [DONE] `mako` notification config has three sources of truth (theme module + inline block in `theme-switch.sh`)                                                                                                     |
-| F      | [DONE] Smoke test hard-fails (vs skips) when `/dev/kvm` is unavailable                                                                                                                                              |
-| F      | [DONE] Three drifting copies of the secret-scan regex across two scripts and the pre-commit hook — PR 62 unifies the scanner/pre-commit pattern; `check-secrets-directory.sh` remains separate                      |
+| Domain | Finding                                                                                                                                           |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A      | [DONE] `ip` field in host registry is validated, invariant-checked, and inventory-projected but set by no host and consumed by no module          |
+| A      | [DONE] `installer-iso`, `control-center`, and `tailscale-acl` outputs have zero CI build coverage                                                 |
+| A      | [DONE] Dev shell missing `nh` (documented `rebuild` alias), `jq`, and `git`                                                                       |
+| B      | [DONE] Grafana dashboards provisioned from store are `editable=true; disableDeletion=false` — UI edits silently lost on redeploy                  |
+| B      | [DONE] `impermanence-base.nix` rollback-root parses btrfs output with fragile `cut -f 9 -d ' '` (field position is version-dependent)             |
+| B      | [DONE] Backup `restic check` never tests an actual restore; backup invariant doesn't verify `paths != []`, so empty backup stamps fresh timestamp |
+| C      | [DONE] `tailscale-bypass-routing` script exits 0 on all errors — firewall exceptions for Tailscale could silently fail to apply                   |
+| D      | [DONE] Grafana SQLite database backed up live (risk of torn-DB backup)                                                                            |
+| D      | [DONE] AdGuard state at dynamic UID path backed up raw (UID mismatch on restore)                                                                  |
+| D      | [DONE] nginx access logs not shipped to Loki — no log data for incident response                                                                  |
+| E      | [DONE] GTK theme never set — GTK apps fall back to stock Adwaita despite `gnome-themes-extra` being installed                                     |
+| E      | [DONE] `clangd` hardcoded-enabled in `lsp.lua` with no matching neovim pack; `clang-tools` only present behind `skipHeavyPackages`                |
+| E      | [DONE] `mako` notification config has three sources of truth (theme module + inline block in `theme-switch.sh`)                                   |
+| F      | [DONE] Smoke test hard-fails (vs skips) when `/dev/kvm` is unavailable                                                                            |
+| F      | [DONE] Three drifting copies of the secret-scan regex across two scripts and the pre-commit hook                                                  |
 
 ---
 
@@ -204,29 +204,30 @@ not on `mac`. Every reboot clears all bans.
 
 ## Cross-Cutting Themes
 
-**1. Monitoring is end-to-end broken.** Alerts fire into a null receiver. Failure
-notifications emit blank service names. CVE scanning has no CI hook. All three
-problems compound: you can't know when the system is unhealthy.
+**1. Monitoring now has an end-to-end path.** Alertmanager is wired to a
+sops-backed webhook on `homeserver-gcp`, failure notifications carry the failed
+unit name, CVE reports run in CI/schedule, TLS expiry is probed, and nginx
+access logs ship to Loki.
 
-**2. Security claims not enforced at the code level.** CLAUDE.md describes a tight
-security model; several parts (initrd.secrets invariant, GCP firewall, hardening
-baseline, anonymous amnesic directories) rely on convention or documentation
-rather than code enforcement.
+**2. Security claims moved closer to code enforcement.** Native assertions and
+flake invariants now cover the initrd secret boundary, shared host invariants,
+Tailscale-only access, backup coverage, deploy sudo assumptions, and
+agent-maintenance sudo scope.
 
-**3. The theme system is a partial implementation.** The architecture is sound but
-Neovim, Kitty ANSI colors, and GTK are all wired to hardcoded gruvbox regardless
-of the active theme.
+**3. The theme system is now consistently wired through Home Manager.** Neovim,
+Kitty ANSI colors, GTK, Mako, Waybar, Hyprland, and Hyprlock all consume the
+central theme data or generated theme intent.
 
-**4. CI coverage has structural gaps.** The invariant checks the wrong closure; CVE
-scan is unreachable from CI; PromQL rules aren't linted; the installer is never
-built.
+**4. CI coverage now includes the review-critical surfaces.** The branch checks
+`main-ci` invariants, CVE reports, PromQL rules, package outputs, installer ISO,
+host closures, smoke tests, and profile tests through targeted validation lanes.
 
 ---
 
-## Parallelizable Fix Batches
+## Original Parallelizable Fix Batches
 
-The fix-context files are self-contained prompts for fix agents. Suggested grouping
-for parallel implementation (no cross-domain file conflicts):
+The fix-context files are preserved as historical prompts and remaining-context
+notes. The original parallel grouping was:
 
 | Batch | Context file                            | Scope                                                                 |
 | ----- | --------------------------------------- | --------------------------------------------------------------------- |

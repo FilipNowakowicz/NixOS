@@ -64,8 +64,7 @@ bash scripts/test-ci-plan.sh
 bash scripts/doctor.sh
 bash scripts/check-secrets-directory.sh --working-tree
 nix fmt -- --fail-on-change
-nix build '.#packages.x86_64-linux.inventory-data'
-nix build '.#packages.x86_64-linux.tailscale-acl'
+bash scripts/validate.sh package all
 ```
 
 Requires extra local capability:
@@ -314,9 +313,9 @@ A `theme-switch` script is available in the shell to list and apply themes. It u
 ## Observability
 
 `homeserver-gcp` runs the full LGTM stack. The observability stack is active and
-operated, including backup, host-hardening, and CVE health signals. Alertmanager
-defaults to a null receiver unless `profiles.observability.alertWebhookUrlFile`
-is set to a secret-backed webhook URL.
+operated, including backup, host-hardening, TLS, failed-unit, and CVE health
+signals. Alertmanager is wired to the sops-backed
+`alertmanager_webhook_url` webhook for off-host delivery.
 
 ### Infrastructure Dashboards
 
@@ -436,14 +435,17 @@ manually with `git config --global user.{name,email}`.
 
 The flake provides several `devShells` and `apps` for development and maintenance.
 
-| Type       | Name            | Purpose                                                                                                                    |
-| ---------- | --------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `devShell` | `default`       | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, `nixd`, etc.                                                    |
-| `devShell` | `security`      | Network recon, web, password, and analysis tools. In the anonymous specialisation `proxychains <tool>` routes through Tor. |
-| `app`      | `doctor`        | Clean-clone checks: `nix run '.#doctor'` or `bash scripts/doctor.sh`                                                       |
-| `app`      | `deploy-gcp`    | GCP homeserver deploy wrapper: `bash scripts/deploy-gcp.sh`                                                                |
-| `package`  | `installer-iso` | Minimal NixOS ISO: `nix build '.#installer-iso'`                                                                           |
-| `template` | `python`        | Python dev shell with `uv`, `ruff`, `basedpyright`: `nix flake init -t ~/nix#python`                                       |
+| Type       | Name             | Purpose                                                                                                                    |
+| ---------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `devShell` | `default`        | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, `nixd`, etc.                                                    |
+| `devShell` | `security`       | Network recon, web, password, and analysis tools. In the anonymous specialisation `proxychains <tool>` routes through Tor. |
+| `app`      | `doctor`         | Clean-clone checks: `nix run '.#doctor'` or `bash scripts/doctor.sh`                                                       |
+| `app`      | `deploy-gcp`     | GCP homeserver deploy wrapper: `bash scripts/deploy-gcp.sh`                                                                |
+| `package`  | `installer-iso`  | Minimal NixOS ISO: `nix build '.#installer-iso'`                                                                           |
+| `package`  | `control-center` | GTK4 desktop control center: `nix build '.#control-center'`                                                                |
+| `package`  | `tailscale-acl`  | Rendered Tailscale ACL JSON: `nix build '.#tailscale-acl' --print-out-paths \| xargs cat`                                  |
+| `package`  | `inventory-data` | Host inventory JSON for homepage/status consumers: `nix build '.#inventory-data'`                                          |
+| `template` | `python`         | Python dev shell with `uv`, `ruff`, `basedpyright`: `nix flake init -t ~/nix#python`                                       |
 
 ---
 
@@ -500,6 +502,9 @@ bash scripts/validate.sh light
 
 # Build all host system closures used by CI
 bash scripts/validate.sh hosts
+
+# Build all package outputs used by CI
+bash scripts/validate.sh package all
 
 # Build smoke tests individually
 bash scripts/validate.sh smoke-homeserver-gcp

@@ -12,17 +12,18 @@ bash scripts/validate.sh host homeserver-gcp
 statix check . && deadnix .
 ```
 
-## Status after PR 62
+## Current Status
 
 - `[DONE]` P0-1, P0-4, P0-5, and P1-11 landed.
-- `[PARTIAL]` P0-2/P0-3 landed as a configurable Alertmanager webhook path, but
-  `homeserver-gcp` still defaults to the null receiver until a secret-backed
-  webhook is set.
-- `[PARTIAL]` P1-1 landed for HSTS, X-Frame-Options, X-Content-Type-Options,
-  and Referrer-Policy; CSP remains open.
+- `[DONE]` P0-2/P0-3 landed as a configurable Alertmanager webhook path and
+  `homeserver-gcp` wires it to the sops-backed `alertmanager_webhook_url`.
+- `[DONE]` P1-1 landed for HSTS, X-Frame-Options, X-Content-Type-Options,
+  Referrer-Policy, and CSP.
 - `[DONE]` P1-9 landed as a TLS expiry alert over the existing HTTPS blackbox probes.
 - `[DONE]` P1-10 landed by sending nginx access logs to journald and adding a Loki audit source.
-- `[OPEN]` P1-2, P1-4, P1-7, P1-8, P2-3, and P3 items remain open.
+- `[DONE]` P2-3 and P3-3/P3-4 landed via SQLite snapshot backup, staged
+  AdGuard backup, declared AdGuard lists/rules, and a restic restore canary.
+- `[OPEN]` P1-2, P1-4, P1-7, P1-8, and remaining P3 ideas remain open.
 
 ---
 

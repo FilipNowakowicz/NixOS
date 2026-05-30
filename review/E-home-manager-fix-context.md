@@ -15,12 +15,13 @@ the generated config) and optionally run `nvim --headless "+checkhealth" +qa` on
 host. Themes: there are 8 under `home/theme/themes/*.nix`, each exposing
 `colors = { bg; brown; orange; amber; text; }` and a `wallpaper`.
 
-## Status after PR 62
+## Current Status
 
 - `[DONE]` FIX 1, FIX 2, FIX 3, FIX 4, FIX 5, FIX 6, FIX 7, and FIX 9 landed.
   Standalone `homeConfigurations.user` now also imports the desktop profile.
-- `[OPEN]` FIX 8, FIX 10, FIX 11, FIX 12, and FIX 13
-  remain open.
+- `[DONE]` FIX 8 landed by building `telescope-fzf-native`/Treesitter support
+  without depending on a workstation-only C compiler.
+- `[OPEN]` FIX 10, FIX 11, FIX 12, and FIX 13 remain open.
 
 ---
 
