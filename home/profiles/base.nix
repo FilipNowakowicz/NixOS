@@ -211,7 +211,7 @@
   xdg.userDirs = {
     enable = true;
     createDirectories = true;
-    download = "${config.home.homeDirectory}/downloads";
+    download = "${config.home.homeDirectory}/Downloads";
     desktop = null;
     documents = null;
     music = null;
