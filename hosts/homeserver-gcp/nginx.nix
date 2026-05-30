@@ -6,6 +6,18 @@ let
   homepageDir = "/var/lib/homepage/public";
   homepageEventsTarget = "http://127.0.0.1:9273/";
   proxy = gen.nginx.proxyLocation;
+
+  # Security response headers. nginx add_header is per-block: once any
+  # add_header appears in a location, inherited server-level headers are
+  # dropped. So these are set at the server level (covering the proxy and
+  # return-only locations that have no add_header of their own) AND re-injected
+  # into every location below that already sets its own add_header directives.
+  securityHeaders = ''
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+  '';
 in
 {
   options.profiles.homeserverGcpNginx = {
@@ -47,6 +59,8 @@ in
         forceSSL = true;
         sslCertificate = "${certDir}/homeserver-gcp.crt";
         sslCertificateKey = "${certDir}/homeserver-gcp.key";
+
+        extraConfig = securityHeaders;
 
         locations = {
           "/" = proxy {
@@ -93,6 +107,7 @@ in
           "= /home/index.html" = {
             alias = "${homepageDir}/index.html";
             extraConfig = ''
+              ${securityHeaders}
               add_header Cache-Control "no-store" always;
             '';
           };
@@ -100,6 +115,7 @@ in
           "~ ^/home/src/(?<asset>.+\\.[0-9a-f]{10}\\.(?:js|css))$" = {
             alias = "${homepageDir}/src/$asset";
             extraConfig = ''
+              ${securityHeaders}
               add_header Cache-Control "public, max-age=31536000, immutable" always;
             '';
           };
@@ -114,6 +130,7 @@ in
           "= /home/status.json" = {
             alias = "${homepageDir}/status.json";
             extraConfig = ''
+              ${securityHeaders}
               default_type application/json;
               add_header Cache-Control "no-store";
             '';
@@ -122,6 +139,7 @@ in
           "= /home/status.events" = {
             proxyPass = homepageEventsTarget;
             extraConfig = ''
+              ${securityHeaders}
               proxy_http_version 1.1;
               proxy_set_header Connection "";
               proxy_buffering off;
@@ -134,6 +152,7 @@ in
           "= /home/status.svg" = {
             alias = "${homepageDir}/status.svg";
             extraConfig = ''
+              ${securityHeaders}
               default_type image/svg+xml;
               add_header Cache-Control "no-store";
             '';
