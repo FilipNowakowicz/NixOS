@@ -374,7 +374,7 @@ let
   alertData = import ../lib/observability-alerts.nix;
   rulesYaml = (pkgs.formats.yaml { }).generate "infrastructure-alerts.yaml" alertData.rules;
   observabilityAlertsLint =
-    pkgs.runCommand "observability-alerts-lint" { nativeBuildInputs = [ pkgs.prometheus ]; }
+    pkgs.runCommand "observability-alerts-lint" { nativeBuildInputs = [ pkgs.prometheus.cli ]; }
       ''
         promtool check rules ${rulesYaml}
         touch $out
