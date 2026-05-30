@@ -86,6 +86,7 @@ When provisioning from scratch:
    - `tailscale_auth_key` — Tailscale admin → Settings → Keys → reusable + ephemeral
    - `user_password` — bcrypt hash: `mkpasswd -m bcrypt`
    - `grafana_admin_password`, `grafana_secret_key`, `observability_ingest_htpasswd`
+   - `alertmanager_webhook_url` — off-host notification URL such as an ntfy topic
    - `restic_password`, `b2_credentials` (env-file format: `B2_ACCOUNT_ID=…` / `B2_ACCOUNT_KEY=…`)
 
 2. **Provision the VM + install NixOS** — `bash scripts/deploy-gcp.sh` (see above).
@@ -126,9 +127,9 @@ deploy '.#homeserver-gcp'
   for independent off-site application recovery.
 - **Off-site backup via B2** — `services.restic.backups.b2` uses the shared
   `backup.class = "critical"` policy from `modules/nixos/profiles/backup.nix`.
-- **Alert delivery** — Alertmanager defaults to a null receiver. Set
-  `profiles.observability.alertWebhookUrlFile` to a sops-backed webhook URL to
-  deliver alerts off-host.
+- **Alert delivery** — Alertmanager sends to the sops-backed
+  `alertmanager_webhook_url`; keep it pointed at an off-host notification
+  target so host or nginx failures can still reach you.
 - **AdGuard DNS failure** — if `adguardhome.service` crashes, tailnet clients
   using it as DNS lose resolution. Recovery: in Tailscale admin → DNS,
   temporarily remove the nameserver override to fall back to default resolver.

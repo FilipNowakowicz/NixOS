@@ -41,14 +41,14 @@ anonymous specialisation. See `C-hosts-main-mac-fix-context.md`.
 
 ### Monitoring / Alerting
 
-**[PARTIAL][B+D] Alertmanager routes all alerts to a null receiver**
+**[DONE][B+D] Alertmanager routes all alerts to a null receiver**
 `modules/nixos/profiles/observability/alerts.nix:127-142` — every one of the 9
 alert rules (backup stale, CVE found, unit failed, probe failed) routes to a
 `null` Alertmanager receiver. Grafana has no contact points provisioned either.
 The entire alerting stack is a write-only system. On an unattended server this
 is the single most operationally dangerous gap.
-→ PR 62 adds an Alertmanager webhook option, but `homeserver-gcp` is not yet
-wired to a real secret-backed receiver in the checked code. See
+→ PR 62 adds an Alertmanager webhook option and `homeserver-gcp` now wires it
+to a sops-backed off-host webhook URL. See
 `B-modules-fix-context.md` and `D-homeserver-installer-fix-context.md`.
 
 **[DONE][D] Backup success metric stamped on failure**
@@ -136,15 +136,15 @@ not on `mac`. Every reboot clears all bans.
 | Domain | Finding                                                                                                                                                                                                    |
 | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A      | [DONE] CLAUDE.md claims `boot.initrd.secrets` is enforced by an invariant — no such invariant exists anywhere in the codebase                                                                              |
-| A      | [OPEN] `inventory-data.nix` re-implements invariants by hand and has already drifted from the canonical ones in `flake/checks.nix` — two parallel definitions of the same security policy                  |
+| A      | [PARTIAL] `inventory-data.nix` re-implements invariants by hand and has already drifted from the canonical ones in `flake/checks.nix` — homeserver sudo drift is fixed, but parallel definitions remain    |
 | A      | [DONE] Deploy config applies fixed rollback settings with no per-host `confirmTimeout`; on `mac` (Tailscale-only, ephemeral) magic-rollback can roll back a correct deploy if `tailscale0` comes up slowly |
 | B      | [DONE] `machine-dev.nix` broad passwordless sudo + trusted Nix user is unconditional — gated only by a comment. `microvm-guest.nix` imports it transitively. Should be `mkIf`-gated                        |
 | B      | [DONE] `nix-trusted-users.nix` only warns (not asserts) on root-equivalent broad trust — a policy that can silently pass CI                                                                                |
 | B      | [DONE] `security.nix` missing standard hardening sysctls: `kptr_restrict`, `dmesg_restrict`, `yama.ptrace_scope`, `bpf_jit_harden`, `kexec_load_disabled`                                                  |
 | C      | [DONE] Libvirt/KVM images (`/var/lib/libvirt`) persisted on `main` but not in the restic/B2 backup list — disk loss destroys them with no off-host copy                                                    |
 | C      | [DONE] `restic-check-local` orders on `network-online.target` but `main` force-disables both wait-online providers — the network dependency is a no-op                                                     |
-| D      | [PARTIAL] No HSTS, CSP, or X-Frame-Options on nginx virtualHosts serving Vaultwarden (password manager); PR 62 adds HSTS/XFO/XCTO/Referrer-Policy, but not CSP                                             |
-| D      | [OPEN] AdGuard `mutableSettings = true` — blocklists, admin creds, client rules are wizard artifacts on disk, not in git. No blocklists declared declaratively                                             |
+| D      | [DONE] No HSTS, CSP, or X-Frame-Options on nginx virtualHosts serving Vaultwarden (password manager); PR 62 adds HSTS/XFO/XCTO/Referrer-Policy and CSP                                                     |
+| D      | [DONE] AdGuard `mutableSettings = true` — blocklists, admin creds, client rules are wizard artifacts on disk, not in git. Blocklists and user rules are now declared                                       |
 | D      | [DONE] No TLS certificate expiry monitoring — a silent renewal failure breaks all HTTPS at ~90 days, surfacing only via the null-receiver alert                                                            |
 | D      | [DONE] `hosts/installer/default.nix` opens TCP/22 globally with `PermitRootLogin = "yes"` and `PasswordAuthentication` not explicitly set to `false`, no hardening profile                                 |
 | E      | [DONE] Treesitter/`telescope-fzf-native` need a C compiler at runtime; works on workstation by accident (gcc in heavy packages) but silently breaks LSP features on WSL                                    |

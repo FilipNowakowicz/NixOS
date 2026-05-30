@@ -88,6 +88,7 @@ in
 
     observability = {
       enable = true;
+      alertWebhookUrlFile = config.sops.secrets.alertmanager_webhook_url.path;
       grafana = {
         enable = true;
         adminPasswordFile = config.sops.secrets.grafana_admin_password.path;
@@ -196,6 +197,10 @@ in
       tailscale_auth_key = { };
       grafana_admin_password.owner = "grafana";
       grafana_secret_key.owner = "grafana";
+      alertmanager_webhook_url = {
+        owner = "mimir";
+        group = "mimir";
+      };
       observability_ingest_htpasswd = {
         owner = config.services.nginx.user;
         inherit (config.services.nginx) group;
