@@ -31,10 +31,31 @@ _: {
       # root. The SSH host key stays persisted (sops reads it directly from
       # /persist; OpenSSH itself is disabled in this spec). Scoped to the
       # specialisation — the normal boot keeps its stable machine-id.
-      environment.persistence."/persist".files = lib.mkForce [
-        "/etc/ssh/ssh_host_ed25519_key"
-        "/etc/ssh/ssh_host_ed25519_key.pub"
-      ];
+      environment.persistence."/persist" = {
+        files = lib.mkForce [
+          "/etc/ssh/ssh_host_ed25519_key"
+          "/etc/ssh/ssh_host_ed25519_key.pub"
+        ];
+        # Amnesic: do not bind-mount persistent identity state from /persist
+        # while booted anonymously. The default boot persists tailnet node
+        # identity, saved Wi-Fi/VPN profiles, Bluetooth pairings, fingerprint
+        # enrolments, USBGuard rule hashes, Mullvad account/device state, etc.;
+        # leaving those mounted here would tie an anonymous session back to the
+        # daily-desktop identity and undercut the amnesic claim. Keep only what
+        # boot/UX needs and nothing that reveals who or where this host is.
+        #   - /var/lib/nixos: stable uid/gid for the tmpfs-home uid=1000 assumption
+        #   - backlight/rfkill: brightness + radio-block UX state, identity-free
+        # /var/log is intentionally dropped too (no persistent logs while amnesic).
+        # /var/lib/libvirt is NOT mounted here: the Whonix images live in
+        # /persist and are only relevant when the operator explicitly starts the
+        # VMs (Whonix provides its own anonymity surface), so they stay out of
+        # the default anonymous mount set.
+        directories = lib.mkForce [
+          "/var/lib/nixos"
+          "/var/lib/systemd/backlight"
+          "/var/lib/systemd/rfkill"
+        ];
+      };
 
       networking = {
         hostName = lib.mkForce "nixos";
