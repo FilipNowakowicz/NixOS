@@ -1,12 +1,11 @@
 { config, pkgs, ... }:
 {
   systemd.services = {
-    # Stamp the freshness metric only when the restic backup ExecStart exits 0.
-    # ExecStartPost runs for every ExecStart result (including a partial or
-    # prune-failed run), so gate on $EXIT_STATUS to avoid reporting a
-    # false-fresh timestamp that would mask a broken backup in alerts/badges.
+    # ExecStartPost only runs after every ExecStart command succeeds, so
+    # reaching this script already means the backup completed cleanly — stamp
+    # the freshness metric unconditionally. ($EXIT_STATUS is only exported to
+    # ExecStop/ExecStopPost, never to ExecStartPost, so it cannot gate here.)
     restic-backups-b2.serviceConfig.ExecStartPost = pkgs.writeShellScript "restic-backup-metrics" ''
-      [ "''${EXIT_STATUS:-}" = "0" ] || exit 0
       tmp=/var/lib/node-exporter-textfiles/restic_backup.prom.tmp
       {
         echo "# HELP restic_last_backup_timestamp_seconds Unix timestamp of last successful restic backup"

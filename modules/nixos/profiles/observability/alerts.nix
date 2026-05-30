@@ -20,35 +20,30 @@ let
 
   rulesFile = mkYaml "infrastructure-alerts.yaml" alertData.rules;
 
-  # Alertmanager config. When `alertWebhookUrl` is set, alerts are routed to a
-  # webhook receiver (ntfy.sh format: POST the alert JSON to the URL). Otherwise
-  # they route to a null receiver so the ruler has somewhere to send alerts
-  # without erroring. Override further in host config via lib.mkForce if needed.
+  # Alertmanager config layered on the shared base in lib/observability-alerts.nix
+  # (null route + null receiver). When `alertWebhookUrl` is set, alerts are routed
+  # to a webhook receiver (ntfy.sh format: POST the alert JSON to the URL).
+  # Override further in host config via lib.mkForce if needed.
   webhookEnabled = cfg.alertWebhookUrl != "";
-  alertmanagerFile = mkYaml "alertmanager.yaml" {
-    route = {
-      receiver = if webhookEnabled then "webhook" else "null";
-      group_by = [
-        "alertname"
-        "instance"
-      ];
-      group_wait = "30s";
-      group_interval = "5m";
-      repeat_interval = "4h";
-    };
-    receivers = [
-      { name = "null"; }
-    ]
-    ++ lib.optional webhookEnabled {
-      name = "webhook";
-      webhook_configs = [
+  alertmanagerFile = mkYaml "alertmanager.yaml" (
+    alertData.alertmanager
+    // lib.optionalAttrs webhookEnabled {
+      route = alertData.alertmanager.route // {
+        receiver = "webhook";
+      };
+      receivers = alertData.alertmanager.receivers ++ [
         {
-          url = cfg.alertWebhookUrl;
-          send_resolved = true;
+          name = "webhook";
+          webhook_configs = [
+            {
+              url = cfg.alertWebhookUrl;
+              send_resolved = true;
+            }
+          ];
         }
       ];
-    };
-  };
+    }
+  );
 in
 {
   config = lib.mkIf (cfg.enable && cfg.mimir.enable) {

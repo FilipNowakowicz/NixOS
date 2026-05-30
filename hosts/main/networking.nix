@@ -149,8 +149,14 @@ in
       };
     };
 
-    tailscaled.postStart = lib.mkAfter "${tailscaleBypassRules}";
-    mullvad-daemon.postStart = lib.mkAfter "${tailscaleBypassRules}";
+    # Best-effort re-assertion when either daemon (re)starts. Trailing `|| true`
+    # keeps a discovery failure here from marking tailscaled/mullvad-daemon
+    # itself failed (postStart -> ExecStartPost, whose non-zero exit fails the
+    # parent unit) — common on a cold-boot race before tailnet is up. The
+    # dedicated tailscale-bypass-routing.service is the surface that fails
+    # loudly on discovery failure.
+    tailscaled.postStart = lib.mkAfter "${tailscaleBypassRules} || true";
+    mullvad-daemon.postStart = lib.mkAfter "${tailscaleBypassRules} || true";
 
     # Tailscale coexistence is handled at the nftables layer: outgoing
     # tailscale0 packets are marked with Mullvad's split-tunnel exclusion

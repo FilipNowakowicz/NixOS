@@ -18,11 +18,17 @@ build_attrs() {
 }
 
 show_report_attrs() {
-  local output
+  local output paths_file rc=0
+  paths_file="$(mktemp)"
+  # Capture nix-build's exit status: process substitution does not propagate it
+  # to the shell, so a failed build would otherwise be silently swallowed.
+  nix build "$@" --no-link --print-out-paths --show-trace >"$paths_file" || rc=$?
   while IFS= read -r output; do
     cat "$output"
     printf '\n'
-  done < <(nix build "$@" --no-link --print-out-paths --show-trace)
+  done <"$paths_file"
+  rm -f "$paths_file"
+  return "$rc"
 }
 
 usage() {
