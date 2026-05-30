@@ -115,6 +115,7 @@ The `main` host uses a secure, encrypted systemd-boot setup:
 - **Companion MacBook Air**: `mac` is a deployed NixOS desktop target with Broadcom Wi-Fi support, impermanence, Tailscale-only SSH, Home Manager Syncthing, Input Leap, and Moonlight.
 - **Workstation Backups**: `main` backs up user-critical state and persisted service identity to Backblaze B2 with Restic, including Codex/Claude state, Wi-Fi profiles, Mullvad, Tailscale, Bluetooth, fingerprint, USBGuard, Secure Boot PKI, machine-id, and SSH host identity.
 - **Recovery Boundary**: local Btrfs snapshots are for short-term rollback on the same disk; Restic/B2 remains the off-site recovery path.
+- **Anonymous Specialisation**: `main` has a boot-selectable `anonymous` mode that disables Tailscale, SSH, Bluetooth, and all observability/backup services; enables AppArmor and kernel hardening; auto-connects Mullvad with lockdown mode; and starts a Tor SOCKS5 daemon with `proxychains` pre-configured to route through it. Whonix KVM VMs (Gateway + Workstation) provide an additional Tor-isolated layer for browser and application work.
 - **Scoped Agent Maintenance Sudo**: `main` keeps normal `wheel` sudo passworded, but allows a narrow set of passwordless maintenance commands for interactive agent sessions: local snapshot start/status, Restic start/status, boot cleanup, selected EFI entry deletion, and fixed-argument Nix GC.
 - **Tailscale ACLs as Nix**: Security rules and tag owners are generated declaratively from the host registry, providing a single source of truth for network access control.
 - **Generated Inventory Export**: `packages/inventory-data.nix` exports host inventory as JSON for the homepage site.
@@ -424,14 +425,14 @@ manually with `git config --global user.{name,email}`.
 
 The flake provides several `devShells` and `apps` for development and maintenance.
 
-| Type       | Name            | Purpose                                                                              |
-| ---------- | --------------- | ------------------------------------------------------------------------------------ |
-| `devShell` | `default`       | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, `nixd`, etc.              |
-| `devShell` | `security`      | Includes common security tools: `nmap`, `gobuster`, `sqlmap`, `hydra`, `john`, etc.  |
-| `app`      | `doctor`        | Clean-clone checks: `nix run '.#doctor'` or `bash scripts/doctor.sh`                 |
-| `app`      | `deploy-gcp`    | GCP homeserver deploy wrapper: `bash scripts/deploy-gcp.sh`                          |
-| `package`  | `installer-iso` | Minimal NixOS ISO: `nix build '.#installer-iso'`                                     |
-| `template` | `python`        | Python dev shell with `uv`, `ruff`, `basedpyright`: `nix flake init -t ~/nix#python` |
+| Type       | Name            | Purpose                                                                                                                    |
+| ---------- | --------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `devShell` | `default`       | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, `nixd`, etc.                                                    |
+| `devShell` | `security`      | Network recon, web, password, and analysis tools. In the anonymous specialisation `proxychains <tool>` routes through Tor. |
+| `app`      | `doctor`        | Clean-clone checks: `nix run '.#doctor'` or `bash scripts/doctor.sh`                                                       |
+| `app`      | `deploy-gcp`    | GCP homeserver deploy wrapper: `bash scripts/deploy-gcp.sh`                                                                |
+| `package`  | `installer-iso` | Minimal NixOS ISO: `nix build '.#installer-iso'`                                                                           |
+| `template` | `python`        | Python dev shell with `uv`, `ruff`, `basedpyright`: `nix flake init -t ~/nix#python`                                       |
 
 ---
 

@@ -298,10 +298,98 @@ sudo cryptsetup luksDump /dev/disk/by-id/nvme-eui.0025388401c2aa47-part2 | grep 
 
 If only the TPM slot is enrolled and TPM fails without initrd SSH available, there is no recovery path. **Keep the passphrase in your external password manager.**
 
+## Anonymous Specialisation
+
+`main` has a boot-selectable `anonymous` specialisation. Select the
+`nixos-anonymous-...` entry from the bootloader; do not attempt to switch at
+runtime. It is an **amnesic, hardened launchpad**, not an anonymous OS:
+
+- `/home/user` is a **tmpfs** — every boot is a clean slate (no logins, cookies,
+  history, or scan artifacts). Home Manager repopulates declarative dotfiles
+  from the store on boot; session _data_ is gone on reboot. Copy off-host
+  anything you want to keep.
+- Fresh transient **machine-id** each boot; the real `@home` is shadowed (not
+  wiped) while this spec runs.
+- Disables Tailscale, SSH, Bluetooth, observability, and backups; enables
+  AppArmor and kernel hardening; **Mullvad** auto-connects + explicit-connects
+  with lockdown always on; starts a **Tor** SOCKS5 proxy on `127.0.0.1:9050`
+  with `proxychains` wired to it (`strict_chain`, `proxy_dns`).
+
+Routing model: **active scans exit via Mullvad** (origin-hiding, full protocol
+support); **Tor (`proxychains`/`torsocks`) is TCP-`connect()` only** — for
+OSINT/recon, never raw/SYN/UDP scans; **anonymous browsing belongs in
+Whonix-Workstation** (Tor Browser), the only topology-enforced anonymous
+surface.
+
+Quick commands inside the anonymous boot:
+
+```bash
+# Check Mullvad is connected and lockdown is active
+mullvad status
+mullvad lockdown-mode get
+
+# OSINT/recon TCP tool through Tor (NOT -sS/-sU/masscan — those bypass SOCKS)
+proxychains nmap -sT -Pn <target>
+
+# Active scan: exit via Mullvad (no proxychains), origin hidden by the tunnel
+nmap -sS -Pn <target>
+
+# Start Whonix (Gateway first, then Workstation), browse via its Tor Browser
+sudo virsh start Whonix-Gateway
+sudo virsh start Whonix-Workstation
+```
+
+Full details: `docs/security.md` § Anonymous Specialisation.
+
+## Whonix KVM
+
+Whonix-Gateway and Whonix-Workstation are installed as persistent KVM/libvirt
+VMs. Images live at `/var/lib/libvirt/images/` (bind-mounted from
+`/persist/var/lib/libvirt/` so they survive the ephemeral-root rollback).
+
+```bash
+# Check VM and network state
+sudo virsh list --all
+sudo virsh net-list --all
+
+# Start/stop
+sudo virsh start Whonix-Gateway
+sudo virsh start Whonix-Workstation
+sudo virsh shutdown Whonix-Workstation
+sudo virsh shutdown Whonix-Gateway
+```
+
+Updates inside the VMs: log out of the `user` session, log in as `sysmaint`
+(no password), run `upgrade-nonroot`. The `user-sysmaint-split` feature blocks
+`sudo` from the normal `user` account by design.
+
+## Mullvad and Tailscale Coexistence
+
+Three mechanisms keep both VPNs running simultaneously:
+
+1. **nftables mark** (`tailscale-mullvad-compat` table, priority −1): marks
+   outgoing `tailscale0` packets with Mullvad's split-tunnel exclusion mark
+   (`0x6d6f6c65`) before Mullvad's kill-switch chain runs. Mullvad passes the
+   traffic without disabling the kill switch for clearnet.
+2. **Policy routing bypass** (`tailscale-bypass-routing.service`): adds
+   destination-specific rules at pref 114 for `100.64.0.0/10` and
+   `fd7a:115c:a1e0::/48` pointing at Tailscale's table, overriding Mullvad's
+   catch-all rule for tailnet addresses.
+3. **Loose reverse-path filtering**: `firewall.checkReversePath = "loose"` to
+   accept legitimate asymmetric tunneled return traffic.
+
+Both `tailscaled.postStart` and `mullvad-daemon.postStart` also run the bypass
+script so routing is re-asserted whenever either daemon restarts.
+
+In the anonymous specialisation all three mechanisms are removed and
+`checkReversePath` is forced back to `"strict"`.
+
 ## Gotchas
 
 - **disko changes are destructive** unless you are only changing metadata for a future reinstall.
 - **Do not persist broad directories by default**; keep persistence minimal and service-owned.
 - **OpenSSH uses only the persisted Ed25519 host key**; do not reintroduce volatile RSA host key generation.
-- **Mullvad and Tailscale coexistence is fragile**; routing bypass rules are deliberate and lockdown mode is disabled so tailnet traffic can survive when Mullvad is disconnected.
+- **Mullvad and Tailscale coexistence is fragile**; the three bypass mechanisms in `default.nix` are load-bearing — do not remove the nftables table, the bypass service, or the loose reverse-path setting without understanding all three.
 - **Old roots are not normal backups**; they are local forensic rollback artifacts retained for 30 days.
+- **Anonymous specialisation is a boot target, not a runtime switch**; booting it fresh is the correct path — attempting to reach it via `nixos-specialise` mid-session does not teardown running services correctly.
+- **Whonix VMs require Gateway before Workstation**; starting Workstation without a running Gateway leaves it without a Tor route.

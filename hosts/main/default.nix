@@ -38,72 +38,19 @@ let
   nixGc14d = pkgs.writeShellScriptBin "nix-gc-14d" ''
     exec ${pkgs.nix}/bin/nix-collect-garbage --delete-older-than 14d
   '';
-
-  tailscaleBypassRules = pkgs.writeShellScript "tailscale-bypass-rules" ''
-    set -eu
-
-    ip_bin=${pkgs.iproute2}/bin/ip
-    awk_bin=${pkgs.gawk}/bin/awk
-    sleep_bin=${pkgs.coreutils}/bin/sleep
-
-    tailscale_table=""
-    for _attempt in 1 2 3 4 5; do
-      tailscale_table=$(
-        {
-          "$ip_bin" rule show
-          "$ip_bin" -6 rule show
-          "$ip_bin" -o route show table all
-          "$ip_bin" -o -6 route show table all
-        } | "$awk_bin" '
-          $0 ~ /^52[0-9][0-9]: from all lookup [0-9]+$/ { print $NF; exit }
-          $1 ~ /^100\./ && $0 ~ /dev tailscale0/ && $0 ~ / table [0-9]+/ {
-            for (i = 1; i <= NF; i++) if ($i == "table" && $(i + 1) ~ /^[0-9]+$/) { print $(i + 1); exit }
-          }
-          $1 ~ /^fd7a:115c:a1e0::/ && $0 ~ /dev tailscale0/ && $0 ~ / table [0-9]+/ {
-            for (i = 1; i <= NF; i++) if ($i == "table" && $(i + 1) ~ /^[0-9]+$/) { print $(i + 1); exit }
-          }
-        '
-      )
-
-      if [ -n "$tailscale_table" ]; then
-        break
-      fi
-
-      "$sleep_bin" 1
-    done
-
-    if [ -z "''${tailscale_table:-}" ]; then
-      echo "tailscale-bypass-routing: could not discover tailscale routing table" >&2
-      exit 0
-    fi
-
-    # Mullvad installs broad policy routing rules that can capture tailnet
-    # traffic on this workstation. Reassert destination-specific rules with a
-    # higher priority than Mullvad's catch-all policy rule so 100.x/ts.net
-    # traffic always uses Tailscale's table.
-    while "$ip_bin" rule del pref 120 to 100.64.0.0/10 2>/dev/null; do :; done
-    while "$ip_bin" rule del pref 117 to 100.64.0.0/10 2>/dev/null; do :; done
-    while "$ip_bin" rule del pref 114 to 100.64.0.0/10 2>/dev/null; do :; done
-    "$ip_bin" rule add pref 114 to 100.64.0.0/10 lookup "$tailscale_table"
-
-    while "$ip_bin" -6 rule del pref 120 to fd7a:115c:a1e0::/48 2>/dev/null; do :; done
-    while "$ip_bin" -6 rule del pref 117 to fd7a:115c:a1e0::/48 2>/dev/null; do :; done
-    while "$ip_bin" -6 rule del pref 114 to fd7a:115c:a1e0::/48 2>/dev/null; do :; done
-    "$ip_bin" -6 rule add pref 114 to fd7a:115c:a1e0::/48 lookup "$tailscale_table"
-
-    "$ip_bin" route flush cache 2>/dev/null || true
-    "$ip_bin" -6 route flush cache 2>/dev/null || true
-  '';
 in
 {
   imports = [
     inputs.disko.nixosModules.disko
     inputs.lanzaboote.nixosModules.lanzaboote
     inputs.nix-index-database.nixosModules.default
+    ./anonymous.nix
+    ./backups.nix
     ./dashboard.nix
     ./disko.nix
     ./impermanence.nix
     ./hardware-configuration.nix
+    ./networking.nix
     ../../modules/nixos/profiles/base.nix
     ../../modules/nixos/profiles/desktop.nix
     ../../modules/nixos/profiles/observability-client.nix
@@ -114,33 +61,7 @@ in
   ];
 
   # ── Hardware ────────────────────────────────────────────────────────────────
-  networking = {
-    hostName = "main";
-    networkmanager.enable = true;
-    # Required because Mullvad + Tailscale create asymmetric VPN routing on this host.
-    # Strict reverse-path filtering drops legitimate tunneled packets in that setup.
-    # "loose" keeps a weaker source-reachability check, but relaxes anti-spoofing
-    # protection compared with strict mode.
-    firewall.checkReversePath = "loose";
-    firewall.interfaces.tailscale0 = {
-      allowedTCPPorts = [
-        22
-        24800
-        47984
-        47989
-        48010
-      ];
-      allowedUDPPorts = [
-        47998
-        47999
-        48000
-        48002
-        48010
-      ];
-    };
-    # Point to systemd-resolved stub for split DNS (Tailscale tailnet hostnames)
-    nameservers = [ "127.0.0.53" ];
-  };
+  networking.hostName = "main";
 
   hardware = {
     bluetooth = {
@@ -174,20 +95,13 @@ in
     ];
   };
 
-  programs.nix-index-database.comma.enable = true;
-
-  # Hidden maintenance mount for the filesystem top-level. btrbk snapshots
-  # subvolumes by their real top-level names (`@home`, `@persist`) rather than
-  # via nested mount paths.
-  fileSystems."/.btrfs-root" = {
-    device = "/dev/disk/by-label/main-root";
-    fsType = "btrfs";
-    options = [
-      "subvol=/"
-      "noatime"
-      "discard=async"
-    ];
+  programs = {
+    nix-index-database.comma.enable = true;
+    virt-manager.enable = true;
+    nix-ld.enable = true;
   };
+
+  virtualisation.libvirtd.enable = true;
 
   environment.systemPackages = with pkgs; [
     efibootmgr
@@ -195,6 +109,9 @@ in
     nixGc14d
     nixosSwitchMain
     sbctl
+    spice-gtk
+    swtpm
+    virt-viewer
   ];
 
   # Narrow passwordless sudo for interactive agent-assisted maintenance.
@@ -280,18 +197,6 @@ in
 
   # ── Services ────────────────────────────────────────────────────────────────
   services = {
-    resolved = {
-      enable = true;
-      settings.Resolve = {
-        DNSSEC = "false"; # Tailscale manages its own trust chain
-        # Do not publish main.local on hostile/shared LANs. Tailscale MagicDNS
-        # remains the durable host-discovery path and avoids resolved's
-        # conflict-renaming loop when another peer already owns main.local.
-        LLMNR = "false";
-        MulticastDNS = "false";
-      };
-    };
-
     sunshine = {
       enable = true;
       autoStart = true;
@@ -306,21 +211,6 @@ in
       enable = true;
       fileSystems = [ "/" ];
     };
-    btrbk.instances.local = {
-      onCalendar = "daily";
-      snapshotOnly = true;
-      settings = {
-        snapshot_preserve_min = "2d";
-        snapshot_preserve = "14d";
-        volume."/.btrfs-root" = {
-          snapshot_dir = ".snapshots";
-          subvolume = {
-            "@home" = { };
-            "@persist" = { };
-          };
-        };
-      };
-    };
 
     openssh = {
       enable = true;
@@ -332,13 +222,6 @@ in
         }
       ];
     };
-
-    tailscale = {
-      enable = true;
-      openFirewall = true;
-    };
-
-    mullvad-vpn.enable = true;
 
     logind.settings.Login = {
       HandleLidSwitch = "suspend";
@@ -370,47 +253,6 @@ in
       ];
     };
 
-    # ── Backups ────────────────────────────────────────────────────────────────
-    restic.backups.local = {
-      paths = [
-        "/home/user/.ssh"
-        "/home/user/.gnupg"
-        "/home/user/nix"
-        "/home/user/.mozilla/firefox"
-        "/home/user/.config/mozilla/firefox"
-        "/home/user/.config/spotify"
-        "/home/user/.config/discord"
-        "/home/user/.config/gh"
-        "/home/user/.config/gcloud"
-        "/home/user/.local/share/Anki2"
-        "/home/user/.config/chromium"
-        "/home/user/.local/share/kwalletd"
-        "/home/user/.codex"
-        "/home/user/.claude"
-        "/home/user/.claude.json"
-        "/home/user/.config/sops"
-        "/etc/machine-id"
-        "/etc/ssh/ssh_host_ed25519_key"
-        "/etc/ssh/ssh_host_ed25519_key.pub"
-        "/etc/NetworkManager/system-connections"
-        "/etc/mullvad-vpn"
-        "/var/lib/tailscale"
-        "/var/lib/bluetooth"
-        "/var/lib/fprint"
-        "/var/lib/sbctl"
-        "/var/lib/usbguard"
-      ];
-      exclude = [
-        # Token/credential caches — not durable; regenerated on next gcloud auth
-        "/home/user/.config/gcloud/access_tokens.db"
-        "/home/user/.config/gcloud/credentials.db"
-        "/home/user/.config/gcloud/logs"
-        "/home/user/.config/gcloud/legacy_credentials"
-      ];
-      repositoryFile = config.sops.secrets.restic_repository.path;
-      passwordFile = config.sops.secrets.restic_password.path;
-      environmentFile = config.sops.secrets.b2_credentials.path;
-    };
   };
 
   services.hardened = {
@@ -495,7 +337,6 @@ in
     };
   };
 
-  # NetworkManager manages networking; avoid boot blocking on online targets.
   systemd = {
     # Hyprland starts the Home Manager graphical session through this target
     # after exporting WAYLAND_DISPLAY/AQ_DRM_DEVICES into the user systemd
@@ -559,111 +400,6 @@ in
         '';
       };
 
-      "systemd-networkd-wait-online".enable = lib.mkForce false;
-      "NetworkManager-wait-online".enable = lib.mkForce false;
-
-      restic-backups-local.serviceConfig.ExecStartPost = pkgs.writeShellScript "restic-backup-metrics" ''
-        tmp=/var/lib/node-exporter-textfiles/restic_backup.prom.tmp
-        {
-          echo "# HELP restic_last_backup_timestamp_seconds Unix timestamp of last successful restic backup"
-          echo "# TYPE restic_last_backup_timestamp_seconds gauge"
-          echo "restic_last_backup_timestamp_seconds $(date +%s)"
-        } > "$tmp"
-        mv "$tmp" /var/lib/node-exporter-textfiles/restic_backup.prom
-      '';
-
-      btrbk-local-snapshot-dir = {
-        description = "Ensure btrbk local snapshot directory exists";
-        requiredBy = [ "btrbk-local.service" ];
-        before = [ "btrbk-local.service" ];
-        unitConfig.RequiresMountsFor = "/.btrfs-root";
-        serviceConfig.Type = "oneshot";
-        script = ''
-          ${pkgs.coreutils}/bin/install -d -m 0750 -o btrbk -g btrbk /.btrfs-root/.snapshots
-        '';
-      };
-
-      restic-check-local = {
-        description = "Restic workstation repository integrity check";
-        after = [ "network-online.target" ];
-        wants = [ "network-online.target" ];
-        environment.RESTIC_PASSWORD_FILE = config.sops.secrets.restic_password.path;
-        serviceConfig = {
-          Type = "oneshot";
-          ExecStart = "${pkgs.restic}/bin/restic check --repository-file=${config.sops.secrets.restic_repository.path} --read-data-subset=1G";
-          ExecStartPost = pkgs.writeShellScript "restic-check-metrics" ''
-            tmp=/var/lib/node-exporter-textfiles/restic_check.prom.tmp
-            {
-              echo "# HELP restic_last_check_timestamp_seconds Unix timestamp of last successful restic integrity check"
-              echo "# TYPE restic_last_check_timestamp_seconds gauge"
-              echo "restic_last_check_timestamp_seconds $(date +%s)"
-            } > "$tmp"
-            mv "$tmp" /var/lib/node-exporter-textfiles/restic_check.prom
-          '';
-          EnvironmentFile = config.sops.secrets.b2_credentials.path;
-        };
-      };
-
-      tailscale-bypass-routing = {
-        description = "Keep tailnet traffic off the Mullvad tunnel";
-        after = [
-          "tailscaled.service"
-          "mullvad-daemon.service"
-        ];
-        wants = [
-          "tailscaled.service"
-          "mullvad-daemon.service"
-        ];
-        wantedBy = [ "multi-user.target" ];
-        serviceConfig = {
-          Type = "oneshot";
-          ExecStart = tailscaleBypassRules;
-        };
-      };
-
-      tailscaled.postStart = lib.mkAfter "${tailscaleBypassRules}";
-      mullvad-daemon.postStart = lib.mkAfter "${tailscaleBypassRules}";
-
-      # Mullvad's lockdown mode installs an nftables killswitch (policy drop +
-      # `reject with tcp reset` on every output chain) that kills tailscale0
-      # traffic the same way it kills clearnet traffic — every TCP connection
-      # to a 100.64/10 peer gets an immediate RST.
-      #
-      # The bypass routing script above only fixes *routing*, not filtering, so
-      # it cannot rescue Tailscale on its own. Disable lockdown so that when
-      # Mullvad is disconnected (the default state) no killswitch firewall is
-      # active and Tailscale can use the normal NixOS firewall.
-      #
-      # Trade-off: while Mullvad is *actively connected* its in-tunnel firewall
-      # still blocks tailscale0. Use one VPN at a time — `mullvad disconnect`
-      # before relying on the tailnet.
-      mullvad-tailscale-coexist = {
-        description = "Disable Mullvad lockdown so Tailscale can coexist";
-        after = [ "mullvad-daemon.service" ];
-        bindsTo = [ "mullvad-daemon.service" ];
-        wantedBy = [ "multi-user.target" ];
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-        };
-        script = ''
-          for _ in $(${pkgs.coreutils}/bin/seq 1 30); do
-            ${pkgs.mullvad-vpn}/bin/mullvad status >/dev/null 2>&1 && break
-            ${pkgs.coreutils}/bin/sleep 1
-          done
-          ${pkgs.mullvad-vpn}/bin/mullvad lockdown-mode set off
-          ${pkgs.mullvad-vpn}/bin/mullvad auto-connect set off
-        '';
-      };
-    };
-
-    timers.restic-check-local = {
-      wantedBy = [ "timers.target" ];
-      timerConfig = {
-        OnCalendar = "weekly";
-        RandomizedDelaySec = "2h";
-        Persistent = true;
-      };
     };
   };
 
@@ -731,7 +467,11 @@ in
   users.groups.telemetry-ingest = { };
 
   users.users.user = {
-    extraGroups = [ "video" ];
+    extraGroups = [
+      "kvm"
+      "libvirtd"
+      "video"
+    ];
     hashedPasswordFile = config.sops.secrets.user_password.path;
   };
 

@@ -119,18 +119,15 @@ let
     name = "codex";
     runtimeInputs = [ pkgs.nodejs ];
     text = ''
-      exec npm exec --yes --package @openai/codex@latest -- codex --dangerously-bypass-approvals-and-sandbox "$@"
+      exec npm exec --yes --package @openai/codex@latest -- codex "$@"
     '';
   };
 
   claudeLatest = pkgs.writeShellApplication {
     name = "claude";
-    runtimeInputs = [
-      pkgs.nodejs
-      pkgs.steam-run
-    ];
+    runtimeInputs = [ pkgs.nodejs ];
     text = ''
-      exec steam-run npx -y @anthropic-ai/claude-code@latest --dangerously-skip-permissions "$@"
+      exec npx -y @anthropic-ai/claude-code@latest --dangerously-skip-permissions "$@"
     '';
   };
 
