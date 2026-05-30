@@ -1,6 +1,15 @@
-vim.g.gruvbox_material_background = "medium"
+-----------------------------------------------------------
+-- Colorscheme (driven by the active theme in home/theme)
+-----------------------------------------------------------
+local generated = require("config.generated")
+local colorscheme = (generated.ui and generated.ui.colorscheme) or {}
+local scheme = colorscheme.name or "gruvbox-material"
+
+vim.o.background = colorscheme.background or "dark"
+-- gruvbox-material reads its contrast from this global; harmless for other schemes.
+vim.g.gruvbox_material_background = colorscheme.contrast or "medium"
 vim.g.gruvbox_material_foreground = "material"
-pcall(vim.cmd.colorscheme, "gruvbox-material")
+pcall(vim.cmd.colorscheme, scheme)
 
 -----------------------------------------------------------
 -- Oil (file explorer)
