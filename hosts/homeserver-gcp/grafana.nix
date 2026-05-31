@@ -58,6 +58,9 @@ in
   };
 
   services.grafana.settings = {
+    # Land on the consolidated single-pane Overview instead of the per-host
+    # main-machine board the shared profile defaults to.
+    dashboards.default_home_dashboard_path = lib.mkForce "/etc/grafana-dashboards/overview.json";
     analytics = {
       reporting_enabled = false;
       check_for_updates = false;

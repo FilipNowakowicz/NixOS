@@ -39,16 +39,22 @@
   # Usage: expr = "node_cpu_seconds_total{${dash.hostSelector \"main\"},mode=\"idle\"}";
   hostSelector = host: ''host="${host}"'';
 
-  # Query target builder
+  # Query target builder. `format`/`instant` are optional and only emitted when
+  # set, so existing callers are unaffected; use format = "table", instant =
+  # true for table panels driven by an instant vector query.
   target =
     {
       expr,
       legendFormat ? "",
       refId ? "A",
+      format ? null,
+      instant ? null,
     }:
     {
       inherit expr legendFormat refId;
-    };
+    }
+    // (if format != null then { inherit format; } else { })
+    // (if instant != null then { inherit instant; } else { });
 
   # Timeseries panel builder
   timeseriesPanel =
@@ -98,6 +104,10 @@
     };
 
   # Stat panel builder for current health tiles.
+  # `thresholds` overrides the default green/orange@70/red@90 steps (e.g. for
+  # count tiles that should go red at 1, or inverted "higher is better" gauges).
+  # `mappings` adds Grafana value mappings (e.g. 0 -> "OK"). `textMode` lets a
+  # tile show the series label instead of the number.
   statPanel =
     {
       id,
@@ -111,6 +121,9 @@
       decimals ? 1,
       colorMode ? "value",
       graphMode ? "area",
+      textMode ? "auto",
+      thresholds ? null,
+      mappings ? null,
     }:
     {
       inherit
@@ -128,33 +141,78 @@
           fields = "";
         };
         orientation = "auto";
-        textMode = "auto";
-        inherit colorMode graphMode;
+        inherit textMode colorMode graphMode;
         justifyMode = "auto";
       };
       fieldConfig.defaults = {
         inherit decimals;
         thresholds = {
           mode = "absolute";
-          steps = [
-            {
-              color = "green";
-              value = null;
-            }
-            {
-              color = "orange";
-              value = 70;
-            }
-            {
-              color = "red";
-              value = 90;
-            }
-          ];
+          steps =
+            if thresholds != null then
+              thresholds
+            else
+              [
+                {
+                  color = "green";
+                  value = null;
+                }
+                {
+                  color = "orange";
+                  value = 70;
+                }
+                {
+                  color = "red";
+                  value = 90;
+                }
+              ];
         };
       }
+      // (if mappings != null then { inherit mappings; } else { })
       // (if unit != null then { inherit unit; } else { })
       // (if min != null then { inherit min; } else { })
       // (if max != null then { inherit max; } else { });
+    };
+
+  # Table panel builder. Pairs with table-format instant targets; pass
+  # `transformations` (e.g. an "organize" transform to hide/rename columns) and
+  # field `overrides` for per-column styling.
+  tablePanel =
+    {
+      id,
+      title,
+      ds,
+      targets,
+      gridPos,
+      transformations ? [ ],
+      overrides ? [ ],
+      noValue ? null,
+    }:
+    {
+      inherit
+        id
+        title
+        targets
+        gridPos
+        transformations
+        ;
+      type = "table";
+      datasource = ds;
+      options = {
+        showHeader = true;
+        cellHeight = "sm";
+        footer.show = false;
+      };
+      fieldConfig = {
+        defaults = {
+          custom = {
+            align = "auto";
+            filterable = false;
+          };
+        }
+        // (if noValue != null then { inherit noValue; } else { });
+        inherit overrides;
+      };
     };
 
   # Logs panel builder
