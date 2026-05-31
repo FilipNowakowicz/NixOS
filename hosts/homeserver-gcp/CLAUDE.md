@@ -46,6 +46,11 @@ Runbook: [`.claude/homeserver-gcp/provisioning.md`](../../.claude/homeserver-gcp
 deploy '.#homeserver-gcp'
 ```
 
+If `deploy-rs` produces no output / appears to hang in a non-interactive
+session, fall back to a manual closure deploy: `nix build` the system closure,
+`nix copy` it to the host (add `--derivation` if needed), then run
+`switch-to-configuration switch` over SSH.
+
 ## Gotchas
 
 - **sops fails on first boot if the host key was not copied into the installed root** — Tailscale won't join, SSH won't work over Tailscale. Recover via GCE serial console or `gcloud compute ssh` (project SSH keys bypass tailnet-only firewall during recovery), then install the encrypted repo key at `/etc/ssh/ssh_host_ed25519_key` and redeploy.

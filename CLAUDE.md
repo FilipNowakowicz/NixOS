@@ -26,7 +26,11 @@ under each host: [`hosts/main/CLAUDE.md`](hosts/main/CLAUDE.md),
 
 - **`main`:** `nh os switch --hostname main .` (alias: `rebuild`).
 - **`mac`:** `deploy '.#mac'` from `main`; local fallback `nh os switch --hostname mac .`.
-- **`homeserver-gcp`:** `deploy '.#homeserver-gcp'` or `bash scripts/deploy-gcp.sh`.
+- **`homeserver-gcp`:** `deploy '.#homeserver-gcp'` for ongoing updates.
+  `scripts/deploy-gcp.sh` is **provisioning/reinstall only** (Terraform apply +
+  `nixos-anywhere`), not an ongoing-deploy alias. Note `deploy-rs` can appear
+  silent/hung in non-interactive sessions; fall back to a manual closure deploy
+  (`nix build` the system, `nix copy` the closure, then `switch-to-configuration`).
 - **`user@wsl`:** `home-manager switch --flake .#user@wsl`.
 
 Module topology, persistence model, and the agent-maintenance sudo allowlist
@@ -72,6 +76,14 @@ remaining work.
 
 - **Claude Code** — all `.nix` changes, deployments, secrets.
 - **Gemini CLI** — documentation only (`.md` files), consistency checks, README updates.
+- **Edit/Bash guards** — `.claude/hooks/guard-edits.sh` and
+  `.claude/hooks/guard-bash.sh` (PreToolUse, wired in `.claude/settings.json`)
+  are the safety net for bypass-permissions mode. The edit guard _denies_ direct
+  edits to `*.enc`/`*.age`/`secrets/**`/the age key (use `sops`) and _asks_
+  before editing any `disko.nix`. The Bash guard _asks_ before catastrophic
+  block-device ops (`dd`/`mkfs`/`wipefs`/partitioning), LUKS format/erase, and
+  recursive `rm` of a top-level path. A blocked/prompted action there is by
+  design, not a failure.
 
 ## Secrets (sops-nix)
 
