@@ -14,6 +14,16 @@ in
     services = {
       lynis-audit = {
         description = "Lynis security audit";
+        # lynis shells out to bare tool names (ss, sysctl, getcap, lsmod, …) and
+        # setuid wrappers (sudo, mount, ping). The NixOS service PATH omits both
+        # /run/current-system/sw/bin and /run/wrappers/bin, so those probes
+        # silently fail and the hardening index is badly under-reported (~58 vs
+        # the real ~77). Give the audit the same tool path an interactive login
+        # has so the metric reflects reality.
+        path = [
+          "/run/wrappers/bin"
+          config.system.path
+        ];
         serviceConfig = {
           Type = "oneshot";
           ExecStart = pkgs.writeShellScript "lynis-audit" ''
