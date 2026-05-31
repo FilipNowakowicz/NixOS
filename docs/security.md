@@ -128,7 +128,7 @@ Tailscale is the primary remote-access layer.
   `/obs/loki/loki/api/v1/push`, `/obs/mimir/api/v1/push`, and
   `/obs/otlp/v1/traces`. Broader `/obs/*` API paths are denied so ingest
   credentials cannot read or query Loki, Mimir, or OTLP APIs through nginx.
-- `homeserver-gcp` runs blackbox probes from inside the tailnet boundary against `https://<tailnet-fqdn>/` (Vaultwarden; expect `200/301/302`) and `https://<tailnet-fqdn>/grafana/` (Grafana auth boundary; expect `403` from the server's tagged-device identity).
+- `homeserver-gcp` runs blackbox probes from inside the tailnet boundary against `https://<tailnet-fqdn>/` (Vaultwarden; expect `200/301/302`) and `https://<tailnet-fqdn>/grafana/` (Grafana auth-proxy path; expect `200` from the server's tailnet node identity).
 - `main` enables SSH but does not open the normal firewall path for general LAN access.
 - `mac` enables SSH and Syncthing listen ports only on `tailscale0`; it is not
   a public service host.

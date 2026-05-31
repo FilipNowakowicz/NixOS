@@ -115,9 +115,16 @@ in
             instance_addr = "127.0.0.1";
             kvstore.store = "inmemory";
           };
+          # Use the read-only `local` backend, not `filesystem`. The filesystem
+          # object-store backend expects rule groups written through the ruler
+          # API in its own object layout and will not parse human-provisioned
+          # rule YAML dropped on disk. The `local` backend reads standard
+          # Prometheus `groups:` YAML from <directory>/<tenant>/<namespace>,
+          # which is exactly what mimir.service's preStart writes
+          # (/var/lib/mimir/rules/anonymous/infrastructure-alerts.yaml).
           ruler_storage = {
-            backend = "filesystem";
-            filesystem.dir = "/var/lib/mimir/rules";
+            backend = "local";
+            local.directory = "/var/lib/mimir/rules";
           };
           store_gateway.sharding_ring = {
             instance_addr = "127.0.0.1";

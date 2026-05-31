@@ -121,11 +121,13 @@ in
             };
 
             # Probe Grafana through nginx so auth_request and upstream routing both
-            # stay observable from inside the tailnet boundary. This host itself is
-            # not a human Tailscale identity, so the healthy outcome is a denial.
+            # stay observable from inside the tailnet boundary. The auth helper
+            # maps tailnet node identities to the default Viewer role unless a
+            # host-local role map promotes them, so a healthy probe reaches
+            # Grafana successfully.
             grafana-auth-boundary = {
               url = "https://${tailnetFQDN}/grafana/";
-              expectedStatusCodes = [ 403 ];
+              expectedStatusCodes = [ 200 ];
             };
           };
         };
@@ -199,9 +201,15 @@ in
       tailscale_auth_key = { };
       grafana_admin_password.owner = "grafana";
       grafana_secret_key.owner = "grafana";
+      # mimir runs as a systemd DynamicUser, so the "mimir" user/group only
+      # exist while the unit is running (via nss-systemd) and cannot be resolved
+      # during activation, when setupSecrets runs with mimir stopped. Own the
+      # secret by root and grant read access through a static supplementary
+      # group the mimir unit joins: sops-install-secrets resolves it at
+      # activation, and mimir still reads the webhook URL at runtime.
       alertmanager_webhook_url = {
-        owner = "mimir";
-        group = "mimir";
+        mode = "0440";
+        group = "mimir-webhook";
       };
       observability_ingest_htpasswd = {
         owner = config.services.nginx.user;
@@ -212,6 +220,11 @@ in
       b2_credentials = { };
     };
   };
+
+  # Static group bridging the root-owned alertmanager_webhook_url secret to the
+  # mimir DynamicUser. systemd adds the dynamic user to this group at start.
+  users.groups.mimir-webhook = { };
+  systemd.services.mimir.serviceConfig.SupplementaryGroups = [ "mimir-webhook" ];
 
   # GCP VMs have no power supply subsystem; the powersupplyclass collector fails
   # to initialize when /sys/class/power_supply is empty. Override the shared

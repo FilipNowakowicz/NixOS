@@ -9,8 +9,14 @@
 #   ResticBackupStale — backup older than 26 h (daily + 2 h buffer)
 #   ResticCheckStale  — integrity check older than 8 d (weekly + 1 d buffer)
 #   ResticRestoreCanaryStale — restore canary older than 2 d
-#   VulnixCveFound    — any CVE finding after whitelist (add known-acceptable CVEs to vulnix-whitelist.toml)
 #   VulnixScanStale   — no successful scan in 26 h (daily + 2 h buffer)
+#
+# Note: there is intentionally no alert on vulnix_cve_total. On a weekly-bumped
+# nixpkgs closure a "CVEs > 0" alert is almost always firing on whitelist drift
+# and build-time/name-collision noise, which trains the operator to ignore
+# alerts. The metric is kept for on-demand review (Grafana Explore /
+# vulnix_cve_total); only scan *staleness* is alerted, so a broken scanner is
+# still caught.
 #   LynisScoreLow     — hardening index < 60 for 0 m
 #   LynisScanStale    — no successful audit in 26 h (daily + 2 h buffer)
 #   BlackboxProbeFailed — blackbox HTTP probe failing for 5 min
@@ -90,16 +96,6 @@
             annotations = {
               summary = "Lynis audit stale on {{ $labels.instance }}";
               description = "Last audit {{ $value | printf \"%.1f\" }}h ago (threshold: 26h). Check lynis-audit.service logs.";
-            };
-          }
-          {
-            alert = "VulnixCveFound";
-            expr = "vulnix_cve_total > 0";
-            for = "0m";
-            labels.severity = "critical";
-            annotations = {
-              summary = "CVE findings on {{ $labels.instance }}";
-              description = "{{ $value }} CVE(s) found in current system closure. Review and suppress known-acceptable findings in vulnix-whitelist.toml.";
             };
           }
           {

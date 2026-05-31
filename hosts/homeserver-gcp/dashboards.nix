@@ -68,67 +68,6 @@ in
       };
     };
 
-    cve = {
-      enable = true;
-      definition = dash.mkDashboard {
-        uid = "homeserver-cve";
-        title = "CVE Scan";
-        panels = [
-          (dash.timeseriesPanel {
-            id = 1;
-            title = "CVE Findings (after whitelist)";
-            ds = dash.mimirDS;
-            gridPos = dash.gridPos {
-              x = 0;
-              y = 0;
-              w = 12;
-              h = 8;
-            };
-            targets = [
-              (dash.target {
-                expr = "vulnix_cve_total";
-                legendFormat = "CVEs";
-              })
-            ];
-          })
-          (dash.timeseriesPanel {
-            id = 2;
-            title = "Affected Packages (after whitelist)";
-            ds = dash.mimirDS;
-            gridPos = dash.gridPos {
-              x = 12;
-              y = 0;
-              w = 12;
-              h = 8;
-            };
-            targets = [
-              (dash.target {
-                expr = "vulnix_affected_packages_total";
-                legendFormat = "packages";
-              })
-            ];
-          })
-          (dash.timeseriesPanel {
-            id = 3;
-            title = "Scan Age (hours)";
-            ds = dash.mimirDS;
-            gridPos = dash.gridPos {
-              x = 0;
-              y = 8;
-              w = 12;
-              h = 8;
-            };
-            targets = [
-              (dash.target {
-                expr = "(time() - vulnix_scan_timestamp_seconds) / 3600";
-                legendFormat = "hours since last scan";
-              })
-            ];
-          })
-        ];
-      };
-    };
-
     backup = {
       enable = true;
       definition = dash.mkDashboard {
