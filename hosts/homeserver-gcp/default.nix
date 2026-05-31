@@ -213,9 +213,9 @@ in
     };
   };
 
-  # GCP VMs have no power supply subsystem; the power_supply collector fails to
-  # initialize when /sys/class/power_supply is empty. Override the shared profile
-  # list to drop it for this host only.
+  # GCP VMs have no power supply subsystem; the powersupplyclass collector fails
+  # to initialize when /sys/class/power_supply is empty. Override the shared
+  # profile list to drop it for this host only.
   services.prometheus.exporters.node.enabledCollectors = pkgs.lib.mkForce [
     "cpu"
     "filesystem"

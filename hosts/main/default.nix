@@ -372,6 +372,7 @@ in
         "ProtectClock"
         "MemoryDenyWriteExecute"
         "SystemCallFilter"
+        "ProcSubset"
       ];
       extraConfig = {
         RestrictAddressFamilies = [
