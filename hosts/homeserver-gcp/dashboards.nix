@@ -46,7 +46,8 @@ let
 in
 {
   profiles.observability.dashboards = {
-    fleet.enable = true;
+    # Overview's fleet-comparison row supersedes the standalone Fleet board.
+    fleet.enable = false;
     security-events.enable = true;
 
     overview = {
@@ -548,111 +549,6 @@ in
       };
     };
 
-    lynis = {
-      enable = true;
-      definition = dash.mkDashboard {
-        uid = "homeserver-lynis";
-        title = "Security Audit";
-        panels = [
-          (dash.timeseriesPanel {
-            id = 1;
-            title = "Hardening Index (0-100)";
-            ds = dash.mimirDS;
-            gridPos = dash.gridPos {
-              x = 0;
-              y = 0;
-              w = 12;
-              h = 8;
-            };
-            targets = [
-              (dash.target {
-                expr = "lynis_hardening_index";
-                legendFormat = "hardening index";
-              })
-            ];
-          })
-          (dash.timeseriesPanel {
-            id = 2;
-            title = "Warnings";
-            ds = dash.mimirDS;
-            gridPos = dash.gridPos {
-              x = 12;
-              y = 0;
-              w = 12;
-              h = 8;
-            };
-            targets = [
-              (dash.target {
-                expr = "lynis_warnings_total";
-                legendFormat = "warnings";
-              })
-            ];
-          })
-          (dash.timeseriesPanel {
-            id = 3;
-            title = "Audit Age (hours)";
-            ds = dash.mimirDS;
-            gridPos = dash.gridPos {
-              x = 0;
-              y = 8;
-              w = 12;
-              h = 8;
-            };
-            targets = [
-              (dash.target {
-                expr = "(time() - lynis_scan_timestamp_seconds) / 3600";
-                legendFormat = "hours since last audit";
-              })
-            ];
-          })
-        ];
-      };
-    };
-
-    backup = {
-      enable = true;
-      definition = dash.mkDashboard {
-        uid = "homeserver-backup-health";
-        title = "Backup Health";
-        panels = [
-          (dash.timeseriesPanel {
-            id = 1;
-            title = "Backup Age (hours)";
-            ds = dash.mimirDS;
-            gridPos = dash.gridPos {
-              x = 0;
-              y = 0;
-              w = 12;
-              h = 8;
-            };
-            targets = [
-              (dash.target {
-                expr = "(time() - restic_last_backup_timestamp_seconds) / 3600";
-                legendFormat = "hours since last backup";
-              })
-            ];
-          })
-          (dash.timeseriesPanel {
-            id = 2;
-            title = "Check Age (hours)";
-            ds = dash.mimirDS;
-            gridPos = dash.gridPos {
-              x = 12;
-              y = 0;
-              w = 12;
-              h = 8;
-            };
-            targets = [
-              (dash.target {
-                expr = "(time() - restic_last_check_timestamp_seconds) / 3600";
-                legendFormat = "hours since last check";
-              })
-            ];
-          })
-        ];
-      };
-    };
-
     main-machine =
       let
         hostSel = dash.hostSelector "main";
@@ -736,6 +632,10 @@ in
               unit = "percent";
               min = 0;
               max = 100;
+              decimals = 0;
+              # Battery is "higher is better": red only when actually low, not
+              # the default red@90 that made a healthy battery glow red.
+              thresholds = invThresholds 20 50;
               targets = [
                 (dash.target {
                   expr = "node_power_supply_capacity{${hostSel},power_supply=\"BAT0\"}";
@@ -790,7 +690,7 @@ in
               gridPos = dash.gridPos {
                 x = 0;
                 y = 12;
-                w = 8;
+                w = 12;
                 h = 8;
               };
               unit = "percent";
@@ -808,9 +708,9 @@ in
               title = "Thermal Zones";
               ds = dash.mimirDS;
               gridPos = dash.gridPos {
-                x = 8;
+                x = 12;
                 y = 12;
-                w = 8;
+                w = 12;
                 h = 8;
               };
               unit = "celsius";
@@ -818,26 +718,6 @@ in
                 (dash.target {
                   expr = "node_thermal_zone_temp{${hostSel}}";
                   legendFormat = "{{zone}}";
-                })
-              ];
-            })
-            (dash.timeseriesPanel {
-              id = 14;
-              title = "Battery %";
-              ds = dash.mimirDS;
-              gridPos = dash.gridPos {
-                x = 16;
-                y = 12;
-                w = 8;
-                h = 8;
-              };
-              unit = "percent";
-              min = 0;
-              max = 100;
-              targets = [
-                (dash.target {
-                  expr = "node_power_supply_capacity{${hostSel},power_supply=\"BAT0\"}";
-                  legendFormat = "{{power_supply}}";
                 })
               ];
             })

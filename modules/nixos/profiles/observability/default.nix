@@ -145,9 +145,11 @@ in
               folder = "Overview";
               type = "file";
               # Dashboards are provisioned declaratively from the Nix store.
-              # Lock down the UI so manual edits/deletions don't survive a
-              # redeploy and silently diverge from the source of truth.
-              disableDeletion = true;
+              # editable = false keeps the UI read-only so manual edits don't
+              # diverge from source. disableDeletion stays false so a dashboard
+              # removed from source is also removed from Grafana on the next
+              # provisioning sync, instead of lingering as an orphan in the DB.
+              disableDeletion = false;
               editable = false;
               options.path = "/etc/grafana-dashboards";
             }
