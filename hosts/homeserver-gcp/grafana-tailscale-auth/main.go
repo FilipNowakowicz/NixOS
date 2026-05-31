@@ -49,11 +49,14 @@ func (c *whoisCache) lookup(ctx context.Context, tailscaleBin, addr string) (*wh
 	c.mu.Unlock()
 
 	who, err := lookupWhois(ctx, tailscaleBin, addr)
+	if err != nil {
+		return nil, err
+	}
 
 	c.mu.Lock()
 	c.entries[addr] = whoisEntry{who: who, err: err, exp: time.Now().Add(cacheTTL)}
 	c.mu.Unlock()
-	return who, err
+	return who, nil
 }
 
 func main() {
