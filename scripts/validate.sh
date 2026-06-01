@@ -223,6 +223,7 @@ hosts)
   build_attrs \
     ".#nixosConfigurations.main-ci.config.system.build.toplevel" \
     ".#nixosConfigurations.homeserver-gcp.config.system.build.toplevel" \
+    ".#nixosConfigurations.gcp-builder.config.system.build.toplevel" \
     ".#nixosConfigurations.mac.config.system.build.toplevel" \
     ".#packages.${system}.installer-iso"
   ;;
