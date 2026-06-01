@@ -159,7 +159,12 @@
 
   # Key-only login. No sops on this host, so no console/recovery password is
   # provisioned; recover a wedged builder by reprovisioning rather than console.
+  # The build key authorizes root@main's nix-daemon to drive distributed builds
+  # as this (trusted) user; it merges with the personal keys from sops-base.
   users.users.user = {
     home = "/home/user";
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIESg3U6QT7ur+a/rRDksMKWOrOVS1uHr7u+LfhmgLl9U nix-remote-build-main-to-gcp-builder"
+    ];
   };
 }
