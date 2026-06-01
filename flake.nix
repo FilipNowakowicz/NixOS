@@ -166,7 +166,7 @@
       systems = [ defaultSystem ];
 
       perSystem =
-        { system, ... }:
+        { system, self', ... }:
         let
           pkgs = import nixpkgs {
             inherit system;
@@ -188,6 +188,7 @@
             nixos-anywhere
             ciDeployNodes
             invariantChecks
+            self'
             ;
           flakeInputs = inputs;
         };

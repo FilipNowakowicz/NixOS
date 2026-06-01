@@ -13,6 +13,7 @@
   flakeInputs,
   ciDeployNodes,
   invariantChecks,
+  self',
 }:
 let
   controlCenterPackage = pkgs.callPackage ../packages/control-center { };
@@ -51,6 +52,15 @@ in
       type = "app";
       program = "${controlCenterPackage}/bin/control-center";
       meta.description = "Open the unified Control Center widget";
+    };
+    inventory-json = {
+      type = "app";
+      program = toString (
+        pkgs.writeShellScript "inventory-json" ''
+          exec ${pkgs.coreutils}/bin/cat ${self'.packages.inventory-data}/inventory.json
+        ''
+      );
+      meta.description = "Print generated host inventory JSON";
     };
   };
 
@@ -183,6 +193,12 @@ in
         inherit nixpkgs system;
       };
       lib-invariants = import ../tests/lib/invariants.nix {
+        inherit nixpkgs system;
+      };
+      lib-host-registry = import ../tests/lib/host-registry.nix {
+        inherit nixpkgs system;
+      };
+      lib-inventory-data = import ../tests/lib/inventory-data.nix {
         inherit nixpkgs system;
       };
       secrets-directory = import ../tests/lib/secrets-directory.nix {
