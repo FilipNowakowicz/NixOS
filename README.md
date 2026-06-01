@@ -444,17 +444,18 @@ manually with `git config --global user.{name,email}`.
 
 The flake provides several `devShells` and `apps` for development and maintenance.
 
-| Type       | Name             | Purpose                                                                                                                    |
-| ---------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `devShell` | `default`        | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, `nixd`, etc.                                                    |
-| `devShell` | `security`       | Network recon, web, password, and analysis tools. In the anonymous specialisation `proxychains <tool>` routes through Tor. |
-| `app`      | `doctor`         | Clean-clone checks: `nix run '.#doctor'` or `bash scripts/doctor.sh`                                                       |
-| `app`      | `deploy-gcp`     | GCP homeserver deploy wrapper: `bash scripts/deploy-gcp.sh`                                                                |
-| `package`  | `installer-iso`  | Minimal NixOS ISO: `nix build '.#installer-iso'`                                                                           |
-| `package`  | `control-center` | GTK4 desktop control center: `nix build '.#control-center'`                                                                |
-| `package`  | `tailscale-acl`  | Rendered Tailscale ACL JSON: `nix build '.#tailscale-acl' --print-out-paths \| xargs cat`                                  |
-| `package`  | `inventory-data` | Host inventory JSON for homepage/status consumers: `nix build '.#inventory-data'`                                          |
-| `template` | `python`         | Python dev shell with `uv`, `ruff`, `basedpyright`: `nix flake init -t ~/nix#python`                                       |
+| Type       | Name             | Purpose                                                                                                                                                               |
+| ---------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `devShell` | `default`        | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, `nixd`, etc.                                                                                               |
+| `devShell` | `security`       | Network recon, web, password, and analysis tools. In the anonymous specialisation `proxychains <tool>` routes through Tor.                                            |
+| `app`      | `doctor`         | Clean-clone checks: `nix run '.#doctor'` or `bash scripts/doctor.sh`                                                                                                  |
+| `app`      | `control-center` | Launch the GTK4 Wayland control panel: `nix run '.#control-center'`                                                                                                   |
+| `app`      | `deploy-gcp`     | GCP homeserver deploy wrapper: `bash scripts/deploy-gcp.sh`                                                                                                           |
+| `package`  | `installer-iso`  | Minimal NixOS ISO: `nix build '.#installer-iso'`                                                                                                                      |
+| `package`  | `control-center` | GTK4 Wayland control panel; deps and graceful degradation in [`packages/control-center/README.md`](packages/control-center/README.md): `nix build '.#control-center'` |
+| `package`  | `tailscale-acl`  | Rendered Tailscale ACL JSON: `nix build '.#tailscale-acl' --print-out-paths \| xargs cat`                                                                             |
+| `package`  | `inventory-data` | Host inventory JSON for homepage/status consumers: `nix build '.#inventory-data'`                                                                                     |
+| `template` | `python`         | Python dev shell with `uv`, `ruff`, `basedpyright`: `nix flake init -t ~/nix#python`                                                                                  |
 
 ---
 

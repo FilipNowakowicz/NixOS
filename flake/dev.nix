@@ -191,5 +191,8 @@ in
       lib-scan-plaintext-secrets = import ../tests/lib/scan-plaintext-secrets.nix {
         inherit nixpkgs system;
       };
+      control-center-capabilities = import ../tests/packages/control-center-capabilities.nix {
+        inherit nixpkgs system;
+      };
     };
 }
