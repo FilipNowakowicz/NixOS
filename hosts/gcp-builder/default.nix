@@ -96,11 +96,20 @@
       openFirewall = false;
     };
 
-    # authKeyFile is intentionally omitted: this host carries no sops secrets.
-    # Join the tailnet once at provisioning with `tailscale up` (see runbook).
+    # Auto-join the tailnet on boot. SSH is tailnet-only, so the box MUST get
+    # onto the tailnet without a login — otherwise it is unreachable after
+    # install (you cannot `tailscale up` on a host you cannot log into, and it
+    # has no console password). The auth key is placed at provisioning time via
+    # `nixos-anywhere --extra-files` (see CLAUDE.md), not sops: a revocable,
+    # tag-scoped auth key kept only on the builder's own disk. Mint it reusable,
+    # NON-ephemeral (the box is usually powered off; an ephemeral node would be
+    # deregistered while down and lose its stable name), pre-tagged tag:server.
+    # After first join the node identity persists on disk, so the key is used once.
     tailscale = {
       enable = true;
       openFirewall = true;
+      authKeyFile = "/var/lib/tailscale-authkey";
+      extraUpFlags = [ "--advertise-tags=tag:server" ];
     };
 
     journald.extraConfig = ''

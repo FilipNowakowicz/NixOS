@@ -39,17 +39,34 @@ full grace window before the first check.
 
 ## Provisioning (operator-only, one time)
 
-The builder is sops-free, so there is no pre-baked host-key injection like the
-homeserver — `nixos-anywhere` installs straight onto the bootstrap image.
+The builder is sops-free. SSH is tailnet-only, so it **must auto-join the tailnet
+on boot** via an auth key (a host you cannot log into cannot run `tailscale up`,
+and there is no console password). The key is dropped into the installed root
+with `nixos-anywhere --extra-files`; it never enters the Nix store, git, or
+Terraform state.
 
 1. **tfvars** — ensure `infra/terraform.tfvars` has `gcp_project` and
    `bootstrap_ssh_public_key` (shared with the homeserver flow).
 
-2. **Create the VM** — `cd infra && tofu plan && tofu apply`. Review the plan:
-   the disk-type/`desired_status` pins mean the existing homeserver instance must
-   show **no** changes; only `gcp-builder` resources should be created.
+2. **Mint a Tailscale auth key** — Tailscale admin → Settings → Keys → Generate:
+   **reusable**, **non-ephemeral**, **pre-approved**, and **tagged `tag:server`**.
+   Non-ephemeral matters: the builder is powered off most of the time, and an
+   ephemeral node would be deregistered while down and lose its stable
+   `gcp-builder.<tailnet>.ts.net` name. The `tag:server` tag means the existing
+   `tag:workstation → tag:server:22` ACL rule already grants `main` SSH — no ACL
+   change needed. Stage it for `--extra-files`:
 
-3. **Temporary SSH path** — the network-wide `deny_public_ssh` rule blocks public
+   ```bash
+   umask 077
+   mkdir -p /tmp/builder-extra/var/lib
+   printf 'tskey-auth-XXXX' > /tmp/builder-extra/var/lib/tailscale-authkey
+   ```
+
+3. **Create the VM** — `cd infra && tofu plan && tofu apply`. Review the plan
+   before applying (the disk-type/`desired_status` pins keep the live homeserver
+   from being replaced).
+
+4. **Temporary SSH path** — the network-wide `deny_public_ssh` rule blocks public
    TCP/22, so open a scoped, higher-priority hole to the builder for install:
 
    ```bash
@@ -59,29 +76,28 @@ homeserver — `nixos-anywhere` installs straight onto the bootstrap image.
      --source-ranges="$(curl -fsS ifconfig.me)/32"
    ```
 
-4. **Install NixOS** — over the bootstrap account (NOPASSWD sudo):
+5. **Install NixOS** — over the bootstrap account (NOPASSWD sudo), placing the
+   auth key into the installed root. Use ssh-agent auth (don't pass `-i` with a
+   passphrase-protected key — nixos-anywhere loads the raw file non-interactively
+   and fails):
 
    ```bash
    IP=$(cd infra && tofu output -raw builder_external_ip)
    nix run github:nix-community/nixos-anywhere -- --flake .#gcp-builder \
-     --target-host "bootstrap@$IP"
+     --target-host "bootstrap@$IP" \
+     --extra-files /tmp/builder-extra \
+     --ssh-option StrictHostKeyChecking=accept-new
    ```
 
-5. **Join the tailnet** — after reboot, SSH in as `user` (personal key, still via
-   the temp rule) and bring Tailscale up tagged as a server:
+   On reboot the builder reads `/var/lib/tailscale-authkey` and joins the tailnet
+   as `tag:server` automatically — no manual `tailscale up`.
 
-   ```bash
-   ssh "user@$IP" sudo tailscale up --advertise-tags=tag:server
-   ```
-
-   Follow the printed auth URL. (`acceptFrom`/tag come from `lib/hosts.nix`;
-   regenerate and push the tailnet ACL from the `tailscale-acl` package so the
-   new node's tag is recognized.)
-
-6. **Verify + lock down** — `tailscale status | grep gcp-builder`, then remove the
+6. **Verify + lock down** — confirm it joined, scrub the staged key, remove the
    temporary hole:
 
    ```bash
+   tailscale status | grep gcp-builder
+   shred -u /tmp/builder-extra/var/lib/tailscale-authkey
    gcloud compute firewall-rules delete gcp-builder-provision-ssh --quiet
    ```
 
