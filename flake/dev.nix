@@ -191,5 +191,8 @@ in
       lib-scan-plaintext-secrets = import ../tests/lib/scan-plaintext-secrets.nix {
         inherit nixpkgs system;
       };
+      python-template-hygiene = import ../tests/packages/python-template-hygiene.nix {
+        inherit nixpkgs system;
+      };
     };
 }
