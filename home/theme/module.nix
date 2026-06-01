@@ -169,6 +169,17 @@ let
 
     # Wallpaper symlink
     "themes/${themeName}/wallpaper".source = theme.wallpaper;
+
+    # Shell-sourceable color vars. The runtime switcher sources this for its
+    # live-reload values instead of re-parsing the theme .nix files, so Nix
+    # stays the single source of truth for every theme's palette.
+    "themes/${themeName}/vars".text = ''
+      bg=${theme.colors.bg}
+      brown=${theme.colors.brown}
+      orange=${theme.colors.orange}
+      amber=${theme.colors.amber}
+      text=${theme.colors.text}
+    '';
   };
 
   # Generate configs for all valid themes
@@ -181,11 +192,14 @@ in
   options.themes = {
     active = lib.mkOption {
       type = lib.types.str;
-      default = "mono-mesh";
+      default = (import (themeDir + /active.nix)).name;
+      defaultText = lib.literalExpression "(import home/theme/active.nix).name";
       description = ''
         Name of the active theme. Must match a .nix filename under home/theme/themes/
-        (without the .nix extension). Theme assets are symlinked into XDG config
-        paths for Kitty, Hyprland, Waybar, and Mako on every rebuild.
+        (without the .nix extension). Defaults to the theme selected in
+        home/theme/active.nix, which is the single source of truth that the
+        runtime `theme-switch` script rewrites. Theme assets are symlinked into
+        XDG config paths for Kitty, Hyprland, Waybar, and Mako on every rebuild.
       '';
       example = "mono-mesh";
     };

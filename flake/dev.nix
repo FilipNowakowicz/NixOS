@@ -191,5 +191,8 @@ in
       lib-scan-plaintext-secrets = import ../tests/lib/scan-plaintext-secrets.nix {
         inherit nixpkgs system;
       };
+      theme-module = import ../tests/home/theme-module.nix {
+        inherit nixpkgs system;
+      };
     };
 }

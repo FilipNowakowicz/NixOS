@@ -167,7 +167,6 @@ in
         ];
         text = ''
           NIX_REPO="${nixRepo}"
-          MAKO_CONFIG_TEMPLATE="${../../theme/mako-config.template}"
         ''
         + builtins.readFile ../../files/scripts/theme-switch.sh;
       })
@@ -311,7 +310,8 @@ in
 
   userSecrets.enable = lib.mkDefault true;
 
-  themes.active = (import ../../theme/active.nix).name;
+  # The active theme defaults to home/theme/active.nix inside the theme module,
+  # so no explicit themes.active wiring is needed here.
 
   my.neovim.languages.tex = {
     enable = lib.mkDefault config.workflowPacks.latex.enable;
