@@ -153,5 +153,5 @@ Acceptance:
 
 ## Notes
 
-- `Automated deploy pipeline` and `Secret rotation ritual` have been moved to `docs/backlog.md` and are no longer active homeserver priorities.
+- `Automated deploy pipeline` and `Secret rotation ritual` have been moved to [`docs/goals/roadmap.md`](roadmap.md) and are no longer active homeserver priorities.
 - Broad service DSL work is now the only active homeserver roadmap item, and it should stay deferred until there are enough repeated service patterns to justify the abstraction.
