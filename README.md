@@ -449,6 +449,7 @@ The flake provides several `devShells` and `apps` for development and maintenanc
 | `devShell` | `default`        | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, `nixd`, etc.                                                    |
 | `devShell` | `security`       | Network recon, web, password, and analysis tools. In the anonymous specialisation `proxychains <tool>` routes through Tor. |
 | `app`      | `doctor`         | Clean-clone checks: `nix run '.#doctor'` or `bash scripts/doctor.sh`                                                       |
+| `app`      | `inventory-json` | Print generated host inventory JSON: `nix run '.#inventory-json'`                                                          |
 | `app`      | `deploy-gcp`     | GCP homeserver deploy wrapper: `bash scripts/deploy-gcp.sh`                                                                |
 | `package`  | `installer-iso`  | Minimal NixOS ISO: `nix build '.#installer-iso'`                                                                           |
 | `package`  | `control-center` | GTK4 desktop control center: `nix build '.#control-center'`                                                                |
