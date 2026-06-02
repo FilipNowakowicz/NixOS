@@ -469,6 +469,22 @@ The flake provides several `devShells` and `apps` for development and maintenanc
 | `package`  | `inventory-data` | Host inventory JSON for homepage/status consumers: `nix build '.#inventory-data'`                                                                                     |
 | `template` | `python`         | Python dev shell with `uv`, `ruff`, `basedpyright`: `nix flake init -t ~/nix#python`                                                                                  |
 
+### Python dev-shell template
+
+Bootstrap a standalone Python project with the same toolchain (`uv`, `ruff`,
+`basedpyright`) ready to go:
+
+```bash
+mkdir my-project && cd my-project
+nix flake init -t ~/nix#python
+direnv allow            # or: nix develop
+uv init                 # uv drives dependency + venv management
+```
+
+The template pins its own `nixos-unstable` and is deliberately self-contained:
+it carries no host, secret, or tailnet assumptions, so it is safe to drop into
+an unrelated repository. The `python-template-hygiene` flake check enforces that.
+
 ---
 
 ## Neovim
