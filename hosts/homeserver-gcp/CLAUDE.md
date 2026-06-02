@@ -64,7 +64,7 @@ session, fall back to a manual closure deploy: `nix build` the system closure,
   `grafanaTailscaleRoleMap` in `default.nix` promotes specific logins.
 - **Grafana break-glass remains local-only** — if the auth helper or role mapping locks
   you out, forward localhost over SSH and use the local Grafana admin account:
-  `ssh -L 3000:127.0.0.1:3000 user@homeserver-gcp.tail90fc7a.ts.net`, then open
+  `ssh -L 3000:127.0.0.1:3000 user@homeserver-gcp.example.ts.net`, then open
   `http://127.0.0.1:3000/`.
 - **Disk is stateful** — no impermanence or `/persist`. Data survives reboots naturally on root.
 - **GCE snapshots are not backups** — use them for fast rollback inside GCP; use restic/B2
