@@ -454,17 +454,20 @@ manually with `git config --global user.{name,email}`.
 
 The flake provides several `devShells` and `apps` for development and maintenance.
 
-| Type       | Name             | Purpose                                                                                                                    |
-| ---------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `devShell` | `default`        | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, `nixd`, etc.                                                    |
-| `devShell` | `security`       | Network recon, web, password, and analysis tools. In the anonymous specialisation `proxychains <tool>` routes through Tor. |
-| `app`      | `doctor`         | Clean-clone checks: `nix run '.#doctor'` or `bash scripts/doctor.sh`                                                       |
-| `app`      | `deploy-gcp`     | GCP homeserver deploy wrapper: `bash scripts/deploy-gcp.sh`                                                                |
-| `package`  | `installer-iso`  | Minimal NixOS ISO: `nix build '.#installer-iso'`                                                                           |
-| `package`  | `control-center` | GTK4 desktop control center: `nix build '.#control-center'`                                                                |
-| `package`  | `tailscale-acl`  | Rendered Tailscale ACL JSON: `nix build '.#tailscale-acl' --print-out-paths \| xargs cat`                                  |
-| `package`  | `inventory-data` | Host inventory JSON for homepage/status consumers: `nix build '.#inventory-data'`                                          |
-| `template` | `python`         | Python dev shell with `uv`, `ruff`, `basedpyright`: `nix flake init -t ~/nix#python`                                       |
+| Type       | Name             | Purpose                                                                                                                                                               |
+| ---------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `devShell` | `default`        | Main dev shell with `deploy-rs`, `nixos-anywhere`, `sops`, `nixd`, etc.                                                                                               |
+| `devShell` | `security`       | Network recon, web, password, and analysis tools. In the anonymous specialisation `proxychains <tool>` routes through Tor.                                            |
+| `app`      | `doctor`         | Clean-clone checks: `nix run '.#doctor'` or `bash scripts/doctor.sh`                                                                                                  |
+| `app`      | `control-center` | Launch the GTK4 Wayland control panel: `nix run '.#control-center'`                                                                                                   |
+| `app`      | `tailscale-acl`  | Print generated Tailscale ACL JSON: `nix run '.#tailscale-acl'`                                                                                                       |
+| `app`      | `inventory-json` | Print generated host inventory JSON: `nix run '.#inventory-json'`                                                                                                     |
+| `app`      | `deploy-gcp`     | GCP homeserver deploy wrapper: `bash scripts/deploy-gcp.sh`                                                                                                           |
+| `package`  | `installer-iso`  | Minimal NixOS ISO: `nix build '.#installer-iso'`                                                                                                                      |
+| `package`  | `control-center` | GTK4 Wayland control panel; deps and graceful degradation in [`packages/control-center/README.md`](packages/control-center/README.md): `nix build '.#control-center'` |
+| `package`  | `tailscale-acl`  | Rendered Tailscale ACL JSON: `nix build '.#tailscale-acl' --print-out-paths \| xargs cat`                                                                             |
+| `package`  | `inventory-data` | Host inventory JSON for homepage/status consumers: `nix build '.#inventory-data'`                                                                                     |
+| `template` | `python`         | Python dev shell with `uv`, `ruff`, `basedpyright`: `nix flake init -t ~/nix#python`                                                                                  |
 
 ---
 
@@ -547,16 +550,16 @@ expensive tests, while the CVE workflow runs on a weekly schedule and on
 
 ## Tailscale ACLs
 
-Tailscale security rules are managed declaratively within the flake. The `lib/acl.nix` generator processes the `lib/hosts.nix` registry to produce a `acl.hujson` compatible structure.
+Tailscale security rules are managed declaratively within the flake. The `lib/acl.nix` generator processes the `lib/hosts.nix` registry to produce a `acl.hujson` compatible structure. See [`docs/tailscale-acl.md`](docs/tailscale-acl.md) for the metadata contract, validation behaviour, and check/apply commands.
 
 - **Current Policy Scope**: The ACL model is intentionally explicit. It consumes `tailscale.tag`, `tailscale.acceptFrom`, and `tailnetFQDN` where host-specific destinations are needed.
 - **Registry Richness**: Other host metadata such as `role` and
   `backup.class` remains available to the rest of the flake, but does not affect
   ACL generation yet.
 - **Generator**: `lib/acl.nix` maps tags to owners, emits explicit tag-to-tag port rules from `acceptFrom`, and keeps `autogroup:admin` as deliberate break-glass access.
-- **Validation**: Unit tests in `tests/lib/acl.nix` verify the generated rules and output shape.
+- **Validation**: `mkAcl` rejects an `acceptFrom` source tag that no host carries (it would otherwise emit an undefined-tag rule Tailscale refuses); unit tests in `tests/lib/acl.nix` cover the generated rules, output shape, and this invalid-metadata case.
 - **Drift Detection**: `.github/workflows/tailscale-acl-drift.yml` runs `scripts/check-tailscale-acl-drift.sh` against the live tailnet policy.
-- **Output**: The generated ACL JSON can be inspected via:
+- **Output**: Inspect the generated ACL JSON with `nix run '.#tailscale-acl'`, or build the artifact:
   ```bash
   nix build '.#packages.x86_64-linux.tailscale-acl' --print-out-paths | xargs cat
   ```
