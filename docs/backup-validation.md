@@ -74,10 +74,20 @@ currently implemented on `homeserver-gcp` (`hosts/homeserver-gcp/backups.nix`):
    real read from the off-site B2 backend.
 3. **Verify.** `grep -qx` asserts the restored content matches the known marker
    exactly.
-4. **Stamp.** On success it writes `restic_last_restore_test_timestamp_seconds`.
+4. **Verify the database.** Before stamping anything, the same service proves the
+   crown-jewel database itself, not just a marker file: it restores the consistent
+   Vaultwarden snapshot (`db.sqlite3.backup`) from the `latest` snapshot and runs
+   `PRAGMA integrity_check`, asserting the result is `ok`.
+5. **Stamp.** Only after every check above passes does the service write both
+   `restic_last_restore_test_timestamp_seconds` and
+   `vaultwarden_last_restore_test_timestamp_seconds` together.
 
 A green metric here means the full path — backend read, decrypt, restore,
-content match — worked end to end within the last cycle, unattended.
+content match, and a database that actually opens cleanly — worked end to end
+within the last cycle, unattended. Because the stamp is last (the service runs
+`set -eu`), a failed Vaultwarden integrity check also leaves the restic canary
+metric stale, so `ResticRestoreCanaryStale` (below) catches a corrupt database
+too — there is no separate Vaultwarden alert by design.
 
 ### 5. Stale alerts (alert on staleness, not failures)
 

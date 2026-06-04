@@ -163,6 +163,20 @@ or untrusted local services are added later, move the nginx-to-Grafana boundary
 to a Unix socket or equivalent nginx-only channel before relying on Grafana
 roles as a local security boundary.
 
+## Shielded VM
+
+`homeserver-gcp` runs as a GCE Shielded VM. `infra/main.tf` sets
+`shielded_instance_config` with vTPM and integrity monitoring enabled, giving a
+hardware root of trust and a boot-integrity baseline that flags unexpected boot
+measurement changes in the GCP console.
+
+Secure Boot is deliberately left **off**: stock NixOS produces no signed boot
+artifacts, so enabling it would leave the VM unbootable until the image adopts
+lanzaboote-style signing. The Terraform block enforces these values rather than
+inheriting them as an unmanaged provider default, and the drift guard
+(`bash scripts/validate.sh tf-drift`) catches any future regression in live
+state.
+
 ## USBGuard
 
 `main` uses USBGuard with a deny-default posture. The checked-in policy should

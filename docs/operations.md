@@ -144,6 +144,22 @@ from the snapshot, then redeploying the NixOS configuration once the system is
 reachable. This avoids treating provider-local snapshots as the authoritative
 long-term backup and keeps Terraform/OpenTofu state drift visible.
 
+## Terraform Drift Guard
+
+`bash scripts/validate.sh tf-drift` runs a read-only `tofu plan
+-detailed-exitcode` against live GCP state and reports drift (exit `2`). It exists
+because the public-SSH edge deny and the snapshot policy carry "apply manually"
+notes, so the live project can silently diverge from `main`.
+
+It is a manual/local check, not a CI gate: it needs GCP credentials (ADC) and
+`infra/terraform.tfvars`. The plan is `-target`-scoped to the always-on
+homeserver resources (instance, both firewalls, snapshot policy + attachment) so
+the on-demand `gcp-builder` — which powers itself off and nulls its ephemeral IP
+— does not register as perpetual benign drift. `bootstrap_ssh_public_key` is
+passed as a placeholder; it is only consumed at first provisioning and held
+under `lifecycle.ignore_changes`, so it produces no diff. Run it after any
+manual change to `infra/`, or periodically, to confirm live state still matches.
+
 ## Homeserver Smoke Tests
 
 `bash scripts/validate.sh smoke-homeserver-gcp` builds the booted NixOS test for
@@ -238,6 +254,8 @@ Rules of thumb:
 - Server profile/GCP changes: build `homeserver-gcp`.
 - Docs changes: run `bash scripts/validate.sh docs`; CI runs this even for docs-only PRs.
 - NixOS test changes: run the relevant smoke/profile test if KVM is available.
+- `infra/` changes: run `bash scripts/validate.sh tf-drift` (manual/local; needs
+  ADC) to confirm live GCP state still matches — see [Terraform Drift Guard](#terraform-drift-guard).
 
 ## On-Demand Remote Builder
 
