@@ -5,7 +5,7 @@ tightly coupled to `main`. The Mac is not a server. It is a second seat that
 shares input, screens, files, and shell sessions with the primary machine.
 
 The host is **active**. Install runbook, gotchas, and recovery notes live in
-[`hosts/mac/CLAUDE.md`](../hosts/mac/CLAUDE.md); this document keeps the
+[`hosts/mac/CLAUDE.md`](../../hosts/mac/CLAUDE.md); this document keeps the
 topology, intended workloads, and open follow-ups.
 
 ## Topology

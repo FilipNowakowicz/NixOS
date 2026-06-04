@@ -187,7 +187,7 @@ nh os switch --hostname mac .
 After Mac changes, check the live host:
 
 ```bash
-ssh user@mac.tail90fc7a.ts.net
+ssh user@mac.example.ts.net
 systemctl --failed --no-pager
 systemctl --user status syncthing.service --no-pager
 systemctl status tailscaled sshd thermald power-profiles-daemon --no-pager
