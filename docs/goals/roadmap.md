@@ -10,23 +10,48 @@ the repo avoids premature abstraction. Host-specific roadmaps live in
 
 ## Active Candidates
 
-Small, finishable work that does not need a triggering event — just not yet
-done. Each row states why it is worth doing and what "done" looks like.
+Small, finishable work that does not need a triggering event. Split by size so
+the quick wins can be picked off independently of the larger reliability work.
+Status notes reflect a goals review on 2026-06-04.
 
-| Area         | Item                                                 | Value / acceptance                                                                                                                                                                                                                 |
-| :----------- | :--------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Hardening    | Bootloader + console hardening parity across hosts   | Bring `main`/`mac`/GCP to the same boot + TTY lockdown baseline; acceptance: a documented parity matrix with no unexplained gaps.                                                                                                  |
-| Hardening    | `systemd.oomd`                                       | Userspace OOM protection on interactive hosts; acceptance: enabled with sane per-slice policy on `main`.                                                                                                                           |
-| Hardening    | Coredump storage policy review on `main`             | Decide retention/size/compression for `systemd-coredump`; acceptance: explicit policy, not the default.                                                                                                                            |
-| Alerting     | Consolidated systemd unit-failure notifier           | A single coherent path so any systemd unit failure attaches a notifier. The off-box-liveness half (VM-down detection) already shipped as the homeserver dead-man's-switch; this is the remaining in-guest unit-failure half.       |
-| Reliability  | Scheduled, _executed_ restore drill                  | `docs/restore-drill.md` documents the procedure; this makes a periodic restore actually run and verify, closing the biggest untested-backup gap. Acceptance: a timer/CI job that restores to a scratch target and asserts success. |
-| Assertions   | Datasource/backend coupling assertions               | Native assertions that catch misconfigured datasource↔backend pairings at eval time.                                                                                                                                               |
-| Home Manager | Migrate raw Neovim config into `programs.neovim`     | Declarative, HM-managed editor config; acceptance: no out-of-band lua/vimrc injection.                                                                                                                                             |
-| Home Manager | Dedupe runtime inputs (Waybar/Kitty/Swaybg/Hyprland) | Single source for shared runtime deps; acceptance: no copy-pasted package lists.                                                                                                                                                   |
-| Home Manager | HM fontconfig + bat/base16 theme provisioning        | Theme + fonts managed declaratively per user.                                                                                                                                                                                      |
-| Home Manager | `firefox-private` profile parity                     | Bring the private profile to parity with the default one.                                                                                                                                                                          |
-| Home Manager | GPG / secret-service defaults                        | Sensible HM-level agent + secret-service wiring.                                                                                                                                                                                   |
-| Mac          | Decide `broadcom_sta` (`wl`) posture                 | Promoted from an open question: `wl` is CVE-flagged. Decide blacklist-`wl`-and-require-USB-Ethernet vs. accept-the-CVE, and record it in [`macbook-goals.md`](macbook-goals.md).                                                   |
+### Quick wins
+
+Each is small and self-contained; several are gaps in existing features.
+
+| Area       | Item                                   | Value / acceptance                                                                                                                                                                                                                                                                              |
+| :--------- | :------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hardening  | `systemd.oomd` on `main`               | Userspace OOM protection on the interactive host. Not present anywhere in the tree today. Acceptance: enabled with a sane per-slice policy on `main`.                                                                                                                                           |
+| Hardening  | Coredump hardening on `main`           | **Security, not hygiene.** With impermanence, `/var/lib/systemd/coredump` is a _persisted_ path, so a crash dump containing in-memory secrets survives reboots. Acceptance: an explicit `systemd.coredump` policy (storage target, `MaxUse`, retention/compression) instead of the default.     |
+| Assertions | Datasource/backend coupling assertions | Eval-time assertions that catch a dashboard/datasource pointing at a backend the host does not run. Partially scaffolded (`lib/dashboards.nix` datasource helpers, `observability/backends.nix`) but no assertion yet. Acceptance: a check in `flake/checks.nix` that fails eval on a mismatch. |
+
+The homeserver **heartbeat-degraded alert** is a quick win too, but it is
+host-specific and tracked in [`homeserver-goals.md`](homeserver-goals.md).
+
+### Larger reliability / security work
+
+The "main ones" — each is a coherent piece of work, not a one-liner.
+
+| Area        | Item                                             | Value / acceptance                                                                                                                                                                                                                                                                                                     |
+| :---------- | :----------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Alerting    | Consolidated systemd unit-failure **delivery**   | `SystemdUnitFailed` already fires after 2 min (`lib/observability-alerts.nix`); the gap is a single coherent, reliable _off-host delivery_ path so a failure on a degraded box still reaches you. The off-box-liveness half shipped as the homeserver dead-man's-switch; this is the remaining in-guest delivery half. |
+| Reliability | Scheduled, _executed_ full-service restore drill | The daily canary already proves a marker round-trip and a Vaultwarden `integrity_check`, so raw restorability is no longer untested. The remaining gap is _full-service_ recovery. Acceptance: a timer/CI job that restores Vaultwarden + Grafana + AdGuard to a scratch target and asserts they come up.              |
+| Security    | CVE remediation cadence                          | Scanning exists (`vulnix`, `validate.sh cve-reports`) and deliberately does not alert on `vulnix_cve_total` (whitelist noise). The missing half is the _human loop_. Acceptance: a documented triage cadence (owner + interval) so "we scan" does not become "we scan and never look."                                 |
+| Recovery    | Age-key escrow                                   | **Promoted** from trigger-deferred: the whole DR story depends on a single age key held by one custodian — itself a single point of failure for an "endgame, reproducible" setup. Acceptance: a second custodian or an offline escrow copy with a documented recovery path.                                            |
+
+### Home Manager polish
+
+Low priority, individually cheap — batch rather than track separately. Status
+reflects what already exists.
+
+| Item                                                 | Status / acceptance                                                                                                                                                                |
+| :--------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dedupe runtime inputs (Waybar/Kitty/Swaybg/Hyprland) | Single source for shared runtime deps; acceptance: no copy-pasted package lists.                                                                                                   |
+| HM fontconfig provisioning                           | bat/base16 theming is **already done** via the custom `home/theme/module.nix` (kitty/waybar/hypr palettes, `bat` `theme = "base16"`); only declarative `fonts.fontconfig` remains. |
+| `firefox-private` profile parity                     | A throwaway-profile `firefox-private` launcher already exists; "parity" means bringing the _default_ profile under managed `programs.firefox` too. Low value.                      |
+| GPG / secret-service defaults                        | `gnome-keyring` (secret-service) is wired at system level; the gap is HM-level `services.gpg-agent` / `programs.gpg` defaults.                                                     |
+
+The Mac `broadcom_sta` (`wl`) posture decision is a candidate too, tracked in
+[`macbook-goals.md`](macbook-goals.md).
 
 ---
 
@@ -34,15 +59,16 @@ done. Each row states why it is worth doing and what "done" looks like.
 
 These are real but should not start until a concrete need appears.
 
-| Item                                                                 | Trigger to revisit                                                       |
-| :------------------------------------------------------------------- | :----------------------------------------------------------------------- |
-| Age-key escrow                                                       | Recovery needs a second custodian or offline escrow becomes a real risk. |
-| Declarative `mac` travel mode                                        | Travel use becomes frequent enough to justify a dedicated profile.       |
-| initrd / FIDO2 recovery for `mac`                                    | A recovery scenario actually requires it.                                |
-| `config.specialisation` alternate boot entries (e.g. gaming profile) | A second concrete boot profile is wanted.                                |
-| Service-level disk quotas (homeserver)                               | A service shows unbounded disk growth.                                   |
-| Metadata endpoint hardening (GCP)                                    | Metadata-sourced secrets/SSRF surface becomes a concern.                 |
-| Dedicated GCP network / VPC model                                    | More than one provider service needs network separation.                 |
+| Item                                                                 | Trigger to revisit                                                 |
+| :------------------------------------------------------------------- | :----------------------------------------------------------------- |
+| Declarative `mac` travel mode                                        | Travel use becomes frequent enough to justify a dedicated profile. |
+| initrd / FIDO2 recovery for `mac`                                    | A recovery scenario actually requires it.                          |
+| `config.specialisation` alternate boot entries (e.g. gaming profile) | A second concrete boot profile is wanted.                          |
+| Service-level disk quotas (homeserver)                               | A service shows unbounded disk growth.                             |
+| Metadata endpoint hardening (GCP)                                    | Metadata-sourced secrets/SSRF surface becomes a concern.           |
+| Dedicated GCP network / VPC model                                    | More than one provider service needs network separation.           |
+
+(Age-key escrow was promoted to an Active Candidate above.)
 
 ---
 
@@ -106,6 +132,13 @@ Recorded so they are not re-proposed:
   flake-parts where it helps; splitting further is aesthetic at this size.
   Reopen only if flake outputs become hard to understand or contributors
   routinely edit unrelated outputs by mistake.
+- **Migrate Neovim to `programs.neovim`** — won't-do. The bespoke `my.neovim`
+  module (language packs, a Lua-config generator, per-language LSP/DAP wiring) is
+  more capable than `programs.neovim` would be, and already installs config
+  declaratively via `xdg.configFile."nvim"` with no out-of-band injection — the
+  original "no out-of-band lua/vimrc" acceptance is effectively already met.
+  Migrating would regress functionality. Reopen only if the custom generator
+  becomes a maintenance burden.
 
 ---
 
@@ -136,3 +169,5 @@ Scope when revisited:
 - Secret inventory with owner, trigger, and command path
 - Rotation checklist through `sops` and deploy
 - Optional Grafana visibility for secret-age metadata
+  </content>
+  </invoke>

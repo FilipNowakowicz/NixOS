@@ -34,9 +34,14 @@ now shipped (see below).
 
 ## Active Goals
 
-None. The reliability gap that motivated this document is closed; the four
-shipped items moved to the durable docs and are summarised below. New homeserver
-work, when it appears, goes here.
+The four reliability goals shipped; both remaining items are gaps in
+_already-shipped_ features rather than new surface (surfaced by a goals review,
+2026-06-04).
+
+| Goal                            | Why                                                                                                                                                                                                          | Acceptance                                                                                                                                                                                             |
+| :------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Heartbeat-degraded alert**    | `heartbeat.nix` emits `heartbeat_last_ping_timestamp_seconds` so internal alerting "can flag a degraded (host-up, ping-failing) heartbeat" — but no alert consumes it. The metric is emitted and never read. | A `HeartbeatPingStale`-style rule in `lib/observability-alerts.nix` (covered by `observability-alerts-lint`) that fires when the host is up but the ping timestamp goes stale.                         |
+| **AdGuard DNS SPOF mitigation** | AdGuard on this host is a fleet-wide DNS single point of failure (see Notes): if the VM dies, tailnet clients lose resolution, and recovery is currently a manual Tailscale-admin step.                      | A documented automatic fallback (e.g. a secondary resolver in the Tailscale DNS config) so resolution survives host death without intervention — or an explicit, recorded decision to accept the SPOF. |
 
 ## Completed (now in durable docs)
 
