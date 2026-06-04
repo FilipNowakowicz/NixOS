@@ -20,12 +20,12 @@ Each is small and self-contained; several are gaps in existing features.
 
 | Area       | Item                                   | Value / acceptance                                                                                                                                                                                                                                                                              |
 | :--------- | :------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Hardening  | `systemd.oomd` on `main`               | Userspace OOM protection on the interactive host. Not present anywhere in the tree today. Acceptance: enabled with a sane per-slice policy on `main`.                                                                                                                                           |
-| Hardening  | Coredump hardening on `main`           | **Security, not hygiene.** With impermanence, `/var/lib/systemd/coredump` is a _persisted_ path, so a crash dump containing in-memory secrets survives reboots. Acceptance: an explicit `systemd.coredump` policy (storage target, `MaxUse`, retention/compression) instead of the default.     |
 | Assertions | Datasource/backend coupling assertions | Eval-time assertions that catch a dashboard/datasource pointing at a backend the host does not run. Partially scaffolded (`lib/dashboards.nix` datasource helpers, `observability/backends.nix`) but no assertion yet. Acceptance: a check in `flake/checks.nix` that fails eval on a mismatch. |
 
 The homeserver **heartbeat-degraded alert** is a quick win too, but it is
 host-specific and tracked in [`homeserver-goals.md`](homeserver-goals.md).
+
+Done: `systemd.oomd` on `main`; coredump hardening on `main`.
 
 ### Larger reliability / security work
 
