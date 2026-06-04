@@ -30,15 +30,33 @@ assemblies stay personal and hardware-bound.
 ## System At A Glance
 
 ```mermaid
+%%{init: {"flowchart": {"curve": "monotoneX"}, "theme": "dark"}}%%
 flowchart LR
-  main["main\nNixOS workstation\nimpermanent root"] --> b2["Backblaze B2\nrestic backups"]
-  main --> builder["gcp-builder\non-demand remote builder"]
-  main <--> mac["mac\ncompanion laptop"]
-  main --> tailnet["Tailscale tailnet"]
+  main("main<br/>workstation / impermanent root")
+  mac("mac<br/>companion laptop")
+  builder("gcp-builder<br/>on-demand builds")
+  homeserver("homeserver-gcp<br/>Vaultwarden / AdGuard / LGTM")
+  tailnet(("Tailscale"))
+  b2("Backblaze B2<br/>restic backups")
+  snapshots("GCP snapshots<br/>fast rollback")
+
+  main <--> mac
+  main --> builder
+  main --> tailnet
   mac --> tailnet
-  homeserver["homeserver-gcp\nVaultwarden, AdGuard, LGTM"] --> tailnet
+  homeserver --> tailnet
+  main --> b2
   homeserver --> b2
-  homeserver --> gcp["GCP snapshots\nfast rollback"]
+  homeserver --> snapshots
+
+  classDef primary fill:#18212b,stroke:#82aaff,color:#f4f7fb,stroke-width:1.5px
+  classDef secondary fill:#21252b,stroke:#aab4be,color:#eef1f4
+  classDef storage fill:#2a261b,stroke:#d2ae63,color:#fff7df
+  classDef network fill:#102f35,stroke:#58d0c9,color:#f0ffff,stroke-width:2px
+  class main,homeserver primary
+  class mac,builder secondary
+  class b2,snapshots storage
+  class tailnet network
 ```
 
 | Host             | Role                | Highlights                                                                                   |
@@ -67,12 +85,16 @@ registry. `installer` is a utility ISO outside the host registry.
 - **Self-hosted observability as code.** Grafana, Mimir, Loki, Tempo,
   Alertmanager, blackbox probes, dashboards, and alert rules are configured
   declaratively, with client hosts shipping over authenticated `/obs/*` routes.
+  Because every on-box alerting component dies with the VM, an off-box
+  dead-man's-switch pings an external healthcheck so total host death is still
+  noticed.
 - **Security policy that is testable.** Custom Nix invariants check fail2ban,
   persisted backup paths, host-registry assumptions, plaintext-secret
   boundaries, and service hardening expectations as part of CI.
 - **Backups that are proven, not assumed.** A daily restore canary restores a
-  known marker from B2 and emits a freshness metric; weekly integrity checks and
-  stale alerts catch silent drift; invariants enforce the contract.
+  known marker from B2 _and_ restores the Vaultwarden database to run
+  `PRAGMA integrity_check`, emitting freshness metrics; weekly integrity checks
+  and stale alerts catch silent drift; invariants enforce the contract.
 - **A single source of truth for the fleet.** `lib/hosts.nix` drives deploy
   targets, Tailscale ACLs, backup policy, observability labels, and inventory
   export — host metadata is defined once, not scattered across files.
