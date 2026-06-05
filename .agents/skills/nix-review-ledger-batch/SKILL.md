@@ -28,4 +28,3 @@ items, or status ledgers in this repository.
 - If a finding looks stale or false-positive, verify against the repo before marking it done.
 - Keep unrelated refactors out of the batch.
 - Leave a clear stop point if remaining items need broader design or live deployment.
-

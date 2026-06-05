@@ -21,11 +21,11 @@ work  ->  candidate lesson  ->  review  ->  promote  ->  better future agents
 
 Any agent (Claude, Codex) may drop a candidate as a side effect of normal work,
 using the `capture-learning-candidate` skill. The bar is high and the act is
-cheap: a candidate is a *proposal*, reviewed later, so it must never edit
+cheap: a candidate is a _proposal_, reviewed later, so it must never edit
 instructions directly.
 
-A Claude `Stop` hook (`.claude/hooks/learning-nudge.sh`) gives a *one-time,
-non-binding* reflection prompt at the end of any session that edited files — it
+A Claude `Stop` hook (`.claude/hooks/learning-nudge.sh`) gives a _one-time,
+non-binding_ reflection prompt at the end of any session that edited files — it
 asks whether a lesson is worth capturing and explicitly accepts "nothing
 qualified." It never forces a candidate, fires at most once per session, and
 stays silent on pure-conversation turns. Codex Stop-event support is not assumed,
@@ -33,8 +33,8 @@ so Codex relies on the skill + `CLAUDE.md` prompt alone for now.
 
 ## Promotion hierarchy (read before proposing a destination)
 
-A lesson written as prose only *asks* a future agent to remember. A lesson
-written as an executable check *makes the mistake impossible* and stays correct
+A lesson written as prose only _asks_ a future agent to remember. A lesson
+written as an executable check _makes the mistake impossible_ and stays correct
 because it fails loudly when the repo changes underneath it. Prefer, in order:
 
 1. **assertion / test / CI gate** — `lib/invariants.nix`, a NixOS assertion, a
@@ -46,7 +46,7 @@ because it fails loudly when the repo changes underneath it. Prefer, in order:
    future invocation, and no safety net if it goes stale. Reserve for genuine
    non-executable judgment.
 
-A candidate that *could* be executable is not allowed to propose prose.
+A candidate that _could_ be executable is not allowed to propose prose.
 
 ## Review (added later — not yet wired)
 

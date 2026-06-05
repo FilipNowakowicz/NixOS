@@ -36,4 +36,3 @@ starts from an issue, review finding, CI failure, roadmap item, or vague bug.
 - For this git-backed flake, stage newly created files before Nix eval/build checks
   that need to see them.
 - Do not include `Co-Authored-By` trailers.
-

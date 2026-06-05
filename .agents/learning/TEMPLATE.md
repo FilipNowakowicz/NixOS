@@ -1,9 +1,9 @@
 ---
 # Machine-routing fields. The reviewer reads these.
-date: YYYY-MM-DD        # when captured
-expires: YYYY-MM-DD     # date + 30d; reviewer rejects if still unpromoted past this
-status: open            # open | promoted | rejected
-agent: claude | codex   # who captured it
+date: YYYY-MM-DD # when captured
+expires: YYYY-MM-DD # date + 30d; reviewer rejects if still unpromoted past this
+status: open # open | promoted | rejected
+agent: claude | codex # who captured it
 ---
 
 # <one-line title>
