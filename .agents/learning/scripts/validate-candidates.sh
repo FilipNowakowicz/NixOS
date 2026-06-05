@@ -28,6 +28,7 @@ required_fields=(
 allowed_type='^(behavior-upgrade|repo-fix|workflow-gotcha|policy-gap)$'
 allowed_route='^(implement-fix|promote-memory|promote-skill|promote-hook|promote-doc|reject)$'
 allowed_best_form='^(invariant|test|ci-gate|hook|skill|doc|none)$'
+allowed_status='^(open|promoted|rejected|superseded|expired)$'
 
 [ -d "$candidate_dir" ] || exit 0
 
@@ -50,6 +51,11 @@ while IFS= read -r path; do
 
   if ! grep -Eq '^schema:[[:space:]]*learning-candidate/v1$' "$path"; then
     printf '%s: schema must be learning-candidate/v1\n' "$path" >&2
+    rc=1
+  fi
+
+  if ! sed -n 's/^status:[[:space:]]*//p' "$path" | head -1 | grep -Eq "$allowed_status"; then
+    printf '%s: invalid status\n' "$path" >&2
     rc=1
   fi
 

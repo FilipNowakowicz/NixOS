@@ -19,6 +19,8 @@ work  ->  candidate lesson  ->  review  ->  promote  ->  better future agents
 - `scripts/index-candidates.sh` — emits a TSV index from candidate metadata.
 - `scripts/query-candidates.sh` — searches the index so agents do not read the
   candidate archive during capture.
+- `scripts/review-candidates.sh` — groups open candidates for low-token reviewer
+  triage.
 - `scripts/validate-candidates.sh` — checks required routing fields and allowed
   categories.
 
@@ -64,15 +66,24 @@ Use `route: implement-fix` for candidates that are really backlog items, such as
 "make `merge-gate` require lint." Use `promote-*` routes for agent behavior
 improvements.
 
-## Review (added later — not yet wired)
+## Review (active on demand)
 
-A reviewer agent will eventually run on demand / on a schedule to:
+Use the `review-learning-candidates` skill when explicitly reviewing the
+candidate queue. The reviewer starts from metadata:
+
+1. run `scripts/validate-candidates.sh`,
+2. run `scripts/review-candidates.sh`,
+3. choose one small batch by `route`, `best_form`, or related target,
+4. open only the selected candidate files, and
+5. draft or implement the promotion in the strongest viable form.
+
+The reviewer should:
 
 - dedup and cluster candidates,
 - reject stale or expired ones,
-- **draft** the promotion in its strongest viable form (invariant > hook >
+- draft the promotion in its strongest viable form (invariant > hook >
   skill > prose), and
-- open a **branch/PR** for human approval — it prepares, it does not commit the
-  promotion.
+- leave promotion reviewable as a normal branch/PR.
 
-Until that exists, candidates simply accumulate here. That is intended.
+Review remains human-gated: a candidate never changes behavior until the
+promotion itself is reviewed.

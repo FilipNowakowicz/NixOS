@@ -2,6 +2,7 @@ schema: learning-candidate/v1
 id: YYYY-MM-DD-short-kebab-slug
 date: YYYY-MM-DD
 expires: YYYY-MM-DD
+# open|promoted|rejected|superseded|expired
 status: open
 agent: claude|codex
 
