@@ -10,22 +10,7 @@ the repo avoids premature abstraction. Host-specific roadmaps live in
 
 ## Active Candidates
 
-Small, finishable work that does not need a triggering event. Split by size so
-the quick wins can be picked off independently of the larger reliability work.
-Status notes reflect a goals review on 2026-06-04.
-
-### Quick wins
-
-Each is small and self-contained; several are gaps in existing features.
-
-| Area       | Item                                   | Value / acceptance                                                                                                                                                                                                                                                                              |
-| :--------- | :------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Assertions | Datasource/backend coupling assertions | Eval-time assertions that catch a dashboard/datasource pointing at a backend the host does not run. Partially scaffolded (`lib/dashboards.nix` datasource helpers, `observability/backends.nix`) but no assertion yet. Acceptance: a check in `flake/checks.nix` that fails eval on a mismatch. |
-
-The homeserver **heartbeat-degraded alert** is a quick win too, but it is
-host-specific and tracked in [`homeserver-goals.md`](homeserver-goals.md).
-
-Done: `systemd.oomd` on `main`; coredump hardening on `main`.
+Small, finishable work that does not need a triggering event.
 
 ### Larger reliability / security work
 
@@ -169,5 +154,3 @@ Scope when revisited:
 - Secret inventory with owner, trigger, and command path
 - Rotation checklist through `sops` and deploy
 - Optional Grafana visibility for secret-age metadata
-  </content>
-  </invoke>
