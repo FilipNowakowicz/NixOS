@@ -24,6 +24,13 @@ using the `capture-learning-candidate` skill. The bar is high and the act is
 cheap: a candidate is a *proposal*, reviewed later, so it must never edit
 instructions directly.
 
+A Claude `Stop` hook (`.claude/hooks/learning-nudge.sh`) gives a *one-time,
+non-binding* reflection prompt at the end of any session that edited files — it
+asks whether a lesson is worth capturing and explicitly accepts "nothing
+qualified." It never forces a candidate, fires at most once per session, and
+stays silent on pure-conversation turns. Codex Stop-event support is not assumed,
+so Codex relies on the skill + `CLAUDE.md` prompt alone for now.
+
 ## Promotion hierarchy (read before proposing a destination)
 
 A lesson written as prose only *asks* a future agent to remember. A lesson
