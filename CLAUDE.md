@@ -60,9 +60,10 @@ Home Manager, backup, and hardware identifiers.
 | `statix check .` / `deadnix .`                  | Nix lint.                                              |
 | `pre-commit run --all-files`                    | Full hook set (treefmt, shellcheck, statix, deadnix…). |
 
-Validate only what you changed: if `main` changed, build `main-ci`; if
-`homeserver-gcp` changed, build its closure; if shared profiles changed, build
-all affected hosts.
+For repo changes, use the `nix-verification-loop` skill to choose the smallest
+meaningful validation command. Validate only what you changed: if `main`
+changed, build `main-ci`; if `homeserver-gcp` changed, build its closure; if
+shared profiles changed, build all affected hosts.
 
 ## CI
 
@@ -75,6 +76,12 @@ all affected hosts.
 
 - **Claude Code** — all `.nix` changes, deployments, secrets.
 - **Gemini CLI** — documentation only (`.md` files), consistency checks, README updates.
+- **Codex CLI** — uses this same `CLAUDE.md` guidance through the repo-local
+  `.codex/config.toml` fallback configuration. Do not maintain separate
+  `CODEX.md`/`AGENTS.md` copies for this repo.
+- **Shared workflow skills** — repo-local skills live under `.agents/skills/`.
+  Codex auto-discovers them directly, and Claude discovers the same tree through
+  the `.claude/skills -> ../.agents/skills` symlink.
 - **Edit/Bash guards** — `.claude/hooks/guard-edits.sh` and
   `.claude/hooks/guard-bash.sh` (PreToolUse, wired in `.claude/settings.json`)
   are the safety net for bypass-permissions mode. The edit guard _denies_ direct
@@ -83,6 +90,32 @@ all affected hosts.
   block-device ops (`dd`/`mkfs`/`wipefs`/partitioning), LUKS format/erase, and
   recursive `rm` of a top-level path. A blocked/prompted action there is by
   design, not a failure.
+
+## Shared Workflow Skills
+
+Use these repo-local skills when the task matches:
+
+- **`nix-verification-loop`** — use for repo changes that need validation. Select
+  the smallest meaningful `scripts/validate.sh` command before broader checks.
+- **`issue-driven-development`** — use when work starts from a GitHub issue,
+  review finding, roadmap item, CI failure, or bug report. Define acceptance
+  criteria and the proving check before editing when feasible.
+- **`nix-review-ledger-batch`** — use when processing review findings, backlog
+  items, or status ledgers in small validated batches.
+- **`capture-learning-candidate`** — use at the end of non-trivial work when you
+  learned something reusable. Record it as a candidate under
+  `.agents/learning/candidates/`; never self-edit `CLAUDE.md`, skills, hooks, or
+  invariants from a lesson.
+
+## Learning Candidates
+
+Agents capture reusable lessons as reviewed candidates under
+`.agents/learning/` (see its `README.md`); a human-gated reviewer promotes the
+good ones later. Capture never changes behavior on its own. Promotion prefers
+the strongest viable form — assertion/test > hook > skill > prose — because an
+executable check is self-validating via `merge-gate`, while prose is a permanent
+context tax with no safety net. Capture is active now; the reviewer is not yet
+wired, so candidates are expected to accumulate.
 
 ## Secrets (sops-nix)
 
