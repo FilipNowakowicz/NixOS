@@ -5,7 +5,7 @@ status: open
 agent: claude
 ---
 
-# codex/* branches may be checked out in a separate worktree
+# codex/\* branches may be checked out in a separate worktree
 
 **Lesson.** A `codex/*` branch can already be checked out in a linked git
 worktree (e.g. under `/tmp/`). `git checkout <branch>` from the primary checkout

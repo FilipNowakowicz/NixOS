@@ -5,7 +5,7 @@ description: Use at the end of non-trivial work to record a reusable lesson as a
 
 # Capture Learning Candidate
 
-When work surfaces something a *future* agent should know, record it as a
+When work surfaces something a _future_ agent should know, record it as a
 candidate under `.agents/learning/candidates/`. Candidates are proposals,
 reviewed and promoted later by a human-gated reviewer — see
 `.agents/learning/README.md`. Capturing a candidate must never change agent
@@ -45,7 +45,7 @@ Prefer **fewer, higher-signal** candidates. Skipping is the default.
 4. For **Best form**, pick the strongest viable destination from the promotion
    hierarchy (assertion/test > hook > skill > prose). If you propose anything
    weaker than an executable check, justify why a stronger form is impossible. A
-   lesson that *could* be executable may not propose prose.
+   lesson that _could_ be executable may not propose prose.
 5. Mention the captured candidate's path in your work summary.
 
 ## Guardrails
