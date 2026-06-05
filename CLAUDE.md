@@ -109,6 +109,9 @@ Use these repo-local skills when the task matches:
 - **`review-learning-candidates`** — use when explicitly reviewing accumulated
   learning candidates. Start from the metadata review script, open only the
   selected batch, and promote strong candidates as checks/hooks/skills/docs.
+- **`repo-map-query`** — use before broad repo exploration when the relevant
+  files are not already obvious. Query the generated repo map, then open only
+  the top likely files and verify against source.
 
 ## Learning Candidates
 
@@ -117,8 +120,7 @@ Agents capture reusable lessons as reviewed candidates under
 good ones later. Capture never changes behavior on its own. Promotion prefers
 the strongest viable form — assertion/test > hook > skill > prose — because an
 executable check is self-validating via `merge-gate`, while prose is a permanent
-context tax with no safety net. Capture is active now; the reviewer is not yet
-wired, so candidates are expected to accumulate.
+context tax with no safety net. Capture and on-demand review are active now.
 
 ## Secrets (sops-nix)
 

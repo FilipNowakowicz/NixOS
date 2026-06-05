@@ -182,6 +182,7 @@ case "$command" in
 docs)
   bash scripts/check-doc-links.sh
   bash .agents/learning/scripts/validate-candidates.sh
+  bash .agents/repo-map/scripts/validate.sh
   ;;
 
 flake-eval)
