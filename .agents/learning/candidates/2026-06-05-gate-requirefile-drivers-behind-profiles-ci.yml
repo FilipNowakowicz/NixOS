@@ -2,9 +2,9 @@ schema: learning-candidate/v1
 id: 2026-06-05-gate-requirefile-drivers-behind-profiles-ci
 date: 2026-06-05
 expires: 2026-07-05
-status: open
+status: promoted
 route: implement-fix
-best_form: invariant
+best_form: doc
 type: policy-gap
 triggers: [requireFile, unfree driver, main-ci, displaylink, CI closure]
 targets: [flake/checks.nix, hosts/main/CLAUDE.md]

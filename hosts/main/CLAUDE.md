@@ -171,6 +171,12 @@ so the unfree blob stays out of `merge-gate`). Three manual prerequisites before
 a dock works: prefetch the `requireFile` driver blob, add a USBGuard allow rule
 for the dock, and connect it before logging into Hyprland.
 
+General rule (this is the second instance after fprintd): any unfree/unfetchable
+`requireFile` driver added to a CI-built host must be gated behind
+`!config.profiles.ci`. The `merge-gate` `main-ci` build is the executable
+backstop — an ungated blob makes that closure unfetchable and fails CI — so this
+note is just to apply the gate up front rather than discover it via a red gate.
+
 ## Recovery Notes
 
 Runbook: [`.claude/main/recovery.md`](../../.claude/main/recovery.md)
