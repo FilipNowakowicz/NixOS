@@ -30,4 +30,3 @@ packages, deploy wiring, secrets boundaries, or generated data in this repo.
 - Treat `deploy-rs` silence in non-interactive sessions as a known behavior; if
   necessary, fall back to closure build/copy/switch instructions from `CLAUDE.md`.
 - Never edit encrypted secrets directly. Use `sops`.
-

@@ -8,4 +8,3 @@ This directory is tracked repo-local Codex configuration.
   Claude Code under `.claude/hooks/`.
 - Runtime Codex state still lives in `~/.codex`; `hosts/main/backups.nix`
   already includes that directory in workstation backups.
-
