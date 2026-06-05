@@ -1,0 +1,16 @@
+schema: learning-candidate/v1
+id: 2026-06-05-codex-branches-live-in-worktrees
+date: 2026-06-05
+expires: 2026-07-05
+status: open
+agent: claude
+type: workflow-gotcha
+route: promote-doc
+best_form: doc
+dedupe_key: git-worktree:codex-branch-already-checked-out
+triggers: [git checkout codex/*, git worktree, branch already used by worktree]
+targets: [CLAUDE.md]
+evidence: [git checkout codex/shared-agent-workflows failed, git worktree list]
+observation: codex/* branches can already be checked out in linked /tmp worktrees.
+proposed_upgrade: document checking git worktree list before switching codex/* branches.
+risk: stale note may cause an unnecessary git worktree list.

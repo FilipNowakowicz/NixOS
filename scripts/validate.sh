@@ -181,6 +181,7 @@ build_package() {
 case "$command" in
 docs)
   bash scripts/check-doc-links.sh
+  bash .agents/learning/scripts/validate-candidates.sh
   ;;
 
 flake-eval)

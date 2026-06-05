@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# Validate compact learning-candidate routing metadata.
+set -euo pipefail
+
+root=${1:-.agents/learning}
+candidate_dir="$root/candidates"
+rc=0
+
+required_fields=(
+  schema
+  id
+  date
+  expires
+  status
+  agent
+  type
+  route
+  best_form
+  dedupe_key
+  triggers
+  targets
+  evidence
+  observation
+  proposed_upgrade
+  risk
+)
+
+allowed_type='^(behavior-upgrade|repo-fix|workflow-gotcha|policy-gap)$'
+allowed_route='^(implement-fix|promote-memory|promote-skill|promote-hook|promote-doc|reject)$'
+allowed_best_form='^(invariant|test|ci-gate|hook|skill|doc|none)$'
+allowed_status='^(open|promoted|rejected|superseded|expired)$'
+
+[ -d "$candidate_dir" ] || exit 0
+
+while IFS= read -r path; do
+  case "$path" in
+  *.yml | *.yaml) ;;
+  *)
+    printf 'learning candidate must be compact YAML: %s\n' "$path" >&2
+    rc=1
+    continue
+    ;;
+  esac
+
+  for field in "${required_fields[@]}"; do
+    if ! grep -Eq "^${field}:[[:space:]]*.+" "$path"; then
+      printf '%s: missing required field %s\n' "$path" "$field" >&2
+      rc=1
+    fi
+  done
+
+  if ! grep -Eq '^schema:[[:space:]]*learning-candidate/v1$' "$path"; then
+    printf '%s: schema must be learning-candidate/v1\n' "$path" >&2
+    rc=1
+  fi
+
+  if ! sed -n 's/^status:[[:space:]]*//p' "$path" | head -1 | grep -Eq "$allowed_status"; then
+    printf '%s: invalid status\n' "$path" >&2
+    rc=1
+  fi
+
+  if ! sed -n 's/^type:[[:space:]]*//p' "$path" | head -1 | grep -Eq "$allowed_type"; then
+    printf '%s: invalid type\n' "$path" >&2
+    rc=1
+  fi
+
+  if ! sed -n 's/^route:[[:space:]]*//p' "$path" | head -1 | grep -Eq "$allowed_route"; then
+    printf '%s: invalid route\n' "$path" >&2
+    rc=1
+  fi
+
+  if ! sed -n 's/^best_form:[[:space:]]*//p' "$path" | head -1 | grep -Eq "$allowed_best_form"; then
+    printf '%s: invalid best_form\n' "$path" >&2
+    rc=1
+  fi
+done < <(find "$candidate_dir" -maxdepth 1 -type f ! -name '.gitkeep' | sort)
+
+exit "$rc"

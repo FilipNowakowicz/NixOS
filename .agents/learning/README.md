@@ -12,30 +12,44 @@ work  ->  candidate lesson  ->  review  ->  promote  ->  better future agents
 
 ## Layout
 
-- `candidates/` — open candidate notes, one file per lesson
-  (`<date>-<slug>.md`). This is a staging area, not instructions; nothing here
+- `candidates/` — open candidate notes, one compact YAML file per lesson
+  (`<date>-<slug>.yml`). This is a staging area, not instructions; nothing here
   changes agent behavior until promoted.
-- `TEMPLATE.md` — the candidate format. Copy it when capturing.
+- `TEMPLATE.yml` — the compact candidate format. Copy it when capturing.
+- `scripts/index-candidates.sh` — emits a TSV index from candidate metadata.
+- `scripts/query-candidates.sh` — searches the index so agents do not read the
+  candidate archive during capture.
+- `scripts/review-candidates.sh` — groups open candidates for low-token reviewer
+  triage.
+- `scripts/validate-candidates.sh` — checks required routing fields and allowed
+  categories.
 
 ## Capture (active now)
 
-Any agent (Claude, Codex) may drop a candidate as a side effect of normal work,
-using the `capture-learning-candidate` skill. The bar is high and the act is
-cheap: a candidate is a _proposal_, reviewed later, so it must never edit
-instructions directly.
+Any agent (Claude, Codex) may drop a candidate as a side effect of high-signal
+work, using the `capture-learning-candidate` skill. The bar is high and the act
+is cheap: a candidate is a structured _proposal_, reviewed later, so it must
+never edit instructions directly.
 
-A Claude `Stop` hook (`.claude/hooks/learning-nudge.sh`) gives a _one-time,
-non-binding_ reflection prompt at the end of any session that edited files — it
-asks whether a lesson is worth capturing and explicitly accepts "nothing
-qualified." It never forces a candidate, fires at most once per session, and
-stays silent on pure-conversation turns. Codex Stop-event support is not assumed,
-so Codex relies on the skill + `CLAUDE.md` prompt alone for now.
+A shared `Stop` hook (`.claude/hooks/learning-nudge.sh`, wired for Claude in
+`.claude/settings.json` and for Codex in `.codex/hooks.json`) gives a
+_one-time, non-binding_ reflection prompt only when the transcript shows both a
+file edit and high-signal learning evidence such as a failed check, CI/deploy
+failure, merge conflict, explicit bypass, or user correction. It asks whether a
+lesson is worth capturing and explicitly accepts "nothing qualified." It never
+forces a candidate, fires at most once per session, and stays silent on
+pure-conversation or routine-success turns.
+
+Capture must not scan `.agents/learning/candidates/`. Use
+`scripts/query-candidates.sh` and open at most the likely duplicate candidates
+that the index returns.
 
 ## Promotion hierarchy (read before proposing a destination)
 
-A lesson written as prose only _asks_ a future agent to remember. A lesson
-written as an executable check _makes the mistake impossible_ and stays correct
-because it fails loudly when the repo changes underneath it. Prefer, in order:
+A candidate is routed by `type`, `route`, and `best_form`. A lesson written as
+prose only _asks_ a future agent to remember. A lesson written as an executable
+check _makes the mistake impossible_ and stays correct because it fails loudly
+when the repo changes underneath it. Prefer, in order:
 
 1. **assertion / test / CI gate** — `lib/invariants.nix`, a NixOS assertion, a
    profile/package/smoke test, a `scripts/validate.sh` check. Self-checking:
@@ -48,15 +62,28 @@ because it fails loudly when the repo changes underneath it. Prefer, in order:
 
 A candidate that _could_ be executable is not allowed to propose prose.
 
-## Review (added later — not yet wired)
+Use `route: implement-fix` for candidates that are really backlog items, such as
+"make `merge-gate` require lint." Use `promote-*` routes for agent behavior
+improvements.
 
-A reviewer agent will eventually run on demand / on a schedule to:
+## Review (active on demand)
+
+Use the `review-learning-candidates` skill when explicitly reviewing the
+candidate queue. The reviewer starts from metadata:
+
+1. run `scripts/validate-candidates.sh`,
+2. run `scripts/review-candidates.sh`,
+3. choose one small batch by `route`, `best_form`, or related target,
+4. open only the selected candidate files, and
+5. draft or implement the promotion in the strongest viable form.
+
+The reviewer should:
 
 - dedup and cluster candidates,
 - reject stale or expired ones,
-- **draft** the promotion in its strongest viable form (invariant > hook >
+- draft the promotion in its strongest viable form (invariant > hook >
   skill > prose), and
-- open a **branch/PR** for human approval — it prepares, it does not commit the
-  promotion.
+- leave promotion reviewable as a normal branch/PR.
 
-Until that exists, candidates simply accumulate here. That is intended.
+Review remains human-gated: a candidate never changes behavior until the
+promotion itself is reviewed.

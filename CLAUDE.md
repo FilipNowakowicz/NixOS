@@ -106,6 +106,9 @@ Use these repo-local skills when the task matches:
   learned something reusable. Record it as a candidate under
   `.agents/learning/candidates/`; never self-edit `CLAUDE.md`, skills, hooks, or
   invariants from a lesson.
+- **`review-learning-candidates`** — use when explicitly reviewing accumulated
+  learning candidates. Start from the metadata review script, open only the
+  selected batch, and promote strong candidates as checks/hooks/skills/docs.
 
 ## Learning Candidates
 
