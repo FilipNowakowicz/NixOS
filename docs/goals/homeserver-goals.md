@@ -34,9 +34,12 @@ now shipped (see below).
 
 ## Active Goals
 
-None. The reliability gap that motivated this document is closed; the four
-shipped items moved to the durable docs and are summarised below. New homeserver
-work, when it appears, goes here.
+One remaining item, a known gap rather than new surface (the heartbeat-degraded
+alert shipped 2026-06-05).
+
+| Goal                            | Why                                                                                                                                                                                     | Acceptance                                                                                                                                                                                             |
+| :------------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **AdGuard DNS SPOF mitigation** | AdGuard on this host is a fleet-wide DNS single point of failure (see Notes): if the VM dies, tailnet clients lose resolution, and recovery is currently a manual Tailscale-admin step. | A documented automatic fallback (e.g. a secondary resolver in the Tailscale DNS config) so resolution survives host death without intervention — or an explicit, recorded decision to accept the SPOF. |
 
 ## Completed (now in durable docs)
 
