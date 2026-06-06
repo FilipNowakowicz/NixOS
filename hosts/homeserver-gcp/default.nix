@@ -16,6 +16,7 @@ in
     ./nginx.nix
     ./adguard.nix
     ./backups.nix
+    ./restore-drill.nix
     ./heartbeat.nix
     ./status-page.nix
     ./audits.nix

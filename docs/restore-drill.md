@@ -16,6 +16,61 @@ verification contract.
 
 ---
 
+## Automated full-service drill
+
+The manual procedure below is the human exercise. Between human drills, an
+**unattended full-service drill** proves the same path on a schedule, defined in
+[`hosts/homeserver-gcp/restore-drill.nix`](../hosts/homeserver-gcp/restore-drill.nix).
+
+What it does: restores Vaultwarden, Grafana, and AdGuard Home from the B2 restic
+repository into a throwaway scratch root (`/var/lib/restore-drill/scratch`,
+wiped on every run) and then **starts each service binary against the restored
+state in its own `PrivateNetwork=true` namespace**, asserting it comes up:
+
+- **Vaultwarden** answers `GET /alive` after opening the restored `db.sqlite3`.
+- **Grafana** reports `database: ok` on `GET /api/health` after opening the
+  restored `grafana.db`.
+- **AdGuard Home** passes `--check-config` on the restored config and then
+  answers `GET /control/status` with a running DNS engine + web UI.
+
+Only after all three come up does it stamp
+`restore_drill_last_success_timestamp_seconds` to the node-exporter textfile
+collector. `set -eu` means any failed bring-up skips the stamp and leaves the
+metric stale.
+
+**It never touches live data.** Restores go to an explicit scratch `--target`;
+the `PrivateNetwork` namespace makes the scratch instances unable to collide
+with the live DNS:53 / Grafana / Vaultwarden listeners or reach the network; and
+the drill never enables, reloads, or stops any live unit. The daily restore
+canary in [`backups.nix`](../hosts/homeserver-gcp/backups.nix) is untouched and
+keeps running on its own timer — this complements it.
+
+### Triggering
+
+- **Scheduled:** `restore-drill-b2.timer` fires quarterly (1st of Jan/Apr/Jul/Oct,
+  ~05:30 + jitter, `Persistent = true`).
+- **On demand:** run it immediately on the host with
+
+  ```bash
+  sudo systemctl start restore-drill-b2.service
+  journalctl -u restore-drill-b2.service -f
+  ```
+
+  A `restore-drill: full-service restore drill PASSED` line and a fresh
+  `restore_drill_last_success_timestamp_seconds` mean success.
+
+### Where results are recorded
+
+- **Metric:** `restore_drill_last_success_timestamp_seconds`, surfaced on the
+  Grafana **Overview** dashboard as the **Restore Drill Age (d)** tile.
+- **Alert:** `RestoreDrillStale` (warning) fires if no successful drill has been
+  recorded in ~100 days (one quarter + buffer), via the shared
+  [`lib/observability-alerts.nix`](../lib/observability-alerts.nix).
+- **This file:** still records the last _manual_ drill date below; update it
+  after a human exercise even though the automated drill keeps the metric green.
+
+---
+
 ## Prerequisites
 
 ```bash

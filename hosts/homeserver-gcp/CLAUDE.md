@@ -82,6 +82,16 @@ session, fall back to a manual closure deploy: `nix build` the system closure,
   `db.sqlite3.backup`, running `PRAGMA integrity_check` on it (writes
   `vaultwarden_last_restore_test_timestamp_seconds`). A corrupt Vaultwarden
   backup fails the daily canary instead of surfacing during a real restore.
+- **Full-service restore drill** — `restore-drill-b2.service` (quarterly timer,
+  also runnable on demand via `systemctl start restore-drill-b2.service`)
+  restores Vaultwarden, Grafana, and AdGuard Home from B2 into a throwaway
+  scratch root (`/var/lib/restore-drill/scratch`) and **starts each service
+  binary against the restored state in a `PrivateNetwork=true` namespace**,
+  asserting each comes up (Vaultwarden `/alive`, Grafana `database: ok`, AdGuard
+  `/control/status`) before stamping `restore_drill_last_success_timestamp_seconds`.
+  It never touches live data and complements the daily canary; `RestoreDrillStale`
+  alerts if it has not passed in ~100 days. Defined in `restore-drill.nix`;
+  procedure in [`docs/restore-drill.md`](../../docs/restore-drill.md).
 - **Alert delivery** — Mimir/Alertmanager sends fleet alerts to the sops-backed
   `alertmanager_webhook_url`; keep it pointed at an off-host notification
   target. For the alerting/reachability stack itself (`mimir`, `prometheus`,

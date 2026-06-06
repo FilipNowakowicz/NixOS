@@ -508,6 +508,29 @@ in
               })
             ];
           })
+          (dash.statPanel {
+            id = 35;
+            title = "Restore Drill Age (d) · gcp";
+            ds = dash.mimirDS;
+            gridPos = dash.gridPos {
+              x = 0;
+              y = 39;
+              w = 5;
+              h = 5;
+            };
+            unit = "d";
+            decimals = 1;
+            graphMode = "none";
+            # Quarterly drill: green well within a quarter, orange as it ages,
+            # red past the ~100d RestoreDrillStale threshold.
+            thresholds = ageThresholds 95 100;
+            targets = [
+              (dash.target {
+                expr = "(time() - restore_drill_last_success_timestamp_seconds) / 86400";
+                legendFormat = "drill";
+              })
+            ];
+          })
           # ── Row 6: logs ───────────────────────────────────────────────
           (dash.logsPanel {
             id = 40;
@@ -515,7 +538,7 @@ in
             ds = dash.lokiDS;
             gridPos = dash.gridPos {
               x = 0;
-              y = 39;
+              y = 44;
               w = 12;
               h = 8;
             };
@@ -531,7 +554,7 @@ in
             ds = dash.lokiDS;
             gridPos = dash.gridPos {
               x = 12;
-              y = 39;
+              y = 44;
               w = 12;
               h = 8;
             };

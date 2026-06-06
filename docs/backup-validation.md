@@ -108,13 +108,27 @@ observability module deploys (`observability-alerts-lint` in `flake/checks.nix`)
 so a typo in a metric name fails the light lane instead of shipping a
 never-firing rule.
 
-### 6. Manual restore drill
+### 6. Full-service restore drill (automated + manual)
 
-Automation proves the canary file round-trips; it does not prove a human can
-recover a real service under pressure. [`docs/restore-drill.md`](restore-drill.md)
-is the quarterly procedure that restores Vaultwarden, Grafana, and AdGuard Home
-from B2 into a throwaway target and records the date and outcome. Run it on a
-schedule; the canary does not replace it.
+The canary (layer 4) proves a marker round-trips and the Vaultwarden DB opens;
+it does not prove a whole service can be brought up from restored bytes. Two
+complementary exercises close that gap:
+
+- **Automated quarterly drill** (`hosts/homeserver-gcp/restore-drill.nix`).
+  `restore-drill-b2.service` restores Vaultwarden, Grafana, and AdGuard Home
+  from B2 into a throwaway scratch root and **starts each service binary against
+  the restored state** in a `PrivateNetwork=true` namespace, asserting each
+  comes up (Vaultwarden `/alive`, Grafana `database: ok`, AdGuard
+  `/control/status`) before stamping `restore_drill_last_success_timestamp_seconds`.
+  It never touches live service data — restores target a scratch `--target` and
+  the namespace isolates the scratch instances from the live listeners and the
+  network. `RestoreDrillStale` alerts if it has not passed in ~100 days. This
+  runs unattended between human drills and does not replace the daily canary.
+- **Manual drill** ([`docs/restore-drill.md`](restore-drill.md)). The automated
+  drill cannot prove a human can recover a real service under pressure. The
+  quarterly manual procedure restores into a throwaway target and records the
+  date and outcome. Run it on a schedule; neither the canary nor the automated
+  drill replaces it.
 
 ---
 

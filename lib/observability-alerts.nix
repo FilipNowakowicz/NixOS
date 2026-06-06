@@ -9,6 +9,7 @@
 #   ResticBackupStale — backup older than 26 h (daily + 2 h buffer)
 #   ResticCheckStale  — integrity check older than 8 d (weekly + 1 d buffer)
 #   ResticRestoreCanaryStale — restore canary older than 2 d
+#   RestoreDrillStale — full-service restore drill older than ~100 d (quarterly + buffer)
 #   HeartbeatPingStale — external heartbeat ping older than 15 min
 #   VulnixScanStale   — no successful scan in 26 h (daily + 2 h buffer)
 #
@@ -75,6 +76,19 @@
             annotations = {
               summary = "Restic restore canary stale on {{ $labels.instance }}";
               description = "No successful restore canary has been recorded for more than 50 hours.";
+            };
+          }
+          {
+            # Full-service restore drill runs quarterly; alert if no successful
+            # full-service bring-up has been recorded in ~100 days (one quarter
+            # plus a generous buffer for a single skipped/failed run).
+            alert = "RestoreDrillStale";
+            expr = "(time() - restore_drill_last_success_timestamp_seconds) / 86400 > 100";
+            for = "1h";
+            labels.severity = "warning";
+            annotations = {
+              summary = "Full-service restore drill stale on {{ $labels.instance }}";
+              description = "No successful full-service restore drill (Vaultwarden + Grafana + AdGuard Home brought up from B2) in more than 100 days. Check restore-drill-b2.service.";
             };
           }
           {
