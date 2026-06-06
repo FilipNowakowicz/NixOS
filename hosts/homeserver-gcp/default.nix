@@ -20,6 +20,7 @@ in
     ./status-page.nix
     ./audits.nix
     ./hardening.nix
+    ./github-runner.nix
     ./tailscale-cert.nix
     ./grafana.nix
     ./dashboards.nix
@@ -237,6 +238,10 @@ in
       # Read at runtime by heartbeat-ping.service via LoadCredential; populate
       # with `sops hosts/homeserver-gcp/secrets/secrets.yaml` before deploying.
       heartbeat_ping_url = { };
+      # Fine-grained PAT used only to register the GitHub Actions deploy runner.
+      # Populate with `sops hosts/homeserver-gcp/secrets/secrets.yaml` before
+      # enabling github-runner-homeserver-deploy.service.
+      github_runner_homeserver_deploy_token = { };
     };
   };
 
