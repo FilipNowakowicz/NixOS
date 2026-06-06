@@ -1,0 +1,17 @@
+schema: learning-candidate/v1
+id: 2026-06-06-deploy-rs-full-checks-block-host-deploy
+date: 2026-06-06
+expires: 2026-07-06
+status: open
+
+route: promote-skill
+best_form: skill
+
+evidence: ["deploy '.#homeserver-gcp' failed before activation on checks.x86_64-linux.invariants-main-ci, then checks.x86_64-linux.pre-commit; after fixing those full-flake checks, deploy confirmed and smoke-homeserver-gcp passed"]
+observation: deploy-rs host deploys in this repo run broad flake checks, so a homeserver-gcp deploy can be blocked by unrelated main-ci invariants or repo-wide pre-commit failures before any remote activation starts.
+proposed_upgrade: update nix-verification-loop or deploy guidance to treat early deploy-rs failures as full-flake validation blockers first, then retry the host deploy after the specific check passes.
+agent: codex
+type: workflow-gotcha
+dedupe_key: deploy-rs:full-flake-checks-block-host-deploy
+triggers: ["deploy '.#homeserver-gcp'", "Failed to check deployment", "checks.x86_64-linux.pre-commit", "checks.x86_64-linux.invariants-main-ci"]
+targets: [".agents/skills/nix-verification-loop/SKILL.md", "CLAUDE.md"]

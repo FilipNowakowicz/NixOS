@@ -1,0 +1,18 @@
+schema: learning-candidate/v1
+id: 2026-06-05-main-ci-usbguard-invariant-blocks-light
+date: 2026-06-05
+expires: 2026-07-05
+status: open
+
+route: implement-fix
+best_form: invariant
+
+evidence: ["bash scripts/validate.sh light in /tmp/nix-systemd-failure-delivery -> Invariant check failed for 'main-ci': main USBGuard stays deny-default: services.usbguard.enable must be true"]
+observation: main-ci currently fails the shared main USBGuard deny-default invariant, which blocks the light validation lane even for unrelated homeserver changes.
+proposed_upgrade: either keep USBGuard enabled in the main-ci closure or split the invariant so CI-specific disabling is explicit and separately justified.
+
+agent: codex
+type: repo-fix
+dedupe_key: validation:main-ci-usbguard-light
+triggers: ["bash scripts/validate.sh light", "checks.x86_64-linux.invariants-main-ci"]
+targets: ["flake/checks.nix", "hosts/main", "modules/nixos/profiles/security.nix"]

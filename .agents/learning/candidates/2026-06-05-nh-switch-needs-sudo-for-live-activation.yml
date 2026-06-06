@@ -1,0 +1,17 @@
+schema: learning-candidate/v1
+id: 2026-06-05-nh-switch-needs-sudo-for-live-activation
+date: 2026-06-05
+expires: 2026-07-05
+status: open
+
+route: promote-skill
+best_form: skill
+
+evidence: ["nh os switch --hostname main . -> build succeeded, activation failed: sudo: a terminal is required to read the password; sudo -n true -> sudo_status=1; systemctl is-enabled usbguard.service -> not-found"]
+observation: non-interactive Codex sessions can build a main generation but fail live activation when sudo is not cached or passwordless, leaving services such as usbguard absent from the current generation.
+proposed_upgrade: update nix-verification-loop or host workflow guidance to require checking sudo availability before claiming live activation, and to report a user-authenticated switch as the remaining step when sudo is unavailable.
+agent: codex
+type: workflow-gotcha
+dedupe_key: activation:nh-switch-noninteractive-sudo-required
+triggers: ["nh os switch --hostname main .", "turn service back on", "live host activation"]
+targets: [".agents/skills/nix-verification-loop/SKILL.md", "hosts/main/CLAUDE.md"]

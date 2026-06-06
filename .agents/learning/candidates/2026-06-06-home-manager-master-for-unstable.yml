@@ -1,0 +1,18 @@
+schema: learning-candidate/v1
+id: 2026-06-06-home-manager-master-for-unstable
+date: 2026-06-06
+expires: 2026-07-06
+status: open
+
+route: promote-doc
+best_form: doc
+
+evidence: ["flake.nix:5 nixpkgs.url = github:NixOS/nixpkgs/nixos-unstable", "flake.nix:13 home-manager.url = github:nix-community/home-manager/master", "nix eval --json .#nixosConfigurations.main.config.home-manager.users.user.home.version -> full=26.11 isReleaseBranch=false", "bash scripts/validate.sh flake-eval -> all checks passed"]
+observation: When this flake tracks nixos-unstable, Home Manager release branches can lag and trigger release mismatch warnings; using home-manager/master keeps evaluated Home Manager aligned with the rolling NixOS release.
+proposed_upgrade: Document the pairing rule near flake inputs or operations docs: nixos-unstable pairs with Home Manager master; stable nixpkgs release branches pair with matching Home Manager release branches.
+
+agent: codex
+type: workflow-gotcha
+dedupe_key: flake-inputs:home-manager-master-for-nixos-unstable
+triggers: ["Home Manager version mismatch warning", "flake.nix home-manager input", "nixpkgs nixos-unstable"]
+targets: ["flake.nix", "docs/operations.md", "CLAUDE.md"]

@@ -61,6 +61,7 @@ let
     "/run/current-system/sw/bin/bootctl status --no-pager"
     "/run/current-system/sw/bin/efibootmgr -b [0-9A-F][0-9A-F][0-9A-F][0-9A-F] -B"
     "/run/current-system/sw/bin/nix-gc-14d"
+    "/run/current-system/sw/bin/nixos-switch-main"
     "/run/current-system/sw/bin/systemctl start btrbk-local.service"
     "/run/current-system/sw/bin/systemctl start restic-backups-local.service"
     "/run/current-system/sw/bin/systemctl start restic-check-local.service"
