@@ -242,6 +242,17 @@ in
       # Populate with `sops hosts/homeserver-gcp/secrets/secrets.yaml` before
       # enabling github-runner-homeserver-deploy.service.
       github_runner_homeserver_deploy_token = { };
+      # SSH private key the deploy runner uses to reach this host. The runner
+      # lives on homeserver-gcp and the deploy workflow runs deploy-rs +
+      # systemctl checks over `ssh user@homeserver-gcp` (a self-connection), so
+      # the runner's `user` account needs an authorized identity. Placed at the
+      # default identity path; the matching public key is authorized for `user`
+      # in ./github-runner.nix.
+      homeserver_selfdeploy_ssh_key = {
+        path = "/home/user/.ssh/id_ed25519";
+        owner = "user";
+        mode = "0600";
+      };
     };
   };
 
