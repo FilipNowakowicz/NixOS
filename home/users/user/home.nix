@@ -258,6 +258,7 @@ in
       codexLatest
       claudeLatest
       launcher
+      lazyactions
 
       (writeShellApplication {
         name = "firefox-private";

@@ -80,6 +80,21 @@
     let
       defaultSystem = "x86_64-linux";
 
+      lazyactionsOverlay = _: prev: {
+        lazyactions = prev.buildGoModule {
+          pname = "lazyactions";
+          version = "unstable";
+          src = prev.fetchFromGitHub {
+            owner = "nnnkkk7";
+            repo = "lazyactions";
+            rev = "main";
+            hash = "sha256-G2Rsu59Qbq9Nm0CSPbieAZHHCZVdDkdUNe3wi0tq8Po=";
+          };
+          vendorHash = "sha256-cDLLpU0xsv57yE2cOMddcf2/mHsmGAe69pbNYGSL1XE=";
+          subPackages = [ "cmd/lazyactions" ];
+        };
+      };
+
       libfprintGoodixOverlay =
         final: prev:
         let
@@ -105,7 +120,10 @@
       pkgs = import nixpkgs {
         system = defaultSystem;
         config.allowUnfree = true;
-        overlays = [ libfprintGoodixOverlay ];
+        overlays = [
+          lazyactionsOverlay
+          libfprintGoodixOverlay
+        ];
       };
 
       invariants = import ./lib/invariants.nix { inherit lib pkgs; };
@@ -118,6 +136,7 @@
           nixpkgs
           lib
           hostRegistry
+          lazyactionsOverlay
           libfprintGoodixOverlay
           ;
         inherit (inputs)
