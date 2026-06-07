@@ -2,7 +2,7 @@ schema: learning-candidate/v1
 id: 2026-06-07-systemd-run-scope-rejects-namespacing
 date: 2026-06-07
 expires: 2026-12-07
-status: open
+status: promoted
 route: promote-doc
 best_form: doc
 evidence: [115962b on main, hosts/homeserver-gcp/restore-drill.nix, fixes PR #103/issue #102]
