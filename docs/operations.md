@@ -235,6 +235,10 @@ bash scripts/check-host-drift.sh homeserver-gcp
 ssh user@homeserver-gcp 'systemctl --failed --no-pager'
 ```
 
+`check-host-drift.sh` uses the lightweight `drift-inventory-data` package by
+default, so deploy verification does not build closure-size metadata on the
+small homeserver.
+
 Rollback is the normal deploy-rs rollback path during activation. If a bad
 generation is confirmed after activation, use the bootloader or
 `/run/current-system/bin/switch-to-configuration` rollback path over SSH, then

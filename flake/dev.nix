@@ -100,6 +100,16 @@ in
       allNixosConfigs = lib.intersectAttrs hostRegistry ciNixosConfigs;
     };
 
+    drift-inventory-data = import ../packages/inventory-data.nix {
+      inherit
+        lib
+        pkgs
+        hostRegistry
+        ;
+      allNixosConfigs = lib.intersectAttrs hostRegistry ciNixosConfigs;
+      includeClosureSizes = false;
+    };
+
     tailscale-acl = tailscaleAclPackage;
 
     installer-iso =
