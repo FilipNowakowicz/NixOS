@@ -2,7 +2,7 @@ schema: learning-candidate/v1
 id: 2026-06-07-sops-key-newline-treefmt
 date: 2026-06-07
 expires: 2026-09-05
-status: open
+status: superseded
 route: promote-doc
 best_form: ci-gate
 evidence: [pr-#104; self-ssh failed "error in libcrypto: unsupported"/publickey until key's trailing newline restored; CI lint run 27076973050 failed on `nix fmt --fail-on-change` reformatting hosts/homeserver-gcp/secrets/secrets.yaml, green after `nix fmt`]

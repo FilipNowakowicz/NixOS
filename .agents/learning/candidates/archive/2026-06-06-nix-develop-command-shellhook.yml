@@ -2,7 +2,7 @@ schema: learning-candidate/v1
 id: 2026-06-06-nix-develop-command-shellhook
 date: 2026-06-06
 expires: 2026-09-04
-status: open
+status: promoted
 route: promote-doc
 best_form: doc
 evidence: [command `nix develop --command sh -c 'echo COMMAND_WORKS'` exited 0 without printing the command output; `.github/workflows/deploy-homeserver.yml` uses `nix shell nixpkgs#deploy-rs -c deploy` instead]
