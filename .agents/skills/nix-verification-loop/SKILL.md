@@ -56,3 +56,14 @@ packages, deploy wiring, secrets boundaries, or generated data in this repo.
   env, `cd <relative>` echoes the resolved path into the capture and corrupts
   it. Rewrite as `CDPATH='' cd -- …` — the guard is preserved and SC1007 stops
   firing.
+- **`nix build`/`flake check` only proves a transient unit's definition
+  evaluates, not that systemd accepts it at runtime.** Sandbox/namespacing
+  directives like `PrivateNetwork=` are service-only — `systemd-run --scope`
+  rejects them with "Unknown assignment" at runtime even though the Nix
+  expression type-checks fine (see `hosts/homeserver-gcp/restore-drill.nix`'s
+  `runIsolated`, which uses `--pipe --wait` service units instead). Transient
+  units also start with systemd's default `PATH` and without the env vars a
+  NixOS module would normally inject, so `cat`/`${pkg}/bin/foo` invocations can
+  fail in ways a build never surfaces. Any drill or check that spawns
+  `systemd-run` units must be smoke-tested by actually starting it on a live
+  host.

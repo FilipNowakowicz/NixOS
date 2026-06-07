@@ -119,7 +119,9 @@ complementary exercises close that gap:
   from B2 into a throwaway scratch root and **starts each service binary against
   the restored state** in a `PrivateNetwork=true` namespace, asserting each
   comes up (Vaultwarden `/alive`, Grafana `database: ok`, AdGuard
-  `/control/status`) before stamping `restore_drill_last_success_timestamp_seconds`.
+  `/login.html` plus a loopback `dig` query — `/control/*` is auth-gated, so an
+  unauthenticated probe must use the public web route and a direct DNS query
+  instead) before stamping `restore_drill_last_success_timestamp_seconds`.
   It never touches live service data — restores target a scratch `--target` and
   the namespace isolates the scratch instances from the live listeners and the
   network. `RestoreDrillStale` alerts if it has not passed in ~100 days. This

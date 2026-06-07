@@ -290,6 +290,29 @@ Run it locally when changing `lib/acl.nix` or registry-owned Tailscale metadata:
 bash scripts/check-tailscale-acl-drift.sh
 ```
 
+Pushes to `main` that touch the ACL generator, host registry, workflow, or ACL
+scripts run the same workflow in apply mode: it applies the rendered `tagOwners`
+and `acls` to the live policy, then runs the drift check again. The daily
+scheduled run remains detect-only so out-of-band console edits fail loudly
+instead of being silently overwritten.
+
+When the check reports drift, apply the rendered artifact with
+`scripts/apply-tailscale-acl.sh` rather than pasting it into the admin console
+or POSTing it directly — the rendered artifact contains only `{tagOwners,
+acls}`, and a raw POST replaces the _entire_ live policy file, silently wiping
+sections the generator does not own (`ssh`, `autoApprovers`, `nodeAttrs`,
+`groups`, ...). The script fetches the live policy, overlays just `tagOwners`
+and `acls` from the rendered artifact, and POSTs the merged result back guarded
+by the live policy's `ETag`:
+
+```bash
+bash scripts/apply-tailscale-acl.sh --dry-run   # show the merged diff only
+bash scripts/apply-tailscale-acl.sh             # fetch, merge, and apply
+```
+
+Requires `TAILSCALE_API_KEY` (read+write ACL access) and `TAILSCALE_TAILNET` in
+the environment, same as the drift check.
+
 ## Validation
 
 Use the narrowest check that covers the files changed.
@@ -380,6 +403,13 @@ replaced with `nix-index`, and `comma` is available for one-off commands:
 
 Use `comma` for temporary tools you do not want to add to the permanent package
 set.
+
+`nix develop --command <cmd>` is **not** a reliable non-interactive wrapper
+here: the default dev shell's `shellHook` unconditionally execs `zsh`, so the
+wrapped command's own output gets swallowed. For automation (CI steps, deploy
+scripts), reach for a flake app/package directly or `nix shell nixpkgs#tool -c
+<cmd>` instead — see `nix shell nixpkgs#deploy-rs -c deploy` in the [Automated
+Homeserver Deploy](#automated-homeserver-deploy) workflow.
 
 ## Desktop Apps
 

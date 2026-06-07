@@ -1,0 +1,13 @@
+schema: learning-candidate/v1
+id: 2026-06-07-tailscale-acl-apply-counterpart
+date: 2026-06-07
+expires: 2026-12-07
+status: promoted
+route: implement-fix
+best_form: ci-gate
+evidence: [scripts/check-tailscale-acl-drift.sh uses `jq -S '{tagOwners, acls}'` on both sides; rendered .#packages.x86_64-linux.tailscale-acl contained only acls+tagOwners]
+observation: repo has an ACL drift detector but no apply counterpart; rendered artifact carries only acls+tagOwners, so a raw POST to the Tailscale ACL endpoint replaces the whole policy and silently wipes other live sections (ssh, autoApprovers, nodeAttrs, groups)
+proposed_upgrade: add scripts/apply-tailscale-acl.sh that fetches live policy, merges in only .acls and .tagOwners from the rendered artifact, then POSTs back
+type: policy-gap
+dedupe_key: tailscale-acl:no-merge-safe-apply-counterpart
+targets: [scripts/apply-tailscale-acl.sh, scripts/check-tailscale-acl-drift.sh]

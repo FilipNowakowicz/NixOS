@@ -2,7 +2,7 @@ schema: learning-candidate/v1
 id: 2026-06-06-adguard-health-probe-auth-and-private-netns
 date: 2026-06-06
 expires: 2026-12-06
-status: open
+status: promoted
 
 route: promote-doc
 best_form: doc
