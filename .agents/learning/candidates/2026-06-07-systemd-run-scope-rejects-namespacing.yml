@@ -1,0 +1,10 @@
+schema: learning-candidate/v1
+id: 2026-06-07-systemd-run-scope-rejects-namespacing
+date: 2026-06-07
+expires: 2026-12-07
+status: open
+route: promote-doc
+best_form: doc
+evidence: [115962b on main, hosts/homeserver-gcp/restore-drill.nix, fixes PR #103/issue #102]
+observation: systemd-run --scope -p PrivateNetwork=true fails at runtime with "Unknown assignment: PrivateNetwork=true" — namespacing/sandbox properties only apply to transient *service* units, not *scope* units; this type-checks fine in Nix and only surfaces by starting the unit on a live host. Same live-only blast radius hit two more runtime-only bugs in one drill: a raw `${pkg}/bin/foo` invocation missing an env var the NixOS module normally injects (WEB_VAULT_FOLDER), and `cat: command not found` (exit 127) because transient systemd-run units get systemd's default PATH, not the caller's, so only nix-store-referenced binaries resolve.
+proposed_upgrade: Add a doc note (e.g. nix-verification-loop or a systemd-transient-unit gotcha section) that any drill/check spawning transient units via systemd-run must be smoke-tested by actually starting it on a live host — `nix build`/`flake check` only proves the unit *definition* evaluates, not that systemd accepts the runtime properties (--scope vs service-only directives like PrivateNetwork=) or that the invoked binary has the env/PATH it gets only inside its normal NixOS-module-managed service context.
