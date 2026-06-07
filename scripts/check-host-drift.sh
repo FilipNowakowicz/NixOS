@@ -53,13 +53,15 @@ host_json="$(
   read -r deployable
   read -r deploy_user
   read -r expected_ports_json
+  read -r expected_extra_ports_json
 } < <(jq -r '
   .drift.tailscaleTag // "",
   .drift.tailnetFQDN // "",
   (.drift.strictTCPPortSet // false | tostring),
   (.deployable // false | tostring),
   .deployUser // "",
-  (.drift.tcpPorts // [] | tojson)
+  (.drift.tcpPorts // [] | tojson),
+  (.drift.expectedExtraTCPPorts // [] | tojson)
 ' <<<"$host_json")
 mapfile -t units < <(jq -r '.drift.systemdUnits // [] | .[]' <<<"$host_json")
 
@@ -151,19 +153,33 @@ units_text="$(section_b64 units | base64 -d)"
 
 actual_tags_json="$(jq -c '[.Self.Tags[]? | sub("^tag:"; "")] | unique' <<<"$tailscale_json")"
 actual_fqdn="$(jq -r '(.Self.DNSName // "") | rtrimstr(".")' <<<"$tailscale_json")"
+# The host's own tailnet IPs. tailscaled binds dynamic WireGuard sockets here on
+# ephemeral high ports that change every restart, so they can never be expressed
+# as a static expected-port set; drop any listener bound to a tailnet IP.
+ts_self_ips_json="$(jq -c '[.Self.TailscaleIPs[]? // empty]' <<<"$tailscale_json")"
 actual_ports_json="$(
   awk '
     $1 == "LISTEN" {
       local = $4
-      if (local ~ /^127\.0\.0\.1:/) next
-      if (local ~ /^\[::1\]:/) next
+      # Split "addr:port": the port follows the final colon, the rest is the
+      # bind address (IPv6 addresses arrive bracketed, e.g. [fd7a::1]:22000).
       port = local
       sub(/^.*:/, "", port)
-      if (port ~ /^[0-9]+$/) print port
+      addr = local
+      sub(/:[^:]*$/, "", addr)
+      gsub(/^\[|\]$/, "", addr)
+      if (port ~ /^[0-9]+$/) print addr "\t" port
     }
-  ' <<<"$ports_text" | sort -n | uniq | jq -Rcs '
-    split("\n")
-    | map(select(length > 0) | tonumber)
+  ' <<<"$ports_text" | jq -Rcs --argjson tsips "$ts_self_ips_json" '
+    [ split("\n")[]
+      | select(length > 0)
+      | (split("\t")) as $f
+      | { addr: $f[0], port: ($f[1] | tonumber) }
+      | select(.addr != "127.0.0.1" and .addr != "::1")
+      | select((.addr | IN($tsips[])) | not)
+      | .port
+    ]
+    | unique
   '
 )"
 
@@ -199,11 +215,12 @@ if [[ $strict_tcp_port_set == "true" ]]; then
   extra_ports_json="$(
     jq -nc \
       --argjson expected "$expected_ports_json" \
+      --argjson allowed "$expected_extra_ports_json" \
       --argjson actual "$actual_ports_json" \
-      '$actual - $expected'
+      '$actual - $expected - $allowed'
   )"
   if [[ "$(jq 'length' <<<"$extra_ports_json")" -gt 0 ]]; then
-    record_failure "unexpected non-loopback listening TCP ports: $(jq -r 'join(", ")' <<<"$extra_ports_json"); review host service modules or manual changes"
+    record_failure "unexpected non-loopback listening TCP ports: $(jq -r 'join(", ")' <<<"$extra_ports_json"); add to drift.expectedExtraTCPPorts if intended, else review host service modules or manual changes"
   fi
 fi
 
