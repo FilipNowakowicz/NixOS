@@ -7,6 +7,14 @@ on:
         description: Type homeserver-gcp to deploy the homeserver
         required: true
         type: string
+      validation_scope:
+        description: Use fast only for small workflow/retry fixes after a full green run on the same commit lineage
+        required: true
+        default: full
+        type: choice
+        options:
+          - full
+          - fast
 
 permissions:
   contents: read
@@ -50,12 +58,15 @@ jobs:
         run: bash scripts/validate.sh flake-eval
 
       - name: Lightweight checks
+        if: ${{ inputs.validation_scope == 'full' }}
         run: bash scripts/validate.sh light
 
       - name: Build homeserver-gcp closure
+        if: ${{ inputs.validation_scope == 'full' }}
         run: bash scripts/validate.sh host homeserver-gcp
 
       - name: Build homeserver smoke test when KVM is available
+        if: ${{ inputs.validation_scope == 'full' }}
         run: bash scripts/validate.sh smoke-homeserver-gcp
 
   # Tailnet-only work: reach the host to activate the closure and verify it.
@@ -86,7 +97,7 @@ jobs:
         run: nix shell nixpkgs#deploy-rs -c deploy --skip-checks '.#homeserver-gcp'
 
       - name: Check registry-backed host drift
-        run: nix shell nixpkgs#coreutils nixpkgs#gawk nixpkgs#gnugrep nixpkgs#gnused nixpkgs#jq -c bash scripts/check-host-drift.sh homeserver-gcp
+        run: bash scripts/check-host-drift.sh homeserver-gcp
 
       - name: Check failed units
         run: |

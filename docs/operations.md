@@ -217,8 +217,13 @@ ssh user@homeserver-gcp 'systemctl status github-runner-homeserver-deploy.servic
 ```
 
 After the runner appears online in GitHub, trigger **Deploy homeserver-gcp** from
-the Actions UI on the `main` branch and enter `homeserver-gcp` as the
-confirmation input. The job runs:
+the Actions UI on the `main` branch, enter `homeserver-gcp` as the confirmation
+input, and leave `validation_scope` at `full` for normal deploys. Use
+`validation_scope=fast` only for small workflow or verification retries after a
+full green run on the same commit lineage; it keeps flake evaluation but skips
+the broad light/closure/smoke gates.
+
+The full job runs:
 
 ```bash
 bash scripts/validate.sh flake-eval

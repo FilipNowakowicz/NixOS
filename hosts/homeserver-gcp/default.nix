@@ -59,6 +59,8 @@ in
     # every terminfo package into the server closure.
     pkgs.alacritty.terminfo
     pkgs.foot.terminfo
+    pkgs.gawk
+    pkgs.jq
     pkgs.kitty.terminfo
     pkgs.wezterm.terminfo
   ];
