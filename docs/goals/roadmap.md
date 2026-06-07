@@ -11,13 +11,7 @@ Host-specific MacBook follow-ups live in
 
 ## Active Candidates
 
-Small, finishable work that does not need a new external trigger. Tracked as
-GitHub issues once ready to pick up rather than duplicated here — see
-[open issues](https://github.com/FilipNowakowicz/nixos-config/issues) for
-current work (e.g. #120, CVE remediation triage cadence).
-
-Settled: default Firefox profile management — won't-do, Firefox Sync already
-covers it; the throwaway `firefox-private` profile remains for isolation.
+No active candidates.
 
 ---
 
