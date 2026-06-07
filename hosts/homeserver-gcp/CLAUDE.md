@@ -65,6 +65,17 @@ limited to this repo with repository `Administration` read/write before
 deploying the runner; the workflow runs validation, deploy-rs, drift, and
 failed-unit checks. It does not automate `main` rollout.
 
+> **Triggering this workflow is root-equivalent on `homeserver-gcp`.** The
+> runner executes as `user`, which holds broad passwordless sudo here (see the
+> Security Preferences in the repo `CLAUDE.md`), and the deploy step runs
+> `switch-to-configuration` as root. Anyone who can dispatch the workflow — i.e.
+> push to `main` and start it — can therefore execute arbitrary root code on
+> this host. Keep dispatch gated to `main` (already enforced via the `if:`
+> guard and the `homeserver-gcp-deploy` environment) and treat write access to
+> `main` accordingly. The registration token also being a repo-Administration
+> PAT means a leak of the runner token is independently host-compromising;
+> rotate it if exposure is suspected.
+
 ## Gotchas
 
 - **sops fails on first boot if the host key was not copied into the installed root** — Tailscale won't join, SSH won't work over Tailscale. Recover via GCE serial console or `gcloud compute ssh` (project SSH keys bypass tailnet-only firewall during recovery), then install the encrypted repo key at `/etc/ssh/ssh_host_ed25519_key` and redeploy.
