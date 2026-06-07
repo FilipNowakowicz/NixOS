@@ -133,13 +133,17 @@ nix run .#inventory-json | jq -S '
 ' > docs/samples/inventory.sample.json
 
 nix run .#tailscale-acl | jq -S . > docs/samples/tailscale-acl.sample.json
+
+nix fmt  # treefmt reformats the generated JSON to the repo's canonical style
 ```
 
 The `jq` filter matches store-hash and tailnet-suffix _patterns_, not this
 fleet's specific values, so running it again — here or against a fork with
-different real identifiers — produces the same sanitized shape. Both commands
-are checked by `lib-scan-plaintext-secrets` (`bash scripts/validate.sh light`),
-which scans every tracked file for credential-shaped strings.
+different real identifiers — produces the same sanitized shape. The trailing
+`nix fmt` keeps the committed JSON identical to what `nix fmt -- --fail-on-change`
+expects in CI. Both commands are checked by `lib-scan-plaintext-secrets`
+(`bash scripts/validate.sh light`), which scans every tracked file for
+credential-shaped strings.
 
 ## Star Growth Checklist
 
