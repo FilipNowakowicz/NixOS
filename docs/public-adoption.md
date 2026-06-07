@@ -92,6 +92,59 @@ High-signal artifacts make the repo easier to link:
 - screenshots only for real UI outputs such as `control-center`, not as the
   main selling point.
 
+## Sample Artifacts
+
+Two generated, sanitized samples are committed under `docs/samples/` so
+visitors can see the shape of this fleet's generated outputs without cloning
+and building:
+
+- [`docs/samples/inventory.sample.json`](samples/inventory.sample.json) — one
+  full host entry from `nix run .#inventory-json`, including the `drift` and
+  `health` sub-objects.
+- [`docs/samples/tailscale-acl.sample.json`](samples/tailscale-acl.sample.json) —
+  the complete `nix run .#tailscale-acl` output.
+
+### Why sanitize, and how it stays reproducible
+
+`apps.tailscale-acl` only ever emits `tagOwners` and tag-to-tag `acls` (see
+[`docs/tailscale-acl.md`](tailscale-acl.md)) — no hostnames, keys, or per-node
+identifiers — so its sample is committed verbatim from `nix run .#tailscale-acl`.
+
+`apps.inventory-json` does carry fleet-private values: real Nix store hash
+prefixes in `closurePath` and this fleet's real Tailscale tailnet suffix in
+`drift.tailnetFQDN` (see [`docs/host-registry.md`](host-registry.md)). Those are
+the only two value shapes in the export that are private; everything else
+(`name`, `system`, `services`, `health`, port lists, …) is already either public
+fleet structure or copied from `lib/host-registry.nix`'s own `example.ts.net`
+convention.
+
+The sample is regenerated with a value-pattern substitution, not a hand edit,
+so it stays reproducible against any clone regardless of that clone's real
+identifiers:
+
+```bash
+nix run .#inventory-json | jq -S '
+  .hosts |= [.[] | select(.name == "homeserver-gcp")]
+  | .hosts |= map(
+      .closurePath |= sub("/nix/store/[a-z0-9]{32}-";
+                          "/nix/store/00000000000000000000000000000000-")
+      | .drift.tailnetFQDN |= sub("\\.tail[0-9a-f]+\\.ts\\.net$"; ".example.ts.net")
+    )
+' > docs/samples/inventory.sample.json
+
+nix run .#tailscale-acl | jq -S . > docs/samples/tailscale-acl.sample.json
+
+nix fmt  # treefmt reformats the generated JSON to the repo's canonical style
+```
+
+The `jq` filter matches store-hash and tailnet-suffix _patterns_, not this
+fleet's specific values, so running it again — here or against a fork with
+different real identifiers — produces the same sanitized shape. The trailing
+`nix fmt` keeps the committed JSON identical to what `nix fmt -- --fail-on-change`
+expects in CI. Both commands are checked by `lib-scan-plaintext-secrets`
+(`bash scripts/validate.sh light`), which scans every tracked file for
+credential-shaped strings.
+
 ## Star Growth Checklist
 
 Engineering work:

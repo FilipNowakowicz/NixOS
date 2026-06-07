@@ -10,7 +10,10 @@ This is not a generic starter template. It is working, multi-host personal
 infrastructure, published to a quality bar that documents the patterns, checks,
 and operational boundaries needed to keep real machines reproducible over time.
 The reusable building blocks are exposed through stable flake outputs; the host
-assemblies stay personal and hardware-bound.
+assemblies stay personal and hardware-bound. For the fleet topology in one
+glance, jump to the [System At A Glance](#system-at-a-glance) diagram; for what
+to take from this repo, start at [Reusable Outputs](#reusable-outputs) and
+[What To Copy First](#what-to-copy-first) below.
 
 ---
 
@@ -43,8 +46,20 @@ the host directories:
 4. `lib/hosts.nix` and `lib/acl.nix` as a pattern for keeping deploy metadata,
    inventory, and Tailscale policy in one source of truth.
 
+Want to see what the registry pattern produces before adopting it? Two
+generated, sanitized samples are committed and reproducible from a clean clone:
+[`docs/samples/inventory.sample.json`](docs/samples/inventory.sample.json)
+(`nix run .#inventory-json`) and
+[`docs/samples/tailscale-acl.sample.json`](docs/samples/tailscale-acl.sample.json)
+(`nix run .#tailscale-acl`) — see
+[`docs/public-adoption.md`](docs/public-adoption.md#sample-artifacts) for the
+exact regeneration command.
+
 Treat `hosts/` as reference implementation: disk layouts, hardware configs,
-hostnames, secrets, and deploy targets are intentionally personal.
+hostnames, secrets, and deploy targets are intentionally personal. Issues and
+PRs are welcome for the reusable pieces above; treat anything under `hosts/` as
+read-only reference rather than something this project will adapt to your
+hardware — see [Support Boundary](#support-boundary).
 
 ---
 
