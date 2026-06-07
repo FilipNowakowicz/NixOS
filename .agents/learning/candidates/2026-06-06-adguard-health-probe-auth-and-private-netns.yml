@@ -1,0 +1,13 @@
+schema: learning-candidate/v1
+id: 2026-06-06-adguard-health-probe-auth-and-private-netns
+date: 2026-06-06
+expires: 2026-12-06
+status: open
+
+route: promote-doc
+best_form: doc
+
+evidence: [hosts/homeserver-gcp/restore-drill.nix, adguardhome-source:internal/home/authhttp.go:312-323-public-routes-list, issue-#102]
+observation: AdGuard /control/* API is auth-gated (302 to /login.html unauth); only /login.html, /assets/*, /control/login, /control/install/* are public — so an unauth health probe of /control/status silently fails. A correct bring-up proof uses public /login.html (HTTP server up) plus a direct dig @127.0.0.1:53 (DNS engine up). Restored services can be started safely alongside live ones via systemd-run --scope -p PrivateNetwork=true, which gives each a loopback-only netns so the live DNS:53 listener cannot collide.
+proposed_upgrade: If a second service restore/health check is added, document the PrivateNetwork=true scratch-bring-up pattern and AdGuard public-route list in docs/backup-validation.md so the auth-gating gotcha is not re-hit.
+type: workflow-gotcha
