@@ -25,6 +25,27 @@ assemblies stay personal and hardware-bound.
 | `lib/hosts.nix` + `lib/acl.nix`     | Host registry and generated Tailscale ACLs from one fleet source of truth.                   |
 | `checks` + `tests`                  | Public invariants for hardening, persistence, backups, registry drift, and module contracts. |
 
+The public adoption plan tracks what is reusable today, what still needs
+examples, and what should remain personal reference infrastructure:
+[`docs/public-adoption.md`](docs/public-adoption.md).
+
+## What To Copy First
+
+If you are borrowing from this repo, start with the reusable outputs instead of
+the host directories:
+
+1. `nixosModules.services-hardened` if you want a tested systemd hardening
+   baseline for existing NixOS services.
+2. `nixosModules.observability-stack` and `observability-client` if you want a
+   declarative single-node LGTM stack with remote collectors.
+3. `homeModules.runtime-theme` if your desktop stack is Hyprland, Waybar, Kitty,
+   Mako, and Hyprlock.
+4. `lib/hosts.nix` and `lib/acl.nix` as a pattern for keeping deploy metadata,
+   inventory, and Tailscale policy in one source of truth.
+
+Treat `hosts/` as reference implementation: disk layouts, hardware configs,
+hostnames, secrets, and deploy targets are intentionally personal.
+
 ---
 
 ## System At A Glance
@@ -327,6 +348,7 @@ cache but only publishes on protected `main`.
 - [Tailscale ACLs](docs/tailscale-acl.md) — metadata contract, validation, and drift detection.
 - [Theming](docs/theme.md) — runtime color contract and public module usage.
 - [Neovim](docs/neovim.md) — editor module layout and generated-config contract.
+- [Public Adoption](docs/public-adoption.md) — reusable contract, example-fleet plan, and public-facing priorities.
 
 **Roadmap**
 
