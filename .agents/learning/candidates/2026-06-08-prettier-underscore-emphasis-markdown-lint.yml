@@ -1,0 +1,12 @@
+schema: learning-candidate/v1
+id: 2026-06-08-prettier-underscore-emphasis-markdown-lint
+date: 2026-06-08
+expires: 2026-12-08
+status: open
+
+route: promote-doc
+best_form: doc
+
+evidence: [pr-#130, "lint job 80071740416: ERRO file has changed path=docs/public-adoption.md prev_size=16075 current_size=16076", "diff: authorized_keys -> authorized\\_keys, _patterns_ -> \\_patterns_"]
+observation: prettier (run via nix fmt --fail-on-change in the lint CI job) rewrites bare underscores in markdown prose as escaped emphasis markers (authorized_keys -> authorized\_keys, _patterns_ -> \_patterns_); a local nix fmt pass had already reported 0 changed for an unrelated reason, so the mismatch only surfaced in CI's fail-on-change check, failing lint and merge-gate on a docs-only PR
+proposed_upgrade: add a short note to the markdown/docs authoring guidance (e.g. docs/theme.md style notes, or a CONTRIBUTING-style doc section, or the issue-driven-development skill's validation step) that bare underscores in markdown prose get rewritten by prettier — use backticks for code identifiers containing underscores (authorizedKeys not authorized_keys-as-prose) and avoid wrapping underscore-containing words in literal _emphasis_ markers; run nix fmt -- --fail-on-change locally (not just nix fmt) before opening a docs PR

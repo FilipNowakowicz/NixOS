@@ -1,0 +1,14 @@
+schema: learning-candidate/v1
+id: 2026-06-09-invariant-coverage-filtered-asserts
+date: 2026-06-09
+expires: 2026-12-09
+status: open
+
+route: implement-fix
+best_form: invariant
+evidence: [flake/checks.nix:81 filters extraRules to users==["user"] before asserting, flake/checks.nix:596-632 has no invariants-gcp-builder entry, security-audit-2026-06-09.md finding C3]
+observation: security invariants that filter-then-assert (sudo allowlist check ignores group/other-user NOPASSWD rules) or skip a registry host (gcp-builder has zero invariant coverage despite root-equivalent posture) let documented guarantees regress silently through merge-gate
+proposed_upgrade: assert over the complete option value (residue-after-filter must be empty) in mainAgentMaintenanceSudoAllowlist, and derive invariant-check coverage from the host registry so every active host gets an access-invariant set
+type: policy-gap
+dedupe_key: invariants:filtered-asserts-and-host-coverage-gaps
+targets: [flake/checks.nix, lib/invariants.nix]
