@@ -118,92 +118,95 @@
     '';
   };
 
-  # ── Idle auto-shutdown ──────────────────────────────────────────────────────
-  systemd.services.tailscale-authkey-cleanup =
-    let
-      authKeyPath = "/var/lib/tailscale-authkey";
-      script = pkgs.writeShellScript "tailscale-authkey-cleanup" ''
-        set -eu
+  systemd = {
+    services = {
+      tailscale-authkey-cleanup =
+        let
+          authKeyPath = "/var/lib/tailscale-authkey";
+          script = pkgs.writeShellScript "tailscale-authkey-cleanup" ''
+            set -eu
 
-        auth_key=${authKeyPath}
+            auth_key=${authKeyPath}
 
-        for _ in $(${pkgs.coreutils}/bin/seq 1 60); do
-          if ${pkgs.tailscale}/bin/tailscale status --json --peers=false 2>/dev/null \
-            | ${pkgs.jq}/bin/jq -e '(.Self.ID? // "") != ""' >/dev/null; then
-            ${pkgs.coreutils}/bin/shred --remove "$auth_key"
-            exit 0
-          fi
+            for _ in $(${pkgs.coreutils}/bin/seq 1 60); do
+              if ${pkgs.tailscale}/bin/tailscale status --json --peers=false 2>/dev/null \
+                | ${pkgs.jq}/bin/jq -e '(.Self.ID? // "") != ""' >/dev/null; then
+                ${pkgs.coreutils}/bin/shred --remove "$auth_key"
+                exit 0
+              fi
 
-          ${pkgs.coreutils}/bin/sleep 1
-        done
+              ${pkgs.coreutils}/bin/sleep 1
+            done
 
-        echo "tailscale-authkey-cleanup: tailscale node identity was not established" >&2
-        exit 1
-      '';
-    in
-    {
-      description = "Remove the gcp-builder Tailscale auth key after first join";
-      wantedBy = [ "multi-user.target" ];
-      wants = [ "tailscaled-autoconnect.service" ];
-      after = [
-        "tailscaled.service"
-        "tailscaled-autoconnect.service"
-      ];
-      unitConfig.ConditionPathExists = authKeyPath;
-      startLimitIntervalSec = 0;
-      startLimitBurst = 1000000;
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = script;
-        Restart = "on-failure";
-        RestartSec = "30s";
-      };
+            echo "tailscale-authkey-cleanup: tailscale node identity was not established" >&2
+            exit 1
+          '';
+        in
+        {
+          description = "Remove the gcp-builder Tailscale auth key after first join";
+          wantedBy = [ "multi-user.target" ];
+          wants = [ "tailscaled-autoconnect.service" ];
+          after = [
+            "tailscaled.service"
+            "tailscaled-autoconnect.service"
+          ];
+          unitConfig.ConditionPathExists = authKeyPath;
+          startLimitIntervalSec = 0;
+          startLimitBurst = 1000000;
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = script;
+            Restart = "on-failure";
+            RestartSec = "30s";
+          };
+        };
+
+      # The builder is started on demand by `main` and powers itself off once it
+      # has been idle (no established SSH/build connections) for idleSeconds. The
+      # stamp lives in /run (tmpfs), so a fresh boot starts the idle clock from
+      # now and gets a full grace window before the first shutdown check can fire.
+      builder-idle-shutdown =
+        let
+          idleSeconds = 1200; # 20 minutes
+          script = pkgs.writeShellScript "builder-idle-shutdown" ''
+            set -eu
+            stamp=/run/builder-last-active
+            now=$(${pkgs.coreutils}/bin/date +%s)
+
+            # Seed the stamp on the first run after boot so an unused boot still
+            # gets a full idle window before shutting down.
+            [ -f "$stamp" ] || ${pkgs.coreutils}/bin/printf '%s\n' "$now" > "$stamp"
+
+            # Any established connection on port 22 means an interactive session
+            # or an in-flight distributed build; treat the box as active.
+            if ${pkgs.iproute2}/bin/ss -Htn state established '( sport = :22 )' \
+                | ${pkgs.gnugrep}/bin/grep -q .; then
+              ${pkgs.coreutils}/bin/printf '%s\n' "$now" > "$stamp"
+              exit 0
+            fi
+
+            last=$(${pkgs.coreutils}/bin/cat "$stamp" 2>/dev/null || ${pkgs.coreutils}/bin/printf '%s' "$now")
+            if [ "$(( now - last ))" -ge ${toString idleSeconds} ]; then
+              ${pkgs.systemd}/bin/systemctl poweroff
+            fi
+          '';
+        in
+        {
+          description = "Power off the build box after it has been idle";
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = script;
+          };
+        };
     };
 
-  # The builder is started on demand by `main` and powers itself off once it has
-  # been idle (no established SSH/build connections) for idleSeconds. The stamp
-  # lives in /run (tmpfs), so a fresh boot starts the idle clock from now and
-  # gets a full grace window before the first shutdown check can fire.
-  systemd.services.builder-idle-shutdown =
-    let
-      idleSeconds = 1200; # 20 minutes
-      script = pkgs.writeShellScript "builder-idle-shutdown" ''
-        set -eu
-        stamp=/run/builder-last-active
-        now=$(${pkgs.coreutils}/bin/date +%s)
-
-        # Seed the stamp on the first run after boot so an unused boot still
-        # gets a full idle window before shutting down.
-        [ -f "$stamp" ] || ${pkgs.coreutils}/bin/printf '%s\n' "$now" > "$stamp"
-
-        # Any established connection on port 22 means an interactive session or
-        # an in-flight distributed build; treat the box as active.
-        if ${pkgs.iproute2}/bin/ss -Htn state established '( sport = :22 )' \
-            | ${pkgs.gnugrep}/bin/grep -q .; then
-          ${pkgs.coreutils}/bin/printf '%s\n' "$now" > "$stamp"
-          exit 0
-        fi
-
-        last=$(${pkgs.coreutils}/bin/cat "$stamp" 2>/dev/null || ${pkgs.coreutils}/bin/printf '%s' "$now")
-        if [ "$(( now - last ))" -ge ${toString idleSeconds} ]; then
-          ${pkgs.systemd}/bin/systemctl poweroff
-        fi
-      '';
-    in
-    {
-      description = "Power off the build box after it has been idle";
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = script;
+    timers.builder-idle-shutdown = {
+      description = "Periodic idle check for the build box";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnBootSec = "10min";
+        OnUnitActiveSec = "5min";
       };
-    };
-
-  systemd.timers.builder-idle-shutdown = {
-    description = "Periodic idle check for the build box";
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      OnBootSec = "10min";
-      OnUnitActiveSec = "5min";
     };
   };
 
