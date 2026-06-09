@@ -34,7 +34,10 @@ pkgs.runCommand "mini-fleet-flake-static"
       exit 1
     fi
 
-    # 3. Each public output the example imports must appear in the example file.
+    # 3. Each public output the example imports must (a) appear in the example
+    #    file under its full dotted name, and (b) exist as a bare attr in the
+    #    root flake.nix so a rename in the root immediately breaks this check.
+    #    Both facts derive from this single list — no parallel copy to drift.
     for name in \
       nixosModules.profiles-desktop \
       nixosModules.profiles-security \
@@ -45,23 +48,11 @@ pkgs.runCommand "mini-fleet-flake-static"
     do
       grep -qF "$name" "$example" \
         || { echo "mini-fleet/flake.nix: missing expected public output reference: $name" >&2; exit 1; }
-    done
-
-    # 4. Each of those output names must also exist in the root flake.nix so a
-    #    rename in the root immediately breaks this check.
-    for attr in \
-      profiles-desktop \
-      profiles-security \
-      services-hardened \
-      observability-stack \
-      observability-client
-    do
+      attr="''${name##*.}"
+      kind="''${name%%.*}"
       grep -qF "$attr" "$root_flake" \
-        || { echo "flake.nix: public nixosModules output '$attr' used by mini-fleet example is missing from root flake" >&2; exit 1; }
+        || { echo "flake.nix: public $kind output '$attr' used by mini-fleet example is missing from root flake" >&2; exit 1; }
     done
-
-    grep -qF 'profiles-base' "$root_flake" \
-      || { echo "flake.nix: public homeModules output 'profiles-base' used by mini-fleet example is missing from root flake" >&2; exit 1; }
 
     touch "$out"
   ''

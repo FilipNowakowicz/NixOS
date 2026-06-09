@@ -13,6 +13,11 @@ let
   inherit (nixpkgs) lib;
   pkgs = nixpkgs.legacyPackages.${system};
 
+  # Private host names come from the registry (single source of truth), so a
+  # host added to lib/hosts.nix is automatically forbidden in doctor narration
+  # without editing this denylist by hand.
+  privateHostAlternation = lib.concatStringsSep "|" (builtins.attrNames (import ../../lib/hosts.nix));
+
   # Ordered list of `section "<name>"` banners doctor.sh must print, paired
   # with a keyword that must appear in that section's explanation. Keep this
   # in sync with scripts/doctor.sh — both are read by mkSectionAssertions
@@ -100,7 +105,7 @@ pkgs.runCommand "doctor-sections-golden"
     # its narration (the sections may still *check* secrets hygiene, but must
     # explain it in public-reader terms, which the keyword assertions above
     # already cover).
-    if grep -qiE 'hosts/(main|mac|homeserver-gcp|gcp-builder)\b' "$doctor"; then
+    if grep -qiE 'hosts/(${privateHostAlternation})\b' "$doctor"; then
       echo "doctor.sh: must not name specific private hosts in its narration" >&2
       exit 1
     fi
