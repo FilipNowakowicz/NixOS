@@ -79,7 +79,7 @@ reload mechanics are fixed — not a generic theming framework.
 ```nix
 # flake.nix
 {
-  inputs.nixos-fleet.url = "github:FilipNowakowicz/NixOS";
+  inputs.nixos-fleet.url = "github:FilipNowakowicz/nixos-config";
 }
 ```
 

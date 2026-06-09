@@ -10,7 +10,7 @@
       url = "github:nix-community/home-manager/master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nixos-fleet.url = "github:FilipNowakowicz/NixOS";
+    nixos-fleet.url = "github:FilipNowakowicz/nixos-config";
   };
 
   outputs =

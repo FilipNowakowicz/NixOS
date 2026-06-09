@@ -10,7 +10,7 @@ Import it from this flake from another NixOS configuration with:
 ```nix
 # flake.nix
 {
-  inputs.nixos-fleet.url = "github:FilipNowakowicz/NixOS";
+  inputs.nixos-fleet.url = "github:FilipNowakowicz/nixos-config";
 
   outputs =
     {

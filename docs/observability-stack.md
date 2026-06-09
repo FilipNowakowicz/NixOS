@@ -11,7 +11,7 @@ Add this flake as an input and import the module(s) you need:
 ```nix
 # flake.nix
 {
-  inputs.nixos-fleet.url = "github:FilipNowakowicz/NixOS";
+  inputs.nixos-fleet.url = "github:FilipNowakowicz/nixos-config";
 
   outputs =
     {

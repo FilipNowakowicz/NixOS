@@ -37,7 +37,8 @@ section "Supported platform" \
 flake evaluates for. The flake targets common Linux and macOS systems; an
 unsupported system means flake outputs may not build here even though Nix
 itself works."
-run nix eval --impure --raw --expr 'builtins.currentSystem'
+current_system=$(nix eval --impure --raw --expr 'builtins.currentSystem')
+run nix eval ".#devShells.${current_system}.default" --apply builtins.typeOf
 echo
 
 section "Repository documentation" \
@@ -90,9 +91,10 @@ flake/checks.nix or the named test under tests/ to see what it asserts."
   run bash scripts/validate.sh light
 
   section "Sample inventory data build" \
-    "Builds the generated, sanitized inventory sample shipped under
-docs/samples/. A failure here usually means the generator (lib/hosts.nix or
-the inventory-json app) and the committed sample have drifted apart."
+    "Builds the inventory-data package (the generator that produces the
+sanitized inventory JSON). A failure here means the generator itself
+(lib/hosts.nix or the inventory-json app) is broken — not that the committed
+docs/samples/inventory.sample.json has drifted from live output."
   run bash scripts/validate.sh package inventory-data
 fi
 
