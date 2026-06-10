@@ -1,4 +1,25 @@
-_: {
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+{
+  # adguardhome runs as a systemd DynamicUser, so the "adguardhome" user/group
+  # only exist while the unit is running and cannot be resolved during
+  # activation, when setupSecrets runs with adguardhome stopped. Own the
+  # secret by root and grant read access through a static supplementary
+  # group the adguardhome unit joins (same pattern as mimir-webhook in
+  # hosts/homeserver-gcp/default.nix).
+  sops.secrets.adguard_admin_password = {
+    mode = "0440";
+    group = "adguardhome-secrets";
+    restartUnits = [ "adguardhome.service" ];
+  };
+
+  users.groups.adguardhome-secrets = { };
+  systemd.services.adguardhome.serviceConfig.SupplementaryGroups = [ "adguardhome-secrets" ];
+
   services.adguardhome = {
     enable = true;
     mutableSettings = false;
@@ -71,17 +92,28 @@ _: {
           }
         ];
       };
-
-      # Web UI credentials. Password is a bcrypt hash (cost 12); plaintext never
-      # stored here. Change via sops-backed secret + activation script if needed.
-      users = [
-        {
-          name = "admin";
-          password = "$2y$12$zECsUKzXoQAf4JfIhAg8Kez/x9T9KmYnyJovEaEQaeQDJ4FHtrj9q";
-        }
-      ];
     };
   };
+
+  systemd.services.adguardhome.preStart = lib.mkAfter ''
+    user_hash="$(${pkgs.apacheHttpd}/bin/htpasswd -niBC 12 admin < "${config.sops.secrets.adguard_admin_password.path}")"
+    user_hash="''${user_hash#admin:}"
+    umask 077
+    {
+      printf 'users:\n'
+      printf '  - name: admin\n'
+      printf '    password: "%s"\n' "$user_hash"
+    } > "$RUNTIME_DIRECTORY/adguardhome-users.yaml"
+    ${pkgs.yaml-merge}/bin/yaml-merge \
+      "$STATE_DIRECTORY/AdGuardHome.yaml" \
+      "$RUNTIME_DIRECTORY/adguardhome-users.yaml" \
+      > "$STATE_DIRECTORY/AdGuardHome.yaml.tmp"
+    mv "$STATE_DIRECTORY/AdGuardHome.yaml.tmp" "$STATE_DIRECTORY/AdGuardHome.yaml"
+    chmod 600 "$STATE_DIRECTORY/AdGuardHome.yaml"
+    ${lib.getExe config.services.adguardhome.package} \
+      -c "$STATE_DIRECTORY/AdGuardHome.yaml" \
+      --check-config
+  '';
 
   # DNS (TCP+UDP) and web UI — tailscale0 only; GCP external firewall blocks 53 on public interface.
   networking.firewall.interfaces.tailscale0 = {
