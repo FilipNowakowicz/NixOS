@@ -5,7 +5,20 @@
   ...
 }:
 {
-  sops.secrets.adguard_admin_password = { };
+  # adguardhome runs as a systemd DynamicUser, so the "adguardhome" user/group
+  # only exist while the unit is running and cannot be resolved during
+  # activation, when setupSecrets runs with adguardhome stopped. Own the
+  # secret by root and grant read access through a static supplementary
+  # group the adguardhome unit joins (same pattern as mimir-webhook in
+  # hosts/homeserver-gcp/default.nix).
+  sops.secrets.adguard_admin_password = {
+    mode = "0440";
+    group = "adguardhome-secrets";
+    restartUnits = [ "adguardhome.service" ];
+  };
+
+  users.groups.adguardhome-secrets = { };
+  systemd.services.adguardhome.serviceConfig.SupplementaryGroups = [ "adguardhome-secrets" ];
 
   services.adguardhome = {
     enable = true;
@@ -83,7 +96,7 @@
   };
 
   systemd.services.adguardhome.preStart = lib.mkAfter ''
-    user_hash="$(${pkgs.apacheHttpd}/bin/htpasswd -niB admin < "${config.sops.secrets.adguard_admin_password.path}")"
+    user_hash="$(${pkgs.apacheHttpd}/bin/htpasswd -niBC 12 admin < "${config.sops.secrets.adguard_admin_password.path}")"
     user_hash="''${user_hash#admin:}"
     umask 077
     {
