@@ -20,7 +20,7 @@ let
   mkDeployNodes =
     nixosConfigs:
     lib.mapAttrs (name: cfg: {
-      hostname = name;
+      hostname = cfg.tailnetFQDN;
       inherit (cfg.deploy) sshUser;
       magicRollback = true;
       autoRollback = true;

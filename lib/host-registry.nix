@@ -109,9 +109,10 @@ let
                   ) (builtins.attrValues cfg.tailscale.acceptFrom)
                 )
               )
+              && (!cfg.tailscale ? ip4 || builtins.isString cfg.tailscale.ip4)
             )
           )
-          "${name}.tailscale: expected tag string and optional acceptFrom attrset of ports (1-65535, TCP+UDP)"
+          "${name}.tailscale: expected tag string, optional acceptFrom attrset of ports (1-65535, TCP+UDP), and optional ip4 string"
         )
         (ok
           (
