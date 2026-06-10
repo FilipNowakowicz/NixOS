@@ -9,6 +9,9 @@
 #   tailscale   — Tailscale metadata; presence means host is on the tailnet
 #     .tag        — Tailscale tag assigned to this host (without "tag:" prefix)
 #     .acceptFrom — source-tag -> allowed inbound ports (TCP+UDP) on this host
+#     .ip4        — this host's stable 100.x.x.x Tailscale IPv4 address (per
+#                    node-key); used by consumers (e.g. AdGuard clients) that
+#                    need a literal IP rather than a resolvable FQDN
 #   homeManager — primary-user Home Manager mapping for this host
 #     .role     — entrypoint module under home/users/user
 #     .profiles — extra profile modules under home/profiles
@@ -40,6 +43,7 @@ let
       tailnetFQDN = "main.tail90fc7a.ts.net";
       tailscale = {
         tag = "workstation";
+        ip4 = "100.111.88.61";
         acceptFrom.workstation = [
           22
           24800
@@ -67,6 +71,7 @@ let
       };
       tailscale = {
         tag = "server";
+        ip4 = "100.103.234.89";
         acceptFrom.workstation = [
           22
           443
@@ -112,6 +117,7 @@ let
       tailnetFQDN = "mac.tail90fc7a.ts.net";
       tailscale = {
         tag = "workstation";
+        ip4 = "100.73.117.103";
         acceptFrom.workstation = [
           22
           22000

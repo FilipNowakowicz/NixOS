@@ -2,8 +2,44 @@
   config,
   lib,
   pkgs,
+  hostRegistry,
   ...
 }:
+let
+  # AdGuard per-client policy keyed by Tailscale IP. NixOS hosts derive their
+  # IP from the host registry (lib/hosts.nix) so a re-key only needs updating
+  # in one place; non-NixOS personal devices (phones/tablets) can't live in
+  # the registry (no `system`, no nixosConfiguration) and are listed
+  # separately below.
+  registryClients =
+    map
+      (name: {
+        inherit name;
+        ids = [ hostRegistry.${name}.tailscale.ip4 ];
+        use_global_settings = true;
+      })
+      [
+        "main"
+        "mac"
+        "homeserver-gcp"
+      ];
+
+  # Personal phones/tablets: not NixOS hosts, so not in lib/hosts.nix. Tailscale
+  # IPs are stable per node-key but must be updated here manually if the device
+  # is re-keyed (e.g. re-installed or re-added to the tailnet).
+  nonRegistryClients = [
+    {
+      name = "filips-s24";
+      ids = [ "100.87.223.42" ];
+      use_global_settings = true;
+    }
+    {
+      name = "filips-tab-s8";
+      ids = [ "100.95.25.123" ];
+      use_global_settings = true;
+    }
+  ];
+in
 {
   # adguardhome runs as a systemd DynamicUser, so the "adguardhome" user/group
   # only exist while the unit is running and cannot be resolved during
@@ -64,33 +100,7 @@
       ];
 
       clients = {
-        persistent = [
-          {
-            name = "main";
-            ids = [ "100.111.88.61" ];
-            use_global_settings = true;
-          }
-          {
-            name = "mac";
-            ids = [ "100.73.117.103" ];
-            use_global_settings = true;
-          }
-          {
-            name = "homeserver-gcp";
-            ids = [ "100.103.234.89" ];
-            use_global_settings = true;
-          }
-          {
-            name = "filips-s24";
-            ids = [ "100.87.223.42" ];
-            use_global_settings = true;
-          }
-          {
-            name = "filips-tab-s8";
-            ids = [ "100.95.25.123" ];
-            use_global_settings = true;
-          }
-        ];
+        persistent = registryClients ++ nonRegistryClients;
       };
     };
   };
