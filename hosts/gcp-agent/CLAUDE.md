@@ -200,12 +200,72 @@ connection open while doing nothing. The box counts as **active** while ANY of:
 - an established inbound SSH connection (`ss` on port 22), or
 - a running Claude Code process (`pgrep` for the `claude` wrapper /
   `claude-code` node process), or
-- the orchestration session lock `/run/agent-session.lock` exists (the #169
-  entrypoint touches it around non-`claude` work such as an offloaded build).
+- the orchestration entrypoint process (`agent-run-issue`) is running, or
+- the orchestration session lock `/run/agent/session.lock` exists (the
+  entrypoint holds it for the whole run, covering `claude`-free gaps such as an
+  offloaded build).
 
 The 60-min window (vs the builder's 20) reflects long-running, bursty sessions.
 The stamp lives in `/run`, so a fresh boot gets a full grace window before the
 first check.
+
+## Issue-loop orchestration
+
+`scripts/agent-run-issue.sh` is the repeatable entrypoint. Given a target issue
+number (or a `--label` filter) it drives the `issue-driven-development` skill
+from a cold, up-to-date clone to a pushed PR, then returns and lets the
+idle-shutdown timer power the box off. **v1 is attended**: it opens PRs but
+never merges — you review and merge yourself.
+
+From your workstation (cold start → run → leave idle):
+
+```bash
+# one issue
+scripts/agent-session.sh -- nix/scripts/agent-run-issue.sh 169
+# every open issue with a label (sequential, one PR each)
+scripts/agent-session.sh -- nix/scripts/agent-run-issue.sh --label architecture-review
+```
+
+Or directly on the host after `scripts/agent-session.sh` opens a shell:
+`scripts/agent-run-issue.sh 169 170`.
+
+What it does per issue:
+
+1. `git fetch` + `reset --hard origin/main` (criterion: clone up to date with `main`).
+2. Runs `claude -p` headless, instructing it to follow the
+   `issue-driven-development` skill: branch off `main`, smallest durable fix,
+   validate with the `nix-verification-loop` skill, push, open a PR linking the
+   issue (`Closes` only if fully satisfied, else `Refs`), never merge, never
+   push to `main`.
+3. Push + PR creation use the host's scoped GitHub PAT via `gh` and the
+   `gh auth git-credential` helper (`home/users/user/agent.nix`).
+
+Knobs: `AGENT_REPO_DIR` (default `$HOME/nix`), `BASE_BRANCH` (default `main`).
+It fails fast if `gh auth status` is not authenticated (PAT not yet provisioned)
+rather than burning a session.
+
+## Failure handling
+
+- **`merge-gate` fails on the produced PR.** Expected and safe — nothing is
+  merged. Re-run the same issue to let a fresh session iterate on the existing
+  branch, or fix it yourself from your workstation. To re-run:
+  `scripts/agent-session.sh -- nix/scripts/agent-run-issue.sh <issue>` again; the
+  entrypoint re-syncs `main` and lets `claude` continue. (Claude opens/updates a
+  branch; if a stale branch exists, prune it on the host with
+  `git push origin --delete <branch>` or let the new run open a fresh one.)
+- **A session exits non-zero or stalls.** The entrypoint logs it and moves on
+  (when several issues were passed); the run returns a non-zero exit overall.
+  The VM still goes idle and powers off after the window — a wedged session does
+  not pin the box on indefinitely beyond the 60-min idle clock once `claude` has
+  exited.
+- **Telling from `main` that a session needs attention.** There is no custom
+  dashboard (a non-goal); use `gh` from your workstation:
+  - `gh pr list --state open` — what got opened.
+  - `gh pr checks <n>` — whether `merge-gate` passed on a given PR.
+  - `gh run list --branch <branch>` — CI runs for a branch.
+  - VM power: `gcloud compute instances describe gcp-agent --zone europe-west2-a --format='value(status)'`
+    (`TERMINATED` = idle/off as expected; `RUNNING` long after a session implies a
+    still-active or stuck run — SSH in and check `pgrep -af agent-run-issue`).
 
 ## Validation
 
