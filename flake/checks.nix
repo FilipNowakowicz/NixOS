@@ -78,17 +78,70 @@ let
     check =
       cfg:
       let
-        userRules = lib.filter (rule: rule.users or [ ] == [ "user" ]) (
-          cfg.security.sudo.extraRules or [ ]
-        );
-        commands = lib.concatMap (rule: rule.commands or [ ]) userRules;
-        actualCommands = lib.sort builtins.lessThan (map (command: command.command) commands);
+        extraRules = cfg.security.sudo.extraRules or [ ];
+
+        commandOptions = command: command.options or [ ];
+        commandPath = command: command.command or "";
+        commandBasename = command: builtins.baseNameOf (commandPath command);
+        sortedCommandPaths = rule: lib.sort builtins.lessThan (map commandPath (rule.commands or [ ]));
+        hasOnlyOptions = options: command: commandOptions command == options;
+
+        isDefaultSetenvRule =
+          rule:
+          let
+            commands = rule.commands or [ ];
+          in
+          (rule.host or "ALL") == "ALL"
+          && (rule.runAs or "ALL:ALL") == "ALL:ALL"
+          &&
+            commands == [
+              {
+                command = "ALL";
+                options = [ "SETENV" ];
+              }
+            ];
+
+        isDefaultRootSetenvRule =
+          rule: isDefaultSetenvRule rule && (rule.users or [ ]) == [ "root" ] && (rule.groups or [ ]) == [ ];
+
+        isDefaultWheelSetenvRule =
+          rule: isDefaultSetenvRule rule && (rule.users or [ ]) == [ ] && (rule.groups or [ ]) == [ "wheel" ];
+
         expectedCommands = expectedAgentMaintenanceCommands;
-        invalidOptions = lib.filter (command: command.options or [ ] != [ "NOPASSWD" ]) commands;
+        isAgentMaintenanceRule =
+          rule:
+          (rule.users or [ ]) == [ "user" ]
+          && (rule.groups or [ ]) == [ ]
+          && sortedCommandPaths rule == expectedCommands
+          && lib.all (hasOnlyOptions [ "NOPASSWD" ]) (rule.commands or [ ]);
+
+        expectedBtrbkCommands = [
+          "btrfs"
+          "btrfs"
+          "mkdir"
+          "mkdir"
+          "readlink"
+          "readlink"
+        ];
+        isBtrbkMaintenanceRule =
+          rule:
+          (rule.users or [ ]) == [ "btrbk" ]
+          && (rule.groups or [ ]) == [ ]
+          && lib.sort builtins.lessThan (map commandBasename (rule.commands or [ ])) == expectedBtrbkCommands
+          && lib.all (hasOnlyOptions [ "NOPASSWD" ]) (rule.commands or [ ]);
+
+        isKnownRule =
+          rule:
+          isDefaultRootSetenvRule rule
+          || isDefaultWheelSetenvRule rule
+          || isAgentMaintenanceRule rule
+          || isBtrbkMaintenanceRule rule;
+
+        unexpectedRules = lib.filter (rule: !(isKnownRule rule)) extraRules;
+        agentRules = lib.filter isAgentMaintenanceRule extraRules;
       in
-      require (
-        actualCommands == expectedCommands && invalidOptions == [ ]
-      ) "main sudo extraRules must only grant NOPASSWD for the exact agent maintenance commands";
+      mkResult (agentRules != [ ] && unexpectedRules == [ ])
+        "main sudo extraRules must only contain the default SETENV rules, exact agent maintenance allowlist, and btrbk maintenance allowlist";
   };
 
   mainBackupPathsArePersisted = {
