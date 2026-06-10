@@ -192,6 +192,15 @@ in
       })
 
       (writeShellApplication {
+        name = "caffeinate";
+        runtimeInputs = with pkgs; [
+          systemd
+          libnotify
+        ];
+        text = builtins.readFile ../../files/scripts/caffeinate.sh;
+      })
+
+      (writeShellApplication {
         name = "power-profile";
         runtimeInputs = with pkgs; [ power-profiles-daemon ];
         text = ''
