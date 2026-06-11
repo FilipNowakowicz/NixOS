@@ -48,3 +48,24 @@ Outcome records are separate from learning candidates:
 - outcome records describe what happened in one run;
 - learning candidates propose durable repo improvements;
 - only reviewed PRs promote candidates into behavior-changing artifacts.
+
+## Liveness Gate
+
+Before dispatching a batch of issues to `scripts/agent-run-issue.sh` (e.g. via
+`scripts/agent-session.sh --issues`), run
+`.agents/scripts/agent-liveness-gate` to catch a broken cold-start
+environment before it burns a session. It checks that the runner's required
+commands (`git`, `gh`, `jq`, `claude`) are on `PATH`, that `gh auth status`
+succeeds, and that the cheap, deterministic self-tests of
+`agent-issue-readiness`, `agent-record-outcome`, and `agent-outcome-index` all
+pass:
+
+```sh
+.agents/scripts/agent-liveness-gate                # full preflight
+.agents/scripts/agent-liveness-gate --skip-gh-auth # before the scoped PAT is provisioned
+.agents/scripts/agent-liveness-gate --self-test    # gate's own self-test (run via scripts/validate.sh docs)
+```
+
+It is opt-in and read-only: it does not perform live agent dispatch and
+requires no secrets, sudo, or remote host access beyond what `gh auth status`
+itself needs.

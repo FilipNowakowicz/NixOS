@@ -190,6 +190,7 @@ docs)
   bash .agents/scripts/agent-record-outcome --self-test
   bash .agents/scripts/agent-outcome-index --self-test
   bash .agents/scripts/agent-issue-readiness --self-test
+  bash .agents/scripts/agent-liveness-gate --self-test
   bash .agents/learning/scripts/validate-candidates.sh
   bash .agents/repo-map/scripts/validate.sh
   ;;
