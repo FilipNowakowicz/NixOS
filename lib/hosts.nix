@@ -25,6 +25,10 @@
 let
   hostRegistryLib = import ./host-registry.nix;
 
+  # Single source of truth for the tailnet domain; each host's tailnetFQDN is
+  # derived as "${name}.${tailnetDomain}" so a tailnet rename is one line.
+  tailnetDomain = "tail90fc7a.ts.net";
+
   raw = {
     main = {
       system = "x86_64-linux";
@@ -40,7 +44,7 @@ let
           "learning"
         ];
       };
-      tailnetFQDN = "main.tail90fc7a.ts.net";
+      tailnetFQDN = "main.${tailnetDomain}";
       tailscale = {
         tag = "workstation";
         ip4 = "100.111.88.61";
@@ -64,7 +68,7 @@ let
       system = "x86_64-linux";
       status = "active";
       homeManager.role = "server";
-      tailnetFQDN = "homeserver-gcp.tail90fc7a.ts.net";
+      tailnetFQDN = "homeserver-gcp.${tailnetDomain}";
       backup = {
         class = "critical";
         name = "b2";
@@ -93,7 +97,7 @@ let
     gcp-builder = {
       system = "x86_64-linux";
       status = "active";
-      tailnetFQDN = "gcp-builder.tail90fc7a.ts.net";
+      tailnetFQDN = "gcp-builder.${tailnetDomain}";
       tailscale = {
         tag = "builder";
         acceptFrom.workstation = [ 22 ];
@@ -114,7 +118,7 @@ let
       system = "x86_64-linux";
       status = "active";
       homeManager.role = "agent";
-      tailnetFQDN = "gcp-agent.tail90fc7a.ts.net";
+      tailnetFQDN = "gcp-agent.${tailnetDomain}";
       tailscale = {
         tag = "agent";
         acceptFrom.workstation = [ 22 ];
@@ -138,7 +142,7 @@ let
           "coding"
         ];
       };
-      tailnetFQDN = "mac.tail90fc7a.ts.net";
+      tailnetFQDN = "mac.${tailnetDomain}";
       tailscale = {
         tag = "workstation";
         ip4 = "100.73.117.103";
