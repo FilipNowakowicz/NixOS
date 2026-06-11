@@ -109,31 +109,6 @@ let
       skipHeavyPackages = true;
       extraModules = [ { profiles.ci = true; } ];
     };
-
-    homeserver-gcp = mkNixos "homeserver-gcp" {
-      extraModules = [
-        (
-          { lib, modulesPath, ... }:
-          {
-            # google-compute-config.nix calls readFile on google-guest-configs at
-            # eval time, requiring the package to exist in the Nix store. Disable
-            # it for flake check; it is still active on real deployments via
-            # hardware-configuration.nix → google-compute-image.nix.
-            # Must use modulesPath (absolute store path) since the module is
-            # imported as a path, not a string, so the key won't match a string.
-            disabledModules = [ "${modulesPath}/virtualisation/google-compute-config.nix" ];
-
-            # Stub out the required options that google-compute-config.nix
-            # normally provides so NixOS module assertions pass.
-            fileSystems."/" = lib.mkDefault {
-              device = "/dev/disk/by-label/nixos";
-              fsType = "ext4";
-            };
-            boot.loader.grub.device = lib.mkDefault "/dev/sda";
-          }
-        )
-      ];
-    };
   };
 
 in
