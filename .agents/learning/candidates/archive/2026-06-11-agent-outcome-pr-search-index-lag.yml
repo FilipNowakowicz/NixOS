@@ -1,0 +1,17 @@
+schema: learning-candidate/v1
+id: 2026-06-11-agent-outcome-pr-search-index-lag
+date: 2026-06-11
+expires: 2026-12-11
+status: promoted
+
+route: implement-fix
+best_form: test
+
+evidence: [issue-#212, PR-#213, "/tmp/nix-issue-212/.agents/state/outcomes/2026-06-11T21:01:42Z-issue-212-success.json had prs=[] immediately after PR creation", "gh pr list --state all --search '#212 in:body' returned PR #213 moments later", "/tmp/nix-issue-212/.agents/state/outcomes/2026-06-11T21:02:04Z-issue-212-success.json included PR #213"]
+observation: agent-record-outcome discovers PRs by GitHub search over issue references in PR bodies; immediately after gh pr create, GitHub search indexing can lag and produce an outcome record with an empty prs array even though the PR already exists and links the issue
+proposed_upgrade: make agent-record-outcome more robust for just-created PRs by retrying PR discovery briefly, accepting an explicit PR number/head branch from agent-run-issue, or combining GitHub search with a head-branch fallback before writing success outcomes
+type: workflow-gotcha
+dedupe_key: agent-outcome:pr-discovery-search-index-lag
+triggers: [agent-record-outcome, gh pr create, GitHub search indexing, outcome prs empty]
+targets: [.agents/scripts/agent-record-outcome, scripts/agent-run-issue.sh]
+risk: successful issue sessions can produce misleading outcome telemetry with no linked PR when recording runs immediately after PR creation

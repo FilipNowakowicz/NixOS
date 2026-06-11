@@ -14,6 +14,8 @@ Options:
   --exit-code <n>                   Worker exit code (default: 0).
   --blocker <text>                  Failure/blocker summary.
   --learning-candidates-file <path> Newline-separated candidate paths to record.
+  --head-branch <name>              Branch to use as a PR discovery fallback.
+  --pr-number <n>                   Explicit PR number to record (repeatable).
   --output-dir <path>               Output directory (default: .agents/state/outcomes).
   --dry-run                         Print JSON instead of writing a file.
   --self-test                       Run a local smoke test and exit.
@@ -35,13 +37,35 @@ json_array_from_lines() {
 
 discover_prs() {
   local issue="$1"
+  local head_branch="$2"
+  local pr_numbers_file="$3"
   if ! command -v gh >/dev/null 2>&1; then
     printf '[]\n'
     return 0
   fi
-  gh pr list --state all --search "#${issue} in:body" \
-    --json number,title,state,headRefName,url,reviewDecision,mergeStateStatus \
-    2>/dev/null || printf '[]\n'
+
+  local pr_fields
+  pr_fields='number,title,state,headRefName,url,reviewDecision,mergeStateStatus'
+
+  {
+    if [[ -s $pr_numbers_file ]]; then
+      while IFS= read -r pr_number; do
+        [[ -n $pr_number ]] || continue
+        gh pr view "$pr_number" --json "$pr_fields" 2>/dev/null || true
+      done <"$pr_numbers_file"
+    fi
+
+    if [[ -n $head_branch && $head_branch != DETACHED ]]; then
+      gh pr list --state all --head "$head_branch" --json "$pr_fields" 2>/dev/null || true
+    fi
+
+    gh pr list --state all --search "#${issue} in:body" --json "$pr_fields" 2>/dev/null || true
+  } | jq -cs '
+    map(if type == "array" then . else [.] end)
+    | (add // [])
+    | map(select(type == "object" and (.number | type == "number")))
+    | unique_by(.number)
+  '
 }
 
 collect_learning_candidates() {
@@ -69,6 +93,8 @@ write_outcome() {
   local candidates_file="$9"
   local output_dir="${10}"
   local dry_run="${11}"
+  local pr_head_branch="${12}"
+  local pr_numbers_file="${13}"
 
   [[ $issue =~ ^[0-9]+$ ]] || die "--issue must be a positive integer"
   [[ $issue -gt 0 ]] || die "--issue must be a positive integer"
@@ -87,8 +113,9 @@ write_outcome() {
   safe_finished=$(printf '%s' "$finished_at" | tr -c '0-9TZ:-' '-')
   id="${safe_finished}-issue-${issue}-${status}"
 
-  local prs_json candidates_json dirty_json
-  prs_json=$(discover_prs "$issue" | jq -c 'if type == "array" then . else [] end')
+  local prs_json candidates_json dirty_json discovery_head_branch
+  discovery_head_branch="${pr_head_branch:-$head_branch}"
+  prs_json=$(discover_prs "$issue" "$discovery_head_branch" "$pr_numbers_file" | jq -c 'if type == "array" then . else [] end')
   candidates_json=$(collect_learning_candidates "$candidates_file" | json_array_from_lines)
   dirty_json=$(git status --short | json_array_from_lines)
 
@@ -154,34 +181,65 @@ write_outcome() {
 }
 
 self_test() {
-  local tmp repo candidates out
+  local tmp repo candidates out bin pr_numbers
   tmp=$(mktemp -d)
   trap 'rm -rf "$tmp"' RETURN
   repo="$tmp/repo"
   out="$tmp/out"
   candidates="$tmp/candidates.txt"
+  bin="$tmp/bin"
+  pr_numbers="$tmp/pr-numbers.txt"
 
-  mkdir -p "$repo/.agents/learning/candidates"
+  mkdir -p "$repo/.agents/learning/candidates" "$bin"
   git -C "$repo" init -q
   git -C "$repo" config user.email test@example.invalid
   git -C "$repo" config user.name 'Agent Outcome Test'
   printf 'seed\n' >"$repo/README.md"
   git -C "$repo" add README.md
   git -C "$repo" commit -q -m seed
+  git -C "$repo" checkout -q -b codex/test-outcome-pr
   printf '.agents/learning/candidates/example.yml\n' >"$candidates"
+  printf '42\n' >"$pr_numbers"
+
+  cat >"$bin/gh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $1 == pr && $2 == view && $3 == 42 ]]; then
+  printf '{"number":42,"title":"test pr","state":"OPEN","headRefName":"codex/test-outcome-pr","url":"https://example.invalid/pr/42","reviewDecision":"","mergeStateStatus":"CLEAN"}\n'
+  exit 0
+fi
+
+if [[ $1 == pr && $2 == list && $* == *"--head codex/test-outcome-pr"* ]]; then
+  printf '[{"number":42,"title":"test pr","state":"OPEN","headRefName":"codex/test-outcome-pr","url":"https://example.invalid/pr/42","reviewDecision":"","mergeStateStatus":"CLEAN"}]\n'
+  exit 0
+fi
+
+if [[ $1 == pr && $2 == list && $* == *"--search #1 in:body"* ]]; then
+  printf '[]\n'
+  exit 0
+fi
+
+printf 'unexpected gh invocation: %s\n' "$*" >&2
+exit 1
+EOF
+  chmod +x "$bin/gh"
 
   local json
   json=$(
+    PATH="$bin:$PATH" \
     write_outcome \
       1 success main "$repo" \
       '2026-01-01T00:00:00Z' '2026-01-01T00:01:00Z' \
-      0 '' "$candidates" "$out" 1
+      0 '' "$candidates" "$out" 1 'codex/test-outcome-pr' "$pr_numbers"
   )
 
   printf '%s\n' "$json" | jq -e \
     '.schema == "agent-outcome/v1"
      and .issue == 1
      and .status == "success"
+     and (.prs | length == 1)
+     and .prs[0].number == 42
      and (.learning_candidates == [".agents/learning/candidates/example.yml"])' >/dev/null
   printf 'agent-record-outcome self-test passed\n'
 }
@@ -195,8 +253,12 @@ finished_at=""
 exit_code=0
 blocker=""
 candidates_file=""
+pr_head_branch=""
+pr_numbers_file=""
 output_dir="${AGENT_OUTCOME_DIR:-.agents/state/outcomes}"
 dry_run=0
+tmp_pr_numbers=""
+trap '[[ -z ${tmp_pr_numbers:-} ]] || rm -f "$tmp_pr_numbers"' EXIT
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -236,6 +298,16 @@ while [[ $# -gt 0 ]]; do
     candidates_file="${2:?--learning-candidates-file needs a value}"
     shift 2
     ;;
+  --head-branch)
+    pr_head_branch="${2:?--head-branch needs a value}"
+    shift 2
+    ;;
+  --pr-number)
+    [[ ${2:?--pr-number needs a value} =~ ^[0-9]+$ ]] || die "--pr-number must be a positive integer"
+    tmp_pr_numbers="${tmp_pr_numbers:-$(mktemp)}"
+    printf '%s\n' "$2" >>"$tmp_pr_numbers"
+    shift 2
+    ;;
   --output-dir)
     output_dir="${2:?--output-dir needs a value}"
     shift 2
@@ -267,4 +339,5 @@ started_at="${started_at:-$(utc_now)}"
 finished_at="${finished_at:-$(utc_now)}"
 
 write_outcome "$issue" "$status" "$base_branch" "$repo_dir" "$started_at" \
-  "$finished_at" "$exit_code" "$blocker" "$candidates_file" "$output_dir" "$dry_run"
+  "$finished_at" "$exit_code" "$blocker" "$candidates_file" "$output_dir" "$dry_run" \
+  "$pr_head_branch" "${tmp_pr_numbers:-/dev/null}"

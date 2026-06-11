@@ -132,6 +132,7 @@ record_issue_outcome() {
   local exit_code="$5"
   local blocker="$6"
   local candidates_file="$7"
+  local head_branch="$8"
 
   if [[ ! -x .agents/scripts/agent-record-outcome ]]; then
     echo "agent-run-issue: outcome recorder missing; skipped outcome record for issue #$issue" >&2
@@ -149,6 +150,7 @@ record_issue_outcome() {
       --exit-code "$exit_code" \
       --blocker "$blocker" \
       --learning-candidates-file "$candidates_file" \
+      --head-branch "$head_branch" \
       --output-dir "$AGENT_OUTCOME_DIR"
   ); then
     echo "agent-run-issue: recorded outcome: $outcome_path" >&2
@@ -168,7 +170,7 @@ fi
 run_one() {
   local issue="$1"
   echo "agent-run-issue: ===== issue #$issue =====" >&2
-  local started_at finished_at status exit_code blocker before_candidates new_candidates
+  local started_at finished_at status exit_code blocker before_candidates new_candidates outcome_head_branch
   started_at=$(utc_now)
   before_candidates=$(mktemp)
   new_candidates=$(mktemp)
@@ -180,7 +182,7 @@ run_one() {
     blocker="failed to sync ${BASE_BRANCH} from origin before issue session"
     : >"$new_candidates"
     finished_at=$(utc_now)
-    record_issue_outcome "$issue" "$status" "$started_at" "$finished_at" "$exit_code" "$blocker" "$new_candidates"
+    record_issue_outcome "$issue" "$status" "$started_at" "$finished_at" "$exit_code" "$blocker" "$new_candidates" "$BASE_BRANCH"
     return "$exit_code"
   fi
 
@@ -213,8 +215,9 @@ and explain what is blocked."
   fi
 
   finished_at=$(utc_now)
+  outcome_head_branch=$(git symbolic-ref --short HEAD 2>/dev/null || printf 'DETACHED')
   new_learning_candidates "$before_candidates" "$new_candidates"
-  record_issue_outcome "$issue" "$status" "$started_at" "$finished_at" "$exit_code" "$blocker" "$new_candidates"
+  record_issue_outcome "$issue" "$status" "$started_at" "$finished_at" "$exit_code" "$blocker" "$new_candidates" "$outcome_head_branch"
   return "$exit_code"
 }
 
