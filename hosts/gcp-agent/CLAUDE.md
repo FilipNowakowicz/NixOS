@@ -229,18 +229,27 @@ scripts/agent-session.sh -- nix/scripts/agent-run-issue.sh --label architecture-
 Or directly on the host after `scripts/agent-session.sh` opens a shell:
 `scripts/agent-run-issue.sh 169 170`.
 
+On a fresh or just-reprovisioned host `$AGENT_REPO_DIR` does not exist yet —
+the entrypoint bootstraps it itself (`git clone` over HTTPS, authenticated via
+the same `gh auth git-credential` PAT helper) before doing anything else. No
+manual clone step is required. If `$AGENT_REPO_DIR` exists but is not a git
+clone, it fails fast rather than touching the directory.
+
 What it does per issue:
 
-1. `git fetch` + `reset --hard origin/main` (criterion: clone up to date with `main`).
-2. Runs `claude -p` headless, instructing it to follow the
+1. Bootstrap: clone `$AGENT_REPO_DIR` from `$REPO_URL` if it doesn't exist yet
+   (first run / after reprovisioning); otherwise reuse the existing clone.
+2. `git fetch` + `reset --hard origin/main` (criterion: clone up to date with `main`).
+3. Runs `claude -p` headless, instructing it to follow the
    `issue-driven-development` skill: branch off `main`, smallest durable fix,
    validate with the `nix-verification-loop` skill, push, open a PR linking the
    issue (`Closes` only if fully satisfied, else `Refs`), never merge, never
    push to `main`.
-3. Push + PR creation use the host's scoped GitHub PAT via `gh` and the
+4. Push + PR creation use the host's scoped GitHub PAT via `gh` and the
    `gh auth git-credential` helper (`home/users/user/agent.nix`).
 
-Knobs: `AGENT_REPO_DIR` (default `$HOME/nix`), `BASE_BRANCH` (default `main`).
+Knobs: `AGENT_REPO_DIR` (default `$HOME/nix`), `BASE_BRANCH` (default `main`),
+`REPO_URL` (default this repo's HTTPS URL, used only for the initial clone).
 It fails fast if `gh auth status` is not authenticated (PAT not yet provisioned)
 rather than burning a session.
 

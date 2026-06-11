@@ -16,12 +16,15 @@
 # Env knobs:
 #   AGENT_REPO_DIR  repo clone to operate in (default: $HOME/nix)
 #   BASE_BRANCH     branch to sync to before each issue (default: main)
+#   REPO_URL        HTTPS clone URL used to bootstrap AGENT_REPO_DIR when it
+#                    does not exist yet (default: this repo, via gh's PAT)
 #
 # v1 is attended: it opens PRs but never merges. You review and merge yourself.
 set -euo pipefail
 
 AGENT_REPO_DIR="${AGENT_REPO_DIR:-$HOME/nix}"
 BASE_BRANCH="${BASE_BRANCH:-main}"
+REPO_URL="${REPO_URL:-https://github.com/FilipNowakowicz/nixos-config.git}"
 SESSION_LOCK="/run/agent/session.lock"
 
 label=""
@@ -58,11 +61,22 @@ die() {
 command -v claude >/dev/null 2>&1 || die "claude CLI not found (Home Manager agent role)"
 command -v gh >/dev/null 2>&1 || die "gh not found"
 command -v git >/dev/null 2>&1 || die "git not found"
-[[ -d $AGENT_REPO_DIR/.git ]] || die "no git clone at AGENT_REPO_DIR=$AGENT_REPO_DIR"
 
 # Fail fast if the scoped PAT is not wired — otherwise the run would burn a
-# session only to fail at push/PR time.
+# session only to fail at clone/push/PR time.
 gh auth status >/dev/null 2>&1 || die "gh is not authenticated (provision the scoped PAT — hosts/gcp-agent/CLAUDE.md)"
+
+# Bootstrap the clone on a fresh/reprovisioned host: nothing else creates
+# AGENT_REPO_DIR, and the host is disposable, so this is the steady-state path.
+if [[ -d $AGENT_REPO_DIR/.git ]]; then
+  : # existing clone — proceed as today
+elif [[ -e $AGENT_REPO_DIR ]]; then
+  die "AGENT_REPO_DIR=$AGENT_REPO_DIR exists but is not a git clone (refusing to touch it)"
+else
+  echo "agent-run-issue: bootstrapping clone of $REPO_URL at $AGENT_REPO_DIR ..." >&2
+  git clone "$REPO_URL" "$AGENT_REPO_DIR" ||
+    die "clone of $REPO_URL failed (check the scoped PAT — hosts/gcp-agent/CLAUDE.md)"
+fi
 
 # Hold the session lock for the WHOLE run so the idle-shutdown timer never powers
 # the box off mid-session during claude-free gaps (offloaded builds, git ops).
