@@ -1,0 +1,16 @@
+schema: learning-candidate/v1
+id: 2026-06-13-grep-literals-before-moving-to-shared-constants
+date: 2026-06-13
+expires: 2026-12-13
+status: open
+
+route: promote-doc
+best_form: doc
+
+evidence: [PR-#256, scripts/check-cache-config.sh]
+observation: scripts/check-cache-config.sh extracted the R2 cache substituter URL and nix-cache-1 key via regex directly from hosts/main/default.nix; issue #193 (move those literals into lib/binary-cache.nix) did not mention this coupling, and nix flake check would not have caught a stale extraction.
+proposed_upgrade: when moving a literal constant (esp. security-relevant cache keys/URLs/secrets identifiers) out of a host file into a shared lib location, grep the whole repo for the literal value first to find shell-script regex couplings, and update them alongside the Nix change.
+
+# type: workflow-gotcha
+# triggers: [move-literal-to-shared-constants, lib/binary-cache.nix, scripts/check-cache-config.sh]
+# targets: [scripts/check-cache-config.sh]
