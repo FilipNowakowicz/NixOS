@@ -57,6 +57,31 @@ have restorable auth state and the visible GitHub hostname/username nesting in
 the GitHub CLI backup. Token values must still be encrypted, and the repository
 check rejects plaintext JSON/YAML auth backups in that directory.
 
+### `DynamicUser` services and sops secrets
+
+A systemd unit with `DynamicUser = true` only has its `mimir`/`adguardhome`/etc.
+user and group resolvable via `nss-systemd` while the unit is running. During
+activation, `sops-install-secrets` runs with the unit stopped, so a secret
+`owner`/`group` set to the dynamic user's name cannot be resolved and the
+default `root:root 0400` is used instead — `preStart`/`ExecStart` then fails to
+read it.
+
+The fix is a static supplementary group, not a dynamic owner:
+
+- Leave the secret root-owned with `mode = "0440"`.
+- Declare a static `users.groups.<name> = { }`.
+- Add `systemd.services.<unit>.serviceConfig.SupplementaryGroups = [ "<name>" ]`
+  — systemd adds the dynamic user to this group at start, and
+  `sops-install-secrets` can resolve the static group at activation time.
+
+See `alertmanager_webhook_url`/`mimir-webhook` and
+`adguardhome_admin_password`/`adguardhome-secrets` in
+`hosts/homeserver-gcp/default.nix` and `hosts/homeserver-gcp/adguard.nix` for
+worked examples. A smoke test that doesn't import the affected module (e.g.
+`checks-light`) will not catch a missing supplementary group — verify with the
+host's own smoke test or a live `systemctl status`/`journalctl` check after
+deploy.
+
 ## Host Key Rotation
 
 Rotating a host identity requires both the host material and the sops recipient
