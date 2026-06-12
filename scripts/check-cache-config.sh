@@ -18,33 +18,33 @@ extract_first_match() {
 }
 
 setup_cache_url="$(extract_first_match 'https://[^[:space:]]+r2\.dev' .github/actions/setup-nix/action.yml)"
-main_cache_url="$(extract_first_match 'https://[^"]+r2\.dev' hosts/main/default.nix)"
+shared_cache_url="$(extract_first_match 'https://[^"]+r2\.dev' lib/binary-cache.nix)"
 
 setup_cache_key="$(
   sed -n 's/.*trusted-public-keys = .* \(nix-cache-1:[^[:space:]]*\).*/\1/p' \
     .github/actions/setup-nix/action.yml |
     head -n 1
 )"
-main_cache_key="$(
-  sed -n 's/.*"\(nix-cache-1:[^"]*\)".*/\1/p' hosts/main/default.nix | head -n 1
+shared_cache_key="$(
+  sed -n 's/.*"\(nix-cache-1:[^"]*\)".*/\1/p' lib/binary-cache.nix | head -n 1
 )"
 
-if [[ -z $setup_cache_url || -z $main_cache_url || -z $setup_cache_key || -z $main_cache_key ]]; then
-  echo "Unable to extract cache configuration from setup-nix or hosts/main." >&2
+if [[ -z $setup_cache_url || -z $shared_cache_url || -z $setup_cache_key || -z $shared_cache_key ]]; then
+  echo "Unable to extract cache configuration from setup-nix or lib/binary-cache.nix." >&2
   exit 1
 fi
 
-if [[ $setup_cache_url != "$main_cache_url" ]]; then
+if [[ $setup_cache_url != "$shared_cache_url" ]]; then
   echo "Cache URL mismatch:" >&2
-  echo "  setup-nix:  $setup_cache_url" >&2
-  echo "  hosts/main: $main_cache_url" >&2
+  echo "  setup-nix:        $setup_cache_url" >&2
+  echo "  lib/binary-cache: $shared_cache_url" >&2
   exit 1
 fi
 
-if [[ $setup_cache_key != "$main_cache_key" ]]; then
+if [[ $setup_cache_key != "$shared_cache_key" ]]; then
   echo "Cache public key mismatch:" >&2
-  echo "  setup-nix:  $setup_cache_key" >&2
-  echo "  hosts/main: $main_cache_key" >&2
+  echo "  setup-nix:        $setup_cache_key" >&2
+  echo "  lib/binary-cache: $shared_cache_key" >&2
   exit 1
 fi
 

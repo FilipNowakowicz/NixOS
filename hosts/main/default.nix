@@ -7,6 +7,8 @@
   ...
 }:
 let
+  binaryCache = import ../../lib/binary-cache.nix;
+
   agentMaintenanceCommands = [
     # Verify and trigger post-reinstall backup/check jobs.
     "/run/current-system/sw/bin/systemctl start restic-backups-local.service"
@@ -113,11 +115,10 @@ in
   };
 
   nix.settings = {
-    extra-substituters = [ "https://pub-706604c9179043ac98604d6de4c65c2c.r2.dev" ];
-    extra-trusted-public-keys = [
-      # Keep this in sync with the CI signing key used for the R2 binary cache.
-      "nix-cache-1:eEcFiWPHQpJmlcnNeGoPg6xxOp3itNZiWwFaE+NebIk="
-    ];
+    extra-substituters = [ binaryCache.r2.substituter ];
+    # Keep this in sync with the CI signing key used for the R2 binary cache;
+    # see lib/binary-cache.nix for the rotation procedure.
+    extra-trusted-public-keys = [ binaryCache.r2.publicKey ];
   };
 
   programs = {

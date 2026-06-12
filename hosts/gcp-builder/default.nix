@@ -3,6 +3,9 @@
   pkgs,
   ...
 }:
+let
+  binaryCache = import ../../lib/binary-cache.nix;
+in
 {
   imports = [
     inputs.disko.nixosModules.disko
@@ -58,8 +61,8 @@
   nix = {
     settings = {
       trusted-public-keys = [
-        "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-        "main.local:fSo1pk+WU1RU7vpv+GTbzldKn4MMtBS46vQasXJ2oeQ="
+        binaryCache.cacheNixosOrgPublicKey
+        binaryCache.mainLocalPublicKey
       ];
       # This box exists to build; let it use the whole VM.
       max-jobs = "auto";

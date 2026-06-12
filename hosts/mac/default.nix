@@ -6,6 +6,9 @@
   hostRegistry,
   ...
 }:
+let
+  binaryCache = import ../../lib/binary-cache.nix;
+in
 {
   imports = [
     inputs.disko.nixosModules.disko
@@ -122,10 +125,8 @@
 
   nix = {
     settings = {
-      extra-substituters = [ "https://pub-706604c9179043ac98604d6de4c65c2c.r2.dev" ];
-      extra-trusted-public-keys = [
-        "nix-cache-1:eEcFiWPHQpJmlcnNeGoPg6xxOp3itNZiWwFaE+NebIk="
-      ];
+      extra-substituters = [ binaryCache.r2.substituter ];
+      extra-trusted-public-keys = [ binaryCache.r2.publicKey ];
     };
 
     # 128 GB SSD fills quickly with generations and closure churn. Override the

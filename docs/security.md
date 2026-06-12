@@ -295,12 +295,17 @@ Two hosts (`main`, `mac`) trust an R2-hosted binary cache as an
 `gcp-builder`) trust a `main.local` cache served by `main`. Both are real trust
 edges in addition to `cache.nixos.org`, and they have different blast radii.
 
+Both substituter URLs and trusted public keys are defined once in
+[`lib/binary-cache.nix`](../lib/binary-cache.nix) and consumed from there by
+the relevant host configs — a key rotation starts by editing that file.
+
 ### R2-hosted CI cache (`main`, `mac`)
 
-`hosts/main/default.nix` and `hosts/mac/default.nix` both add
-`https://pub-706604c9179043ac98604d6de4c65c2c.r2.dev` as an `extra-substituters`
-entry and trust the public key
-`nix-cache-1:eEcFiWPHQpJmlcnNeGoPg6xxOp3itNZiWwFaE+NebIk=`. Anything
+`hosts/main/default.nix` and `hosts/mac/default.nix` both reference
+`lib/binary-cache.nix`'s `r2.substituter`
+(`https://pub-706604c9179043ac98604d6de4c65c2c.r2.dev`) as an
+`extra-substituters` entry and trust `r2.publicKey`
+(`nix-cache-1:eEcFiWPHQpJmlcnNeGoPg6xxOp3itNZiWwFaE+NebIk=`). Anything
 `nix-store`-signed with the matching private key and served from that R2 bucket
 will be substituted and trusted by both workstations without rebuilding from
 source — i.e. it can supply build outputs that land in `/nix/store` and get
@@ -346,16 +351,15 @@ tracked separately — see the linked follow-up issue, if filed.
 1. Generate a new Ed25519 signing keypair:
    `nix-store --generate-binary-cache-key nix-cache-1 /tmp/cache-priv.key /tmp/cache-pub.key`
    (keep the same `nix-cache-1` name so existing trust comments stay accurate,
-   or pick a new name and update both files below consistently).
+   or pick a new name and update both places below consistently).
 2. Update the `CACHE_SIGNING_KEY` GitHub Actions repo secret with the contents
    of the new private key file (Settings → Secrets and variables → Actions).
-3. Update `extra-trusted-public-keys` in both `hosts/main/default.nix` and
-   `hosts/mac/default.nix` to the new public key, keeping the
-   "Keep this in sync with the CI signing key used for the R2 binary cache"
-   comment.
+3. Update `r2.publicKey` in `lib/binary-cache.nix` to the new public key —
+   `hosts/main/default.nix` and `hosts/mac/default.nix` both consume it from
+   there, keeping the "Keep this in sync with the CI signing key used for the
+   R2 binary cache" comment in `hosts/main/default.nix` accurate.
 4. Update the matching trusted key in `.github/actions/setup-nix/action.yml`
-   (checked against `hosts/main/default.nix` by
-   `scripts/check-cache-config.sh`).
+   (checked against `lib/binary-cache.nix` by `scripts/check-cache-config.sh`).
 5. Deploy `main` and `mac` so the new public key is trusted before CI starts
    signing with the new private key, then merge the workflow/host changes.
 6. Old store paths signed with the retired key remain on R2 but will no longer
@@ -365,8 +369,9 @@ tracked separately — see the linked follow-up issue, if filed.
 ### `main.local` cache (`homeserver-gcp`, `gcp-builder`)
 
 `hosts/homeserver-gcp/default.nix` and `hosts/gcp-builder/default.nix` trust
-`main.local:fSo1pk+WU1RU7vpv+GTbzldKn4MMtBS46vQasXJ2oeQ=` for a cache served by
-`main` itself. This is a much smaller trust delta: `main` (the user's own dev
+`lib/binary-cache.nix`'s `mainLocalPublicKey`
+(`main.local:fSo1pk+WU1RU7vpv+GTbzldKn4MMtBS46vQasXJ2oeQ=`) for a cache served
+by `main` itself. This is a much smaller trust delta: `main` (the user's own dev
 workstation) is already the deploy and admin source of truth for both of those
 hosts, so trusting its cache does not add a new principal — it just lets them
 substitute from a host they already implicitly trust.
