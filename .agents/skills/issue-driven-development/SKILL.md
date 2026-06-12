@@ -25,6 +25,10 @@ If the source item is still vague, use `issue-tdd` first.
    - What must not change?
    - What command/check will prove completion?
    - What decisions are already answered or explicitly out of scope?
+   - If the issue names specific identifiers/paths to keep, rename, or remove
+     (common in architecture-review-derived issues), grep the repo for those
+     names before applying them literally — the issue text itself can have
+     stale or transposed names relative to actual usage.
 3. Ask only outcome-changing questions before editing:
    - Ask about security posture, ownership, deploy risk, document ownership,
      product behavior, or PR split boundaries.
