@@ -162,7 +162,8 @@ validate_routing() {
     "agent-model-routing/v1" \
     "path_classes" \
     "id,description,patterns,risk,default_profile,required_checks" \
-    docs agent-workflow-scripts nix-modules security-secrets ci-workflows
+    docs learning-candidates agent-workflow-scripts nix-modules \
+    security-secrets ci-workflows agent-instructions
 }
 
 validate_profiles() {

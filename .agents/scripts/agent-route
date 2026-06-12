@@ -366,6 +366,35 @@ self_test() {
     and (.capability_profile.agent == "gemini-cli")
   ' >/dev/null || die "self-test: unexpected docs decision: $out"
 
+  # learning candidates: run byproducts, low risk, must NOT classify as
+  # agent-workflow-scripts despite living under .agents/.
+  out=$(printf '.agents/learning/candidates/2026-01-01-example.yml\n' | "$script_path" --json)
+  printf '%s' "$out" | jq -e '
+    .risk == "low"
+    and .route == "auto"
+    and .path_classes == ["learning-candidates"]
+  ' >/dev/null || die "self-test: unexpected learning-candidates decision: $out"
+
+  # root CLAUDE.md: explicit agent-instructions class, human review — not
+  # "unclassified" noise. Host runbooks under hosts/ stay docs.
+  out=$(printf 'CLAUDE.md\n' | "$script_path" --json)
+  printf '%s' "$out" | jq -e '
+    .risk == "high"
+    and .route == "human-review"
+    and .path_classes == ["agent-instructions"]
+    and .default_profile == null
+  ' >/dev/null || die "self-test: unexpected agent-instructions decision: $out"
+  out=$(printf 'hosts/main/CLAUDE.md\n' | "$script_path" --json)
+  printf '%s' "$out" | jq -e '.path_classes == ["docs"]' >/dev/null ||
+    die "self-test: expected host runbook to stay in docs: $out"
+
+  # flake.lock: dependency pin, nix-modules, not unclassified.
+  out=$(printf 'flake.lock\n' | "$script_path" --json)
+  printf '%s' "$out" | jq -e '
+    .path_classes == ["nix-modules"]
+    and .route == "auto"
+  ' >/dev/null || die "self-test: unexpected flake.lock decision: $out"
+
   # agent workflow scripts: medium risk, auto route, agent-workflow-engineer.
   out=$(printf '.agents/scripts/agent-route\n' | "$script_path" --json)
   printf '%s' "$out" | jq -e '
