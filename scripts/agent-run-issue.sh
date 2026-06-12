@@ -24,12 +24,23 @@
 #   BASE_BRANCH     branch to sync to before each issue (default: main)
 #   REPO_URL        HTTPS clone URL used to bootstrap AGENT_REPO_DIR when it
 #                    does not exist yet (default: this repo, via gh's PAT)
-#                    Standard GitHub HTTPS origins are converted to SSH
-#                    push URLs after clone setup so PR publication can push
-#                    non-interactively.
+#                    GitHub SSH push URLs are normalized back to HTTPS after
+#                    clone setup: the agent host authenticates over HTTPS via
+#                    gh's credential helper and has no GitHub SSH key, so an
+#                    SSH push URL fails only at PR publication time, after a
+#                    whole session has been spent (dogfood run 2026-06-12).
+#                    Authenticated access to origin is preflighted before any
+#                    session starts.
 #   AGENT_OUTCOME_DIR
 #                   directory for per-issue outcome records
 #                   (default: .agents/state/outcomes)
+#   AGENT_SESSION_DIR
+#                   directory for per-issue inner-session logs. Each claude
+#                   session runs with --output-format stream-json --verbose
+#                   and its full event stream is written to
+#                   <dir>/<started-at>-issue-<n>.log; the final "result"
+#                   event supplies cost/turns/duration telemetry for the
+#                   outcome record. (default: .agents/state/sessions)
 #   AGENT_REQUIRE_READY
 #                   when set to 1 (or pass --require-ready), run
 #                   .agents/scripts/agent-issue-readiness on each issue first
@@ -59,6 +70,7 @@ AGENT_REPO_DIR="${AGENT_REPO_DIR:-$HOME/nix}"
 BASE_BRANCH="${BASE_BRANCH:-main}"
 REPO_URL="${REPO_URL:-https://github.com/FilipNowakowicz/nixos-config.git}"
 AGENT_OUTCOME_DIR="${AGENT_OUTCOME_DIR:-.agents/state/outcomes}"
+AGENT_SESSION_DIR="${AGENT_SESSION_DIR:-.agents/state/sessions}"
 AGENT_REQUIRE_READY="${AGENT_REQUIRE_READY:-0}"
 AGENT_CLAUDE_CMD="${AGENT_CLAUDE_CMD:-claude}"
 AGENT_INNER_TIMEOUT_SECONDS="${AGENT_INNER_TIMEOUT_SECONDS:-900}"
@@ -119,27 +131,44 @@ validate_supervision_config() {
   validate_non_negative_integer AGENT_INNER_KILL_GRACE_SECONDS "$AGENT_INNER_KILL_GRACE_SECONDS"
 }
 
-github_https_to_ssh_url() {
+github_ssh_to_https_url() {
   local url="$1"
-  if [[ $url =~ ^https://github\.com/([^/]+)/([^/]+)(\.git)?$ ]]; then
-    printf 'git@github.com:%s/%s.git\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]%.git}"
+  if [[ $url =~ ^git@github\.com:([^/]+)/(.+)$ ]] ||
+    [[ $url =~ ^ssh://git@github\.com/([^/]+)/(.+)$ ]]; then
+    printf 'https://github.com/%s/%s.git\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]%.git}"
     return 0
   fi
   return 1
 }
 
 ensure_push_safe_origin() {
+  # The agent host pushes over HTTPS via gh's credential helper (scoped PAT)
+  # and has no GitHub SSH key, so a GitHub SSH push URL fails with
+  # "Permission denied (publickey)" only at PR publication time — after a
+  # whole session has been spent. Normalize GitHub SSH push URLs back to
+  # HTTPS; HTTPS and non-GitHub URLs are left unchanged.
   local repo_dir="$1"
-  local push_url ssh_url
+  local push_url https_url
   push_url=$(git -C "$repo_dir" remote get-url --push origin 2>/dev/null || true)
   [[ -n $push_url ]] || return 0
 
-  if ssh_url=$(github_https_to_ssh_url "$push_url"); then
-    if [[ $push_url != "$ssh_url" ]]; then
-      git -C "$repo_dir" remote set-url --push origin "$ssh_url"
-      echo "agent-run-issue: configured origin push URL for SSH publication" >&2
+  if https_url=$(github_ssh_to_https_url "$push_url"); then
+    if [[ $push_url != "$https_url" ]]; then
+      git -C "$repo_dir" remote set-url --push origin "$https_url"
+      echo "agent-run-issue: normalized origin push URL to HTTPS (gh credential helper)" >&2
     fi
   fi
+}
+
+preflight_push_auth() {
+  # Prove non-interactive authenticated access to origin BEFORE burning a
+  # session: the 2026-06-11/12 dogfood runs each completed implementation and
+  # failed only at `git push` (first a missing credential helper, then a
+  # wrong SSH push URL). ls-remote exercises the same URL + credential path
+  # the final push will use.
+  local repo_dir="$1"
+  GIT_TERMINAL_PROMPT=0 git -C "$repo_dir" ls-remote --heads origin >/dev/null 2>&1 ||
+    die "cannot authenticate to origin non-interactively (check the scoped PAT / gh credential helper — hosts/gcp-agent/CLAUDE.md)"
 }
 
 heartbeat_worktree_summary() {
@@ -171,24 +200,25 @@ terminate_inner_session() {
 
 supervise_inner_session() {
   local issue="$1"
-  shift
+  local session_log="$2"
+  shift 2
   validate_supervision_config
 
-  local start now elapsed next_heartbeat pid kill_target rc
+  local start now elapsed next_heartbeat pid kill_target rc log_bytes
   start=$(date +%s)
   next_heartbeat=$((start + AGENT_HEARTBEAT_SECONDS))
 
   if command -v setsid >/dev/null 2>&1; then
-    setsid "$@" &
+    setsid "$@" >"$session_log" 2>&1 &
     pid=$!
     kill_target="-$pid"
   else
-    "$@" &
+    "$@" >"$session_log" 2>&1 &
     pid=$!
     kill_target="$pid"
   fi
 
-  echo "agent-run-issue: issue #$issue inner session started pid=$pid timeout=${AGENT_INNER_TIMEOUT_SECONDS}s heartbeat=${AGENT_HEARTBEAT_SECONDS}s" >&2
+  echo "agent-run-issue: issue #$issue inner session started pid=$pid timeout=${AGENT_INNER_TIMEOUT_SECONDS}s heartbeat=${AGENT_HEARTBEAT_SECONDS}s log=$session_log" >&2
 
   while kill -0 "$pid" 2>/dev/null; do
     now=$(date +%s)
@@ -204,7 +234,8 @@ supervise_inner_session() {
     fi
 
     if ((AGENT_HEARTBEAT_SECONDS > 0 && now >= next_heartbeat)); then
-      echo "agent-run-issue: issue #$issue heartbeat elapsed=${elapsed}s $(heartbeat_worktree_summary)" >&2
+      log_bytes=$(wc -c <"$session_log" 2>/dev/null | tr -d ' ' || printf '0')
+      echo "agent-run-issue: issue #$issue heartbeat elapsed=${elapsed}s log_bytes=${log_bytes:-0} $(heartbeat_worktree_summary)" >&2
       next_heartbeat=$((now + AGENT_HEARTBEAT_SECONDS))
     fi
 
@@ -216,6 +247,22 @@ supervise_inner_session() {
   rc=$?
   set -e
   return "$rc"
+}
+
+# Print the last stream-json "result" event from a session log (claude -p
+# --output-format stream-json), or "null" when the log has none — e.g. the
+# CLI died before emitting any event. Never fails the caller.
+parse_session_result() {
+  local log="$1"
+  if [[ ! -s $log ]]; then
+    printf 'null\n'
+    return 0
+  fi
+  jq -cRs '
+    split("\n")
+    | map(fromjson? // empty)
+    | map(select(type == "object" and .type == "result"))
+    | (last // null)' "$log" 2>/dev/null || printf 'null\n'
 }
 
 self_test() {
@@ -232,22 +279,27 @@ self_test() {
   printf 'seed\n' >"$repo/README.md"
   git -C "$repo" add README.md
   git -C "$repo" commit -q -m seed
-  git -C "$repo" remote add origin https://github.com/example-owner/example-repo.git
+  git -C "$repo" remote add origin git@github.com:example-owner/example-repo.git
   ensure_push_safe_origin "$repo"
-  [[ $(git -C "$repo" remote get-url --push origin) == git@github.com:example-owner/example-repo.git ]] ||
-    die "self-test: expected GitHub HTTPS origin push URL to convert to SSH"
+  [[ $(git -C "$repo" remote get-url --push origin) == https://github.com/example-owner/example-repo.git ]] ||
+    die "self-test: expected GitHub SSH origin push URL to convert to HTTPS"
 
-  git -C "$repo" remote set-url origin git@github.com:example-owner/example-repo.git
-  git -C "$repo" remote set-url --push origin git@github.com:example-owner/example-repo.git
+  git -C "$repo" remote set-url origin https://github.com/example-owner/example-repo.git
+  git -C "$repo" remote set-url --push origin https://github.com/example-owner/example-repo.git
   ensure_push_safe_origin "$repo"
-  [[ $(git -C "$repo" remote get-url --push origin) == git@github.com:example-owner/example-repo.git ]] ||
-    die "self-test: expected existing SSH push URL to be preserved"
+  [[ $(git -C "$repo" remote get-url --push origin) == https://github.com/example-owner/example-repo.git ]] ||
+    die "self-test: expected existing HTTPS push URL to be preserved"
 
-  git -C "$repo" remote set-url origin https://example.invalid/example-owner/example-repo.git
-  git -C "$repo" remote set-url --push origin https://example.invalid/example-owner/example-repo.git
+  git -C "$repo" remote set-url --push origin ssh://git@github.com/example-owner/example-repo.git
   ensure_push_safe_origin "$repo"
-  [[ $(git -C "$repo" remote get-url --push origin) == https://example.invalid/example-owner/example-repo.git ]] ||
-    die "self-test: expected non-GitHub HTTPS push URL to be preserved"
+  [[ $(git -C "$repo" remote get-url --push origin) == https://github.com/example-owner/example-repo.git ]] ||
+    die "self-test: expected ssh:// GitHub push URL to convert to HTTPS"
+
+  git -C "$repo" remote set-url origin git@gitlab.example.invalid:example-owner/example-repo.git
+  git -C "$repo" remote set-url --push origin git@gitlab.example.invalid:example-owner/example-repo.git
+  ensure_push_safe_origin "$repo"
+  [[ $(git -C "$repo" remote get-url --push origin) == git@gitlab.example.invalid:example-owner/example-repo.git ]] ||
+    die "self-test: expected non-GitHub SSH push URL to be preserved"
 
   cat >"$bin/success-worker" <<'EOF'
 #!/usr/bin/env bash
@@ -273,17 +325,31 @@ EOF
   AGENT_HEARTBEAT_SECONDS=1
   AGENT_INNER_KILL_GRACE_SECONDS=1
   set +e
-  out=$(supervise_inner_session 999 "$bin/success-worker" -p prompt 2>&1)
+  out=$(supervise_inner_session 999 "$tmp/success.log" "$bin/success-worker" -p prompt 2>&1)
   rc=$?
   set -e
   [[ $rc -eq 0 ]] || die "self-test: expected success worker rc 0 (got $rc; output: $out)"
   [[ $out == *"inner session started"* ]] || die "self-test: missing start line (output: $out)"
+  grep -q 'success-worker received' "$tmp/success.log" ||
+    die "self-test: worker output not captured in session log"
+
+  printf '%s\n' '{"type":"system","subtype":"init"}' \
+    '{"type":"result","subtype":"success","total_cost_usd":0.42,"num_turns":7,"duration_ms":12345,"session_id":"abc-123"}' \
+    >"$tmp/result.log"
+  out=$(parse_session_result "$tmp/result.log")
+  [[ $(jq -r '.total_cost_usd' <<<"$out") == 0.42 ]] ||
+    die "self-test: expected parse_session_result to find the result event (got: $out)"
+  printf 'not json at all\n' >"$tmp/noise.log"
+  [[ $(parse_session_result "$tmp/noise.log") == null ]] ||
+    die "self-test: expected null result for a log without result events"
+  [[ $(parse_session_result "$tmp/missing.log") == null ]] ||
+    die "self-test: expected null result for a missing log"
 
   AGENT_INNER_TIMEOUT_SECONDS=2
   AGENT_HEARTBEAT_SECONDS=1
   AGENT_INNER_KILL_GRACE_SECONDS=1
   set +e
-  out=$(supervise_inner_session 999 "$bin/slow-worker" 2>&1)
+  out=$(supervise_inner_session 999 "$tmp/slow.log" "$bin/slow-worker" 2>&1)
   rc=$?
   set -e
   [[ $rc -eq 124 ]] || die "self-test: expected timeout rc 124 (got $rc; output: $out)"
@@ -304,6 +370,7 @@ fi
 command -v "$AGENT_CLAUDE_CMD" >/dev/null 2>&1 || die "$AGENT_CLAUDE_CMD CLI not found (Home Manager agent role)"
 command -v gh >/dev/null 2>&1 || die "gh not found"
 command -v git >/dev/null 2>&1 || die "git not found"
+command -v jq >/dev/null 2>&1 || die "jq not found"
 
 # Fail fast if the scoped PAT is not wired — otherwise the run would burn a
 # session only to fail at clone/push/PR time.
@@ -321,6 +388,7 @@ else
     die "clone of $REPO_URL failed (check the scoped PAT — hosts/gcp-agent/CLAUDE.md)"
 fi
 ensure_push_safe_origin "$AGENT_REPO_DIR"
+preflight_push_auth "$AGENT_REPO_DIR"
 
 # Hold the session lock for the WHOLE run so the idle-shutdown timer never powers
 # the box off mid-session during claude-free gaps (offloaded builds, git ops).
@@ -388,7 +456,15 @@ discover_pr_lines() {
     if [[ -n $head_branch && $head_branch != DETACHED ]]; then
       gh pr list --state all --head "$head_branch" --json number,title,state,url 2>/dev/null || true
     fi
-    gh pr list --state all --search "#${issue} in:body" --json number,title,state,url 2>/dev/null || true
+    # The body search alone is too loose: any PR merely quoting "#<issue>"
+    # matches (dogfood run 2026-06-12 attached an unrelated PR to two
+    # outcomes). Keep only PRs whose body links the issue with a
+    # closing/reference keyword.
+    gh pr list --state all --search "#${issue} in:body" --json number,title,state,url,body 2>/dev/null |
+      jq -c --arg issue "$issue" '
+        map(select((.body // "")
+          | test("(?i)(close[sd]?|fix(es|ed)?|resolve[sd]?|refs?)[[:space:]]+#" + $issue + "\\b")))
+        | map(del(.body))' 2>/dev/null || true
   } | jq -rs '
     (add // [])
     | map(select(type == "object" and (.number | type == "number")))
@@ -428,6 +504,9 @@ post_finished_comment() {
   local head_branch="$6"
   local blocker="$7"
   local outcome_path="$8"
+  local session_log="${9:-}"
+  local session_cost="${10:-}"
+  local session_turns="${11:-}"
 
   local blocker_text pr_lines outcome_text
   blocker_text="${blocker:-"(none)"}"
@@ -445,6 +524,9 @@ post_finished_comment() {
 - head_branch: ${head_branch}
 - blocker: ${blocker_text}
 - outcome_record: ${outcome_text}
+- session_log: ${session_log:-"(none)"}
+- cost_usd: ${session_cost:-"(unknown)"}
+- turns: ${session_turns:-"(unknown)"}
 
 Linked PRs:
 ${pr_lines}
@@ -464,6 +546,11 @@ record_issue_outcome() {
   local candidates_file="$7"
   local head_branch="$8"
   local route_file="${9:-}"
+  local session_log="${10:-}"
+  local session_cost="${11:-}"
+  local session_turns="${12:-}"
+  local session_duration_ms="${13:-}"
+  local session_id="${14:-}"
 
   LAST_OUTCOME_PATH=""
   if [[ ! -x .agents/scripts/agent-record-outcome ]]; then
@@ -475,6 +562,13 @@ record_issue_outcome() {
   if [[ -n $route_file && -s $route_file ]]; then
     route_args=(--route-file "$route_file")
   fi
+
+  local session_args=()
+  [[ -n $session_log ]] && session_args+=(--session-log "$session_log")
+  [[ -n $session_cost ]] && session_args+=(--session-cost-usd "$session_cost")
+  [[ -n $session_turns ]] && session_args+=(--session-turns "$session_turns")
+  [[ -n $session_duration_ms ]] && session_args+=(--session-duration-ms "$session_duration_ms")
+  [[ -n $session_id ]] && session_args+=(--session-id "$session_id")
 
   if outcome_path=$(
     .agents/scripts/agent-record-outcome \
@@ -489,7 +583,8 @@ record_issue_outcome() {
       --learning-candidates-file "$candidates_file" \
       --head-branch "$head_branch" \
       --output-dir "$AGENT_OUTCOME_DIR" \
-      "${route_args[@]}"
+      "${route_args[@]}" \
+      "${session_args[@]}"
   ); then
     LAST_OUTCOME_PATH="$outcome_path"
     echo "agent-run-issue: recorded outcome: $outcome_path" >&2
@@ -521,12 +616,17 @@ run_one() {
   local issue="$1"
   echo "agent-run-issue: ===== issue #$issue =====" >&2
   local started_at finished_at status exit_code blocker before_candidates new_candidates outcome_head_branch route_file
+  local session_log session_result session_cost session_turns session_duration_ms session_id
   started_at=$(utc_now)
   post_started_comment "$issue" "$started_at"
   before_candidates=$(mktemp)
   new_candidates=$(mktemp)
   route_file=$(mktemp)
   trap 'rm -f "$before_candidates" "$new_candidates" "$route_file"' RETURN
+
+  mkdir -p "$AGENT_SESSION_DIR"
+  session_log="$AGENT_SESSION_DIR/$(printf '%s' "$started_at" | tr -c '0-9TZ:-' '-')-issue-${issue}.log"
+  session_cost="" session_turns="" session_duration_ms="" session_id=""
 
   if ! sync_base; then
     status=failure
@@ -575,26 +675,38 @@ explain what is blocked."
   status=success
   exit_code=0
   blocker=""
-  if supervise_inner_session "$issue" "$AGENT_CLAUDE_CMD" -p "$prompt"; then
+  if supervise_inner_session "$issue" "$session_log" \
+    "$AGENT_CLAUDE_CMD" -p "$prompt" --output-format stream-json --verbose; then
     echo "agent-run-issue: issue #$issue session finished" >&2
   else
     exit_code=$?
     status=failure
     if [[ $exit_code -eq 124 ]]; then
-      blocker="claude session exceeded AGENT_INNER_TIMEOUT_SECONDS=${AGENT_INNER_TIMEOUT_SECONDS}; inspect session output and git status"
-      echo "agent-run-issue: issue #$issue session timed out — see output above; check 'git status' and 'gh pr list'" >&2
+      blocker="claude session exceeded AGENT_INNER_TIMEOUT_SECONDS=${AGENT_INNER_TIMEOUT_SECONDS}; inspect $session_log and git status"
+      echo "agent-run-issue: issue #$issue session timed out — see $session_log; check 'git status' and 'gh pr list'" >&2
     else
-      blocker="claude session exited non-zero; inspect session output and linked PRs"
-      echo "agent-run-issue: issue #$issue session exited non-zero — see output above; check 'gh pr list'" >&2
+      blocker="claude session exited non-zero; inspect $session_log and linked PRs"
+      echo "agent-run-issue: issue #$issue session exited non-zero — see $session_log; check 'gh pr list'" >&2
     fi
+    echo "agent-run-issue: last session output for issue #$issue:" >&2
+    tail -n 40 "$session_log" >&2 2>/dev/null || true
   fi
+
+  session_result=$(parse_session_result "$session_log")
+  session_cost=$(jq -r '.total_cost_usd // empty' <<<"$session_result" 2>/dev/null || true)
+  session_turns=$(jq -r '.num_turns // empty' <<<"$session_result" 2>/dev/null || true)
+  session_duration_ms=$(jq -r '.duration_ms // empty' <<<"$session_result" 2>/dev/null || true)
+  session_id=$(jq -r '.session_id // empty' <<<"$session_result" 2>/dev/null || true)
+  echo "agent-run-issue: issue #$issue session telemetry: cost_usd=${session_cost:-unknown} turns=${session_turns:-unknown} log=$session_log" >&2
 
   finished_at=$(utc_now)
   outcome_head_branch=$(git symbolic-ref --short HEAD 2>/dev/null || printf 'DETACHED')
   new_learning_candidates "$before_candidates" "$new_candidates"
   compute_route_decision "$route_file"
-  record_issue_outcome "$issue" "$status" "$started_at" "$finished_at" "$exit_code" "$blocker" "$new_candidates" "$outcome_head_branch" "$route_file"
-  post_finished_comment "$issue" "$status" "$exit_code" "$started_at" "$finished_at" "$outcome_head_branch" "$blocker" "$LAST_OUTCOME_PATH"
+  record_issue_outcome "$issue" "$status" "$started_at" "$finished_at" "$exit_code" "$blocker" "$new_candidates" "$outcome_head_branch" "$route_file" \
+    "$session_log" "$session_cost" "$session_turns" "$session_duration_ms" "$session_id"
+  post_finished_comment "$issue" "$status" "$exit_code" "$started_at" "$finished_at" "$outcome_head_branch" "$blocker" "$LAST_OUTCOME_PATH" \
+    "$session_log" "$session_cost" "$session_turns"
   return "$exit_code"
 }
 

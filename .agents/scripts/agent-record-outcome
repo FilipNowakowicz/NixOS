@@ -19,6 +19,11 @@ Options:
   --route-file <path>               agent-route --json output to embed under "route".
                                      Ignored if the file's "schema" is not
                                      "agent-route/v1".
+  --session-log <path>              Inner-session log path to record under "session".
+  --session-cost-usd <n>            Session cost in USD (from the stream-json result event).
+  --session-turns <n>               Session turn count.
+  --session-duration-ms <n>         Session duration in milliseconds.
+  --session-id <id>                 Inner Claude session id.
   --output-dir <path>               Output directory (default: .agents/state/outcomes).
   --dry-run                         Print JSON instead of writing a file.
   --self-test                       Run a local smoke test and exit.
@@ -62,7 +67,14 @@ discover_prs() {
       gh pr list --state all --head "$head_branch" --json "$pr_fields" 2>/dev/null || true
     fi
 
-    gh pr list --state all --search "#${issue} in:body" --json "$pr_fields" 2>/dev/null || true
+    # The body search alone is too loose: any PR merely quoting "#<issue>"
+    # matches. Keep only PRs whose body links the issue with a
+    # closing/reference keyword.
+    gh pr list --state all --search "#${issue} in:body" --json "${pr_fields},body" 2>/dev/null |
+      jq -c --arg issue "$issue" '
+        map(select((.body // "")
+          | test("(?i)(close[sd]?|fix(es|ed)?|resolve[sd]?|refs?)[[:space:]]+#" + $issue + "\\b")))
+        | map(del(.body))' 2>/dev/null || true
   } | jq -cs '
     map(if type == "array" then . else [.] end)
     | (add // [])
@@ -82,6 +94,28 @@ collect_learning_candidates() {
   [[ -d .agents/learning/candidates ]] || return 0
   find .agents/learning/candidates -maxdepth 1 -type f \
     ! -name '.gitkeep' -printf '%p\n' | sort
+}
+
+# Build the optional "session" object from the --session-* globals; prints
+# "null" when none were provided so the key can be omitted entirely.
+build_session_json() {
+  if [[ -z $session_log && -z $session_cost_usd && -z $session_turns &&
+    -z $session_duration_ms && -z $session_id ]]; then
+    printf 'null\n'
+    return 0
+  fi
+  jq -cn \
+    --arg log "$session_log" \
+    --arg cost "$session_cost_usd" \
+    --arg turns "$session_turns" \
+    --arg duration_ms "$session_duration_ms" \
+    --arg id "$session_id" \
+    '{}
+     + (if $log == "" then {} else {log: $log} end)
+     + (if $cost == "" then {} else {cost_usd: ($cost | tonumber)} end)
+     + (if $turns == "" then {} else {turns: ($turns | tonumber)} end)
+     + (if $duration_ms == "" then {} else {duration_ms: ($duration_ms | tonumber)} end)
+     + (if $id == "" then {} else {id: $id} end)'
 }
 
 write_outcome() {
@@ -130,6 +164,11 @@ write_outcome() {
       die "route file is not valid JSON: $route_file"
   fi
 
+  # Session telemetry comes from the --session-* globals (not positional
+  # parameters) to keep this signature from growing further.
+  local session_json
+  session_json=$(build_session_json)
+
   local outcome
   outcome=$(
     jq -cn \
@@ -149,6 +188,7 @@ write_outcome() {
       --argjson git_dirty "$dirty_json" \
       --arg blocker "$blocker" \
       --argjson route "$route_json" \
+      --argjson session "$session_json" \
       '{
         schema: $schema,
         id: $id,
@@ -165,7 +205,8 @@ write_outcome() {
         learning_candidates: $learning_candidates,
         git_dirty: $git_dirty,
         blocker: $blocker
-      } + (if $route == null then {} else {route: $route} end)'
+      } + (if $route == null then {} else {route: $route} end)
+        + (if $session == null then {} else {session: $session} end)'
   )
 
   printf '%s\n' "$outcome" | jq -e \
@@ -265,7 +306,38 @@ EOF
      and (.prs | length == 1)
      and .prs[0].number == 42
      and (.learning_candidates == [".agents/learning/candidates/example.yml"])
-     and (has("route") | not)' >/dev/null
+     and (has("route") | not)
+     and (has("session") | not)' >/dev/null
+
+  # --session-* flags embed a "session" telemetry object.
+  json=$(
+    PATH="$bin:$PATH" \
+      "$script_path" \
+      --issue 1 \
+      --status success \
+      --base-branch main \
+      --repo-dir "$repo" \
+      --started-at '2026-01-01T00:00:00Z' \
+      --finished-at '2026-01-01T00:01:00Z' \
+      --exit-code 0 \
+      --blocker '' \
+      --learning-candidates-file "$candidates" \
+      --output-dir "$out" \
+      --head-branch 'codex/test-outcome-pr' \
+      --pr-number 42 \
+      --session-log '.agents/state/sessions/2026-01-01T00:00:00Z-issue-1.log' \
+      --session-cost-usd 0.42 \
+      --session-turns 7 \
+      --session-duration-ms 12345 \
+      --session-id 'abc-123' \
+      --dry-run
+  )
+  printf '%s\n' "$json" | jq -e \
+    '.session.log == ".agents/state/sessions/2026-01-01T00:00:00Z-issue-1.log"
+     and .session.cost_usd == 0.42
+     and .session.turns == 7
+     and .session.duration_ms == 12345
+     and .session.id == "abc-123"' >/dev/null
 
   # --route-file embeds a valid agent-route/v1 decision under "route".
   local route_file="$tmp/route.json"
@@ -331,6 +403,11 @@ candidates_file=""
 pr_head_branch=""
 pr_numbers_file=""
 route_file=""
+session_log=""
+session_cost_usd=""
+session_turns=""
+session_duration_ms=""
+session_id=""
 output_dir="${AGENT_OUTCOME_DIR:-.agents/state/outcomes}"
 dry_run=0
 tmp_pr_numbers=""
@@ -387,6 +464,32 @@ while [[ $# -gt 0 ]]; do
     ;;
   --route-file)
     route_file="${2:?--route-file needs a value}"
+    shift 2
+    ;;
+  --session-log)
+    session_log="${2:?--session-log needs a value}"
+    shift 2
+    ;;
+  --session-cost-usd)
+    [[ ${2:?--session-cost-usd needs a value} =~ ^[0-9]+(\.[0-9]+)?$ ]] ||
+      die "--session-cost-usd must be a non-negative number"
+    session_cost_usd="$2"
+    shift 2
+    ;;
+  --session-turns)
+    [[ ${2:?--session-turns needs a value} =~ ^[0-9]+$ ]] ||
+      die "--session-turns must be a non-negative integer"
+    session_turns="$2"
+    shift 2
+    ;;
+  --session-duration-ms)
+    [[ ${2:?--session-duration-ms needs a value} =~ ^[0-9]+$ ]] ||
+      die "--session-duration-ms must be a non-negative integer"
+    session_duration_ms="$2"
+    shift 2
+    ;;
+  --session-id)
+    session_id="${2:?--session-id needs a value}"
     shift 2
     ;;
   --output-dir)

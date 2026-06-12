@@ -1,0 +1,16 @@
+schema: learning-candidate/v1
+id: 2026-06-12-agent-session-collects-failed-outcomes
+date: 2026-06-12
+expires: 2026-09-12
+status: promoted
+route: implement-fix
+best_form: test
+evidence: [pr-#253, "dogfood run #194/#193: remote wrote .agents/state/outcomes/*failure.json but scripts/agent-session.sh exited nonzero before collect_issue_artifacts", "manual scp recovered 2026-06-12T21:50:49Z-issue-194-failure.json and 2026-06-12T21:50:58Z-issue-193-failure.json"]
+observation: `scripts/agent-session.sh --issues` used `set -e`, so a nonzero remote issue-run skipped `collect_issue_artifacts` exactly when failure outcome records were most useful.
+proposed_upgrade: Add or keep a regression test around the nonzero remote-run path so `agent-session.sh` always collects outcome records and learning candidates before returning the remote exit code.
+agent: codex
+type: workflow-gotcha
+dedupe_key: agent-session:collect-artifacts-after-nonzero-run
+triggers: [scripts/agent-session.sh --issues, remote agent-run-issue failure, set -e before artifact collection]
+targets: [scripts/agent-session.sh]
+risk: Without a regression test this can silently regress and make failed gcp-agent batches harder to diagnose.

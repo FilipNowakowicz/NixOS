@@ -188,6 +188,7 @@ case "$command" in
 docs)
   bash scripts/check-doc-links.sh
   bash scripts/agent-run-issue.sh --self-test
+  bash scripts/agent-session.sh --self-test
   bash .agents/scripts/agent-record-outcome --self-test
   bash .agents/scripts/agent-outcome-index --self-test
   bash .agents/scripts/agent-weekly-digest --self-test
