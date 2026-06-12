@@ -27,6 +27,18 @@
 #                   and skip the claude session (recording a "blocked"
 #                   outcome) if it is not ready. Default is 0 (off): issues
 #                   are dispatched as before.
+#   AGENT_CLAUDE_CMD
+#                   Claude command to execute (default: claude). Tests can
+#                   point this at a local fixture worker.
+#   AGENT_INNER_TIMEOUT_SECONDS
+#                   max seconds for one inner Claude issue session before it
+#                   is terminated and recorded as a timeout failure
+#                   (default: 900; 0 disables).
+#   AGENT_HEARTBEAT_SECONDS
+#                   seconds between cheap progress heartbeats while the inner
+#                   session is alive (default: 60; 0 disables).
+#   AGENT_INNER_KILL_GRACE_SECONDS
+#                   seconds to wait after TERM before KILL (default: 15).
 #
 # v1 is attended: it opens PRs but never merges. You review and merge yourself.
 set -euo pipefail
@@ -36,10 +48,15 @@ BASE_BRANCH="${BASE_BRANCH:-main}"
 REPO_URL="${REPO_URL:-https://github.com/FilipNowakowicz/nixos-config.git}"
 AGENT_OUTCOME_DIR="${AGENT_OUTCOME_DIR:-.agents/state/outcomes}"
 AGENT_REQUIRE_READY="${AGENT_REQUIRE_READY:-0}"
+AGENT_CLAUDE_CMD="${AGENT_CLAUDE_CMD:-claude}"
+AGENT_INNER_TIMEOUT_SECONDS="${AGENT_INNER_TIMEOUT_SECONDS:-900}"
+AGENT_HEARTBEAT_SECONDS="${AGENT_HEARTBEAT_SECONDS:-60}"
+AGENT_INNER_KILL_GRACE_SECONDS="${AGENT_INNER_KILL_GRACE_SECONDS:-15}"
 SESSION_LOCK="/run/agent/session.lock"
 
 label=""
 issues=()
+self_test=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
   --label)
@@ -48,6 +65,10 @@ while [[ $# -gt 0 ]]; do
     ;;
   --require-ready)
     AGENT_REQUIRE_READY=1
+    shift
+    ;;
+  --self-test)
+    self_test=1
     shift
     ;;
   -h | --help)
@@ -73,7 +94,162 @@ die() {
   exit 1
 }
 
-command -v claude >/dev/null 2>&1 || die "claude CLI not found (Home Manager agent role)"
+validate_non_negative_integer() {
+  local name="$1"
+  local value="$2"
+  [[ $value =~ ^[0-9]+$ ]] || die "$name must be a non-negative integer (got: $value)"
+}
+
+validate_supervision_config() {
+  validate_non_negative_integer AGENT_INNER_TIMEOUT_SECONDS "$AGENT_INNER_TIMEOUT_SECONDS"
+  validate_non_negative_integer AGENT_HEARTBEAT_SECONDS "$AGENT_HEARTBEAT_SECONDS"
+  validate_non_negative_integer AGENT_INNER_KILL_GRACE_SECONDS "$AGENT_INNER_KILL_GRACE_SECONDS"
+}
+
+heartbeat_worktree_summary() {
+  local branch dirty
+  branch=$(git symbolic-ref --short HEAD 2>/dev/null || printf 'DETACHED')
+  dirty=$(git status --short 2>/dev/null | wc -l | tr -d ' ')
+  printf 'branch=%s dirty=%s' "$branch" "$dirty"
+}
+
+terminate_inner_session() {
+  local pid="$1"
+  local kill_target="$2"
+  local grace="$3"
+  local waited=0
+
+  kill -TERM -- "$kill_target" 2>/dev/null || true
+  while kill -0 "$pid" 2>/dev/null; do
+    if [[ $(ps -o stat= -p "$pid" 2>/dev/null || true) == Z* ]]; then
+      break
+    fi
+    if ((waited >= grace)); then
+      kill -KILL -- "$kill_target" 2>/dev/null || true
+      break
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+}
+
+supervise_inner_session() {
+  local issue="$1"
+  shift
+  validate_supervision_config
+
+  local start now elapsed next_heartbeat pid kill_target rc
+  start=$(date +%s)
+  next_heartbeat=$((start + AGENT_HEARTBEAT_SECONDS))
+
+  if command -v setsid >/dev/null 2>&1; then
+    setsid "$@" &
+    pid=$!
+    kill_target="-$pid"
+  else
+    "$@" &
+    pid=$!
+    kill_target="$pid"
+  fi
+
+  echo "agent-run-issue: issue #$issue inner session started pid=$pid timeout=${AGENT_INNER_TIMEOUT_SECONDS}s heartbeat=${AGENT_HEARTBEAT_SECONDS}s" >&2
+
+  while kill -0 "$pid" 2>/dev/null; do
+    now=$(date +%s)
+    elapsed=$((now - start))
+
+    if ((AGENT_INNER_TIMEOUT_SECONDS > 0 && elapsed >= AGENT_INNER_TIMEOUT_SECONDS)); then
+      echo "agent-run-issue: issue #$issue inner session exceeded timeout after ${elapsed}s; terminating pid=$pid" >&2
+      terminate_inner_session "$pid" "$kill_target" "$AGENT_INNER_KILL_GRACE_SECONDS"
+      set +e
+      wait "$pid" 2>/dev/null
+      set -e
+      return 124
+    fi
+
+    if ((AGENT_HEARTBEAT_SECONDS > 0 && now >= next_heartbeat)); then
+      echo "agent-run-issue: issue #$issue heartbeat elapsed=${elapsed}s $(heartbeat_worktree_summary)" >&2
+      next_heartbeat=$((now + AGENT_HEARTBEAT_SECONDS))
+    fi
+
+    sleep 1
+  done
+
+  set +e
+  wait "$pid"
+  rc=$?
+  set -e
+  return "$rc"
+}
+
+self_test() {
+  local tmp repo bin out rc old_timeout old_heartbeat old_grace
+  tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' RETURN
+  repo="$tmp/repo"
+  bin="$tmp/bin"
+
+  mkdir -p "$repo" "$bin"
+  git -C "$repo" init -q
+  git -C "$repo" config user.email test@example.invalid
+  git -C "$repo" config user.name 'Agent Runner Test'
+  printf 'seed\n' >"$repo/README.md"
+  git -C "$repo" add README.md
+  git -C "$repo" commit -q -m seed
+
+  cat >"$bin/success-worker" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'success-worker received %s args\n' "$#"
+EOF
+  chmod +x "$bin/success-worker"
+
+  cat >"$bin/slow-worker" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+trap 'exit 143' TERM
+sleep 30
+EOF
+  chmod +x "$bin/slow-worker"
+
+  old_timeout="$AGENT_INNER_TIMEOUT_SECONDS"
+  old_heartbeat="$AGENT_HEARTBEAT_SECONDS"
+  old_grace="$AGENT_INNER_KILL_GRACE_SECONDS"
+
+  cd "$repo"
+  AGENT_INNER_TIMEOUT_SECONDS=10
+  AGENT_HEARTBEAT_SECONDS=1
+  AGENT_INNER_KILL_GRACE_SECONDS=1
+  set +e
+  out=$(supervise_inner_session 999 "$bin/success-worker" -p prompt 2>&1)
+  rc=$?
+  set -e
+  [[ $rc -eq 0 ]] || die "self-test: expected success worker rc 0 (got $rc; output: $out)"
+  [[ $out == *"inner session started"* ]] || die "self-test: missing start line (output: $out)"
+
+  AGENT_INNER_TIMEOUT_SECONDS=2
+  AGENT_HEARTBEAT_SECONDS=1
+  AGENT_INNER_KILL_GRACE_SECONDS=1
+  set +e
+  out=$(supervise_inner_session 999 "$bin/slow-worker" 2>&1)
+  rc=$?
+  set -e
+  [[ $rc -eq 124 ]] || die "self-test: expected timeout rc 124 (got $rc; output: $out)"
+  [[ $out == *"heartbeat elapsed="* ]] || die "self-test: missing heartbeat line (output: $out)"
+  [[ $out == *"exceeded timeout"* ]] || die "self-test: missing timeout line (output: $out)"
+
+  AGENT_INNER_TIMEOUT_SECONDS="$old_timeout"
+  AGENT_HEARTBEAT_SECONDS="$old_heartbeat"
+  AGENT_INNER_KILL_GRACE_SECONDS="$old_grace"
+  printf 'agent-run-issue self-test passed\n'
+}
+
+if [[ $self_test == 1 ]]; then
+  self_test
+  exit 0
+fi
+
+command -v "$AGENT_CLAUDE_CMD" >/dev/null 2>&1 || die "$AGENT_CLAUDE_CMD CLI not found (Home Manager agent role)"
 command -v gh >/dev/null 2>&1 || die "gh not found"
 command -v git >/dev/null 2>&1 || die "git not found"
 
@@ -230,13 +406,18 @@ and explain what is blocked."
   status=success
   exit_code=0
   blocker=""
-  if claude -p "$prompt"; then
+  if supervise_inner_session "$issue" "$AGENT_CLAUDE_CMD" -p "$prompt"; then
     echo "agent-run-issue: issue #$issue session finished" >&2
   else
     exit_code=$?
     status=failure
-    blocker="claude session exited non-zero; inspect session output and linked PRs"
-    echo "agent-run-issue: issue #$issue session exited non-zero — see output above; check 'gh pr list'" >&2
+    if [[ $exit_code -eq 124 ]]; then
+      blocker="claude session exceeded AGENT_INNER_TIMEOUT_SECONDS=${AGENT_INNER_TIMEOUT_SECONDS}; inspect session output and git status"
+      echo "agent-run-issue: issue #$issue session timed out — see output above; check 'git status' and 'gh pr list'" >&2
+    else
+      blocker="claude session exited non-zero; inspect session output and linked PRs"
+      echo "agent-run-issue: issue #$issue session exited non-zero — see output above; check 'gh pr list'" >&2
+    fi
   fi
 
   finished_at=$(utc_now)

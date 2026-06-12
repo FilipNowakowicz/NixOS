@@ -70,6 +70,28 @@ It is opt-in and read-only: it does not perform live agent dispatch and
 requires no secrets, sudo, or remote host access beyond what `gh auth status`
 itself needs.
 
+## Issue Runner Bounds
+
+`scripts/agent-run-issue.sh` supervises each inner Claude issue session with
+cheap, deterministic guardrails:
+
+```sh
+AGENT_INNER_TIMEOUT_SECONDS=900   # default; 0 disables the timeout
+AGENT_HEARTBEAT_SECONDS=60        # default; 0 disables heartbeat lines
+AGENT_INNER_KILL_GRACE_SECONDS=15 # TERM grace period before KILL
+```
+
+Heartbeat lines go to stderr while the inner process is alive and include
+elapsed seconds plus the current git branch and dirty-file count. If the timeout
+is exceeded, the runner terminates the inner process group, records a failure
+outcome with a timeout blocker, and moves on according to the normal issue-loop
+rules.
+
+For dogfood batches, keep the defaults or lower the timeout for tiny issues.
+Raise it only when the issue explicitly needs a long validation/build phase.
+`scripts/agent-run-issue.sh --self-test` covers timeout supervision with local
+fixture workers; it does not invoke a real model.
+
 ## Governance Policy
 
 `.agents/governance.yaml` is a versioned, advisory policy that classifies
