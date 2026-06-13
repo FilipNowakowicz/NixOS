@@ -44,6 +44,14 @@ in
         device."wifi.scan-rand-mac-address" = "no";
       };
     };
+    # Syncthing local-discovery UDP/21027 is deliberately not opened here:
+    # tailscale0 is a point-to-point overlay with no broadcast domain, so the
+    # discovery multicast that 21027 serves on a LAN never arrives via this
+    # interface, and the tailnet ACL (lib/acl.nix, from
+    # tailscale.acceptFrom.workstation in lib/hosts.nix) does not admit it
+    # either. Keep this set equal to that acceptFrom list (TCP+UDP union) —
+    # enforced by the "tailscale0 firewall ports match registry acceptFrom"
+    # invariant.
     firewall.interfaces.tailscale0 = {
       allowedTCPPorts = [
         22
@@ -51,7 +59,6 @@ in
       ];
       allowedUDPPorts = [
         22000
-        21027
       ];
     };
     # Loose reverse-path filtering: this host commonly has two live default

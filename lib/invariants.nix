@@ -324,6 +324,39 @@ rec {
       ) "ports must not be exposed on non-${interface} interfaces: ${formatList elsewhereMessages}")
     ];
 
+  # The tailnet ACL (lib/acl.nix) is generated from each host's
+  # tailscale.acceptFrom registry entry; the host's own tailscale0 firewall
+  # is hand-maintained separately. Keep the two in sync: every port a host
+  # actually opens on tailscale0 must be one the ACL admits, and the ACL
+  # should not admit ports the host firewall never opens (a port the ACL
+  # allows but the firewall drops is dead policy).
+  tailscale0FirewallPortsMatchAcceptFrom =
+    hostMeta: cfg:
+    let
+      acceptFrom = hostMeta.tailscale.acceptFrom or { };
+      acceptFromPorts = uniqueSorted (builtins.concatLists (builtins.attrValues acceptFrom));
+      tsInterface = cfg.networking.firewall.interfaces.tailscale0 or { };
+      firewallPorts = uniqueSorted (
+        (tsInterface.allowedTCPPorts or [ ]) ++ (tsInterface.allowedUDPPorts or [ ])
+      );
+      missingFromFirewall = lib.filter (p: !(builtins.elem p firewallPorts)) acceptFromPorts;
+      missingFromAcceptFrom = lib.filter (p: !(builtins.elem p acceptFromPorts)) firewallPorts;
+      violations = lib.filter (msg: msg != "") [
+        (lib.optionalString (missingFromFirewall != [ ])
+          "tailscale.acceptFrom admits port(s) not opened on tailscale0: ${formatIntList missingFromFirewall}"
+        )
+        (lib.optionalString (missingFromAcceptFrom != [ ])
+          "tailscale0 opens port(s) not admitted by tailscale.acceptFrom: ${formatIntList missingFromAcceptFrom}"
+        )
+      ];
+    in
+    mkResult (violations == [ ]) (
+      if violations == [ ] then
+        "tailscale0 firewall ports match tailscale.acceptFrom"
+      else
+        lib.concatStringsSep "; " violations
+    );
+
   checkExpectedTrustedUsers =
     expectedUsers: cfg:
     let
@@ -699,6 +732,12 @@ rec {
       {
         name = "tailnet metadata enables Tailscale";
         check = cfg: cfg.services.tailscale.enable;
+      }
+    ]
+    ++ lib.optionals (hostMeta.tailscale.acceptFrom or null != null) [
+      {
+        name = "tailscale0 firewall ports match registry acceptFrom";
+        check = tailscale0FirewallPortsMatchAcceptFrom hostMeta;
       }
     ];
 }

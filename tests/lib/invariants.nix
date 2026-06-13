@@ -144,6 +144,24 @@ let
 
   assertions = invariants.mkRegistryAssertions "homeserver-gcp" hostMeta;
 
+  hostMetaWithAcceptFrom = hostMeta // {
+    tailscale = hostMeta.tailscale // {
+      acceptFrom.workstation = [
+        22
+        443
+      ];
+    };
+  };
+
+  assertionsWithAcceptFrom = invariants.mkRegistryAssertions "homeserver-gcp" hostMetaWithAcceptFrom;
+
+  runAssertionFrom =
+    assertionList: name: cfg:
+    let
+      assertion = lib.findFirst (candidate: candidate.name == name) null assertionList;
+    in
+    if assertion == null then throw "missing assertion '${name}'" else assertion.check cfg;
+
   runAssertion =
     name: cfg:
     let
@@ -246,6 +264,42 @@ let
         }
       );
       expected = false;
+    };
+
+    tailscale0PortsAssertionAbsentWithoutAcceptFrom = {
+      expr = lib.any (a: a.name == "tailscale0 firewall ports match registry acceptFrom") assertions;
+      expected = false;
+    };
+
+    tailscale0PortsAssertionPresentWithAcceptFrom = {
+      expr = lib.any (
+        a: a.name == "tailscale0 firewall ports match registry acceptFrom"
+      ) assertionsWithAcceptFrom;
+      expected = true;
+    };
+
+    tailscale0PortsMatchAcceptFromPasses = {
+      expr =
+        (runAssertionFrom assertionsWithAcceptFrom "tailscale0 firewall ports match registry acceptFrom"
+          baseConfig
+        ).passed;
+      expected = true;
+    };
+
+    tailscale0PortsMatchAcceptFromRejectsMismatch = {
+      expr =
+        (runAssertionFrom assertionsWithAcceptFrom "tailscale0 firewall ports match registry acceptFrom" (
+          baseConfig
+          // {
+            networking.firewall = baseConfig.networking.firewall // {
+              interfaces.tailscale0 = {
+                allowedTCPPorts = [ 22 ];
+                allowedUDPPorts = [ 21027 ];
+              };
+            };
+          }
+        )).message;
+      expected = "tailscale.acceptFrom admits port(s) not opened on tailscale0: 443; tailscale0 opens port(s) not admitted by tailscale.acceptFrom: 21027";
     };
 
     sopsRecipientParityPasses = {
