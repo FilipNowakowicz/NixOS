@@ -90,3 +90,9 @@ If the source item is still vague, use `issue-tdd` first.
   this checkout has uncommitted, non-generated changes. When dispatching the
   subagent, explicitly tell it to operate only inside its assigned worktree
   path and never run git commands against the primary checkout.
+- Goals/roadmap cleanup checklist (e.g. `docs/goals/roadmap.md`,
+  `docs/goals/*-goals.md`): remove shipped history, but first identify a
+  durable-doc home for anything worth keeping (architecture/operations docs)
+  before deleting it; keep only forward-looking items; `rg` for cross-references
+  to removed sections from other goals/roadmap docs and update or drop them;
+  then run `bash scripts/validate.sh docs`.
