@@ -7,6 +7,7 @@
   ...
 }:
 let
+  binaryCache = import ../../lib/binary-cache.nix;
   inherit (hostMeta) tailnetFQDN;
   hostDriftInventory = {
     schemaVersion = 1;
@@ -76,8 +77,8 @@ in
 
   nix = {
     settings.trusted-public-keys = [
-      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-      "main.local:fSo1pk+WU1RU7vpv+GTbzldKn4MMtBS46vQasXJ2oeQ="
+      binaryCache.cacheNixosOrgPublicKey
+      binaryCache.mainLocalPublicKey
     ];
     gc = {
       automatic = true;
