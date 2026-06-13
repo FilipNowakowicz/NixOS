@@ -18,6 +18,10 @@
 #                                            # repo clone yet (the script then
 #                                            # bootstraps the clone itself)
 #   scripts/agent-session.sh -- <cmd...>     # start, wait, run <cmd...> on host
+#   scripts/agent-session.sh --self-test     # offline regression test (stubbed
+#                                            # gcloud/ssh/scp; proves artifacts
+#                                            # are collected even when the
+#                                            # remote issue run exits non-zero)
 #
 # Env knobs (defaults match lib/hosts.nix + infra/variables.tf):
 #   AGENT_NAME (gcp-agent)  AGENT_ZONE (europe-west2-a)
@@ -38,10 +42,15 @@ wait_only=0
 remote_cmd=()
 issue_args=()
 run_issues=0
+run_self_test=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
   --wait-only)
     wait_only=1
+    shift
+    ;;
+  --self-test)
+    run_self_test=1
     shift
     ;;
   --issues)
@@ -65,19 +74,6 @@ while [[ $# -gt 0 ]]; do
     ;;
   esac
 done
-
-command -v gcloud >/dev/null 2>&1 || {
-  echo "agent-session: gcloud not found (authenticate + set the agent project)" >&2
-  exit 1
-}
-command -v ssh >/dev/null 2>&1 || {
-  echo "agent-session: ssh not found" >&2
-  exit 1
-}
-command -v scp >/dev/null 2>&1 || {
-  echo "agent-session: scp not found" >&2
-  exit 1
-}
 
 collect_remote_dir_files() {
   local remote_dir="$1"
@@ -111,17 +107,109 @@ collect_remote_dir_files() {
 }
 
 collect_issue_artifacts() {
-  echo "agent-session: collecting remote outcome records and learning candidates ..." >&2
+  echo "agent-session: collecting remote outcome records, session logs, and learning candidates ..." >&2
   collect_remote_dir_files \
     "$REMOTE_AGENT_REPO_DIR/.agents/state/outcomes" \
     ".agents/state/outcomes" \
     '*.json' \
     0
   collect_remote_dir_files \
+    "$REMOTE_AGENT_REPO_DIR/.agents/state/sessions" \
+    ".agents/state/sessions" \
+    '*.log' \
+    1
+  collect_remote_dir_files \
     "$REMOTE_AGENT_REPO_DIR/.agents/learning/candidates" \
     ".agents/learning/candidates" \
     '*.yml' \
     1
+}
+
+# Regression test for the artifact-collection path (learning candidate
+# 2026-06-12-agent-session-collects-failed-outcomes): a NONZERO remote
+# issue-run must still collect outcome records, session logs, and learning
+# candidates before this script returns the remote exit code — failure
+# records are most valuable exactly when the run failed. Everything external
+# (gcloud/ssh/scp) is stubbed via PATH; no VM, network, or model is touched.
+self_test() {
+  local tmp bin work script_path rc
+  tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' RETURN
+  bin="$tmp/bin"
+  work="$tmp/work"
+  mkdir -p "$bin" "$work"
+  script_path="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+
+  fail() {
+    echo "agent-session: self-test: $*" >&2
+    exit 1
+  }
+
+  cat >"$bin/gcloud" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+
+  cat >"$bin/ssh" <<'EOF'
+#!/usr/bin/env bash
+case "$*" in
+*agent-run-issue*)
+  cat >/dev/null # consume the shipped runner script
+  exit 7         # simulate a failed remote issue run
+  ;;
+*"find "*)
+  case "$*" in
+  *'*.json'*) printf 'stub-outcome.json\n' ;;
+  *'*.log'*) printf 'stub-session.log\n' ;;
+  *'*.yml'*) printf 'stub-candidate.yml\n' ;;
+  esac
+  exit 0
+  ;;
+*)
+  exit 0 # reachability probe and anything else
+  ;;
+esac
+EOF
+
+  cat >"$bin/scp" <<'EOF'
+#!/usr/bin/env bash
+# Last argument is the local destination path.
+args=("$@")
+printf 'collected\n' >"${args[-1]}"
+EOF
+  chmod +x "$bin/gcloud" "$bin/ssh" "$bin/scp"
+
+  rc=0
+  (cd "$work" && PATH="$bin:$PATH" "$script_path" --issues 999 >/dev/null 2>&1) || rc=$?
+
+  [[ $rc -eq 7 ]] ||
+    fail "expected the remote exit code 7 to be preserved (got $rc)"
+  [[ -f $work/.agents/state/outcomes/stub-outcome.json ]] ||
+    fail "outcome record was not collected after a failed remote run"
+  [[ -f $work/.agents/state/sessions/stub-session.log ]] ||
+    fail "session log was not collected after a failed remote run"
+  [[ -f $work/.agents/learning/candidates/stub-candidate.yml ]] ||
+    fail "learning candidate was not collected after a failed remote run"
+
+  printf 'agent-session self-test passed\n'
+}
+
+if [[ $run_self_test == 1 ]]; then
+  self_test
+  exit 0
+fi
+
+command -v gcloud >/dev/null 2>&1 || {
+  echo "agent-session: gcloud not found (authenticate + set the agent project)" >&2
+  exit 1
+}
+command -v ssh >/dev/null 2>&1 || {
+  echo "agent-session: ssh not found" >&2
+  exit 1
+}
+command -v scp >/dev/null 2>&1 || {
+  echo "agent-session: scp not found" >&2
+  exit 1
 }
 
 echo "agent-session: starting $AGENT_NAME (no-op if already running) ..." >&2
@@ -167,10 +255,12 @@ if [[ $run_issues == 1 ]]; then
   # timer's `pgrep -f agent-run-issue` activity check.
   script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
   printf -v issue_args_q ' %q' "${issue_args[@]}"
+  set +e
   ssh -o StrictHostKeyChecking=accept-new "$SSH_USER@$AGENT_FQDN" -- \
     "tmp=\$(mktemp /tmp/agent-run-issue.XXXXXX) && cat >\"\$tmp\" && trap 'rm -f \"\$tmp\"' EXIT && bash \"\$tmp\"$issue_args_q" \
     <"$script_dir/agent-run-issue.sh"
   rc=$?
+  set -e
   collect_issue_artifacts
   exit "$rc"
 fi

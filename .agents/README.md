@@ -18,10 +18,13 @@ Runtime outcome records are intentionally ignored by git. They are telemetry for
 operators and later automation, not reviewed repo instructions.
 
 When issues run through `scripts/agent-session.sh --issues`, the workstation
-collects remote `.agents/state/outcomes/*.json` records after the SSH command
-returns. It also copies any missing `.agents/learning/candidates/*.yml` files
-from the worker into the local candidate queue without overwriting existing
-files.
+collects remote `.agents/state/outcomes/*.json` records and
+`.agents/state/sessions/*.log` session logs after the SSH command returns —
+**including when the remote run exits non-zero**, which is exactly when
+failure records matter most (`scripts/agent-session.sh --self-test` is the
+regression test for that path). It also copies any missing
+`.agents/learning/candidates/*.yml` files from the worker into the local
+candidate queue without overwriting existing files.
 
 Useful inspection commands:
 
@@ -145,22 +148,53 @@ AGENT_INNER_KILL_GRACE_SECONDS=15 # TERM grace period before KILL
 ```
 
 Heartbeat lines go to stderr while the inner process is alive and include
-elapsed seconds plus the current git branch and dirty-file count. If the timeout
-is exceeded, the runner terminates the inner process group, records a failure
-outcome with a timeout blocker, and moves on according to the normal issue-loop
-rules.
+elapsed seconds, the session-log byte count, and the current git branch and
+dirty-file count. If the timeout is exceeded, the runner terminates the inner
+process group, records a failure outcome with a timeout blocker, and moves on
+according to the normal issue-loop rules.
+
+### Session Logs And Cost Telemetry
+
+Each inner claude session runs with `--output-format stream-json --verbose`
+and its full event stream is captured to
+`.agents/state/sessions/<started-at>-issue-<n>.log` (`AGENT_SESSION_DIR`).
+This makes failures diagnosable after the fact — the 2026-06-12 dogfood runs
+failed in seconds and left no trace — and the final `result` event supplies
+`total_cost_usd`, `num_turns`, `duration_ms`, and the session id, which the
+runner embeds under `session` in the outcome record and in the finish
+comment. On a non-zero session exit the runner also prints the last 40 log
+lines to stderr. Cost per issue is therefore a recorded number, not a
+feeling:
+
+```sh
+jq -r '[.issue, .status, (.session.cost_usd // "?"), (.session.turns // "?")] | @tsv' .agents/state/outcomes/*.json
+```
+
+By default the runner also posts a start comment and a finish comment on each
+target issue. The finish comment includes status, exit code, blocker, head
+branch, linked PRs, session cost/turns, and the local outcome-record and
+session-log paths so an operator can follow an attended run from GitHub
+without SSHing into the worker. Set `AGENT_ISSUE_COMMENTS=0` to suppress
+these breadcrumbs for a quiet dry run. PR discovery counts a body-search
+match only when the PR body links the issue with a closing/reference keyword
+(`Closes/Fixes/Resolves/Refs #<n>`), so unrelated PRs that merely quote the
+issue number are not attached to outcomes or comments.
 
 For dogfood batches, keep the defaults or lower the timeout for tiny issues.
 Raise it only when the issue explicitly needs a long validation/build phase.
 `scripts/agent-run-issue.sh --self-test` covers timeout supervision with local
 fixture workers; it does not invoke a real model.
 
-Fresh clones also get a push-safe `origin` remote. If the runner sees a standard
-GitHub HTTPS push URL such as `https://github.com/owner/repo.git`, it configures
-the push URL as `git@github.com:owner/repo.git` before issue work begins. This
-avoids completing a session and failing only at PR publication because an
-interactive HTTPS credential prompt was unavailable. Existing SSH remotes and
-non-GitHub HTTPS remotes are left unchanged.
+The runner also normalizes the `origin` push URL before issue work begins:
+GitHub SSH push URLs (`git@github.com:...`, `ssh://git@github.com/...`) are
+converted back to HTTPS, because the agent host authenticates over HTTPS via
+`gh auth git-credential` (scoped PAT) and has no GitHub SSH key — an SSH push
+URL fails with "Permission denied (publickey)" only at PR publication time,
+after a whole session has been spent (dogfood run 2026-06-12). Non-GitHub
+remotes are left unchanged. After normalization the runner preflights
+non-interactive authenticated access to origin (`git ls-remote`) and refuses
+to start any session if it fails, so a credential problem costs seconds, not
+a session.
 
 ## Governance Policy
 
@@ -257,8 +291,13 @@ separate, human-reviewed gates.
 `.agents/model-routing.yaml` and `.agents/capability-profiles.yaml` define the
 first advisory routing substrate for agent work. They describe path classes,
 risk tiers, default capability profiles, required checks, and escalation rules
-for docs, agent workflow scripts, Nix modules, security/secrets, and
-CI/workflow changes.
+for docs, learning candidates, agent workflow scripts, Nix modules (including
+`flake.lock`), security/secrets, CI/workflow changes, and root agent
+instruction files (`CLAUDE.md`, `.claude/`, `.codex/`). Learning candidates
+are classified separately (low risk) so run-produced candidate files do not
+drag every outcome's route into the workflow-scripts class, and root
+instruction files get an explicit human-review class instead of falling
+through to "unclassified".
 
 Validate the metadata locally:
 

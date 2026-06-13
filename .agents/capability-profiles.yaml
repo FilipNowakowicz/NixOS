@@ -11,7 +11,14 @@ profiles:
     escalation: "Escalate if docs imply behavior, security, deploy, or host-state changes."
   - id: agent-workflow-engineer
     agent: codex-cli
-    allowed_path_classes: ["docs", "agent-workflow-scripts", "ci-workflows"]
+    allowed_path_classes:
+      [
+        "docs",
+        "learning-candidates",
+        "agent-workflow-scripts",
+        "agent-instructions",
+        "ci-workflows",
+      ]
     max_risk: high
     required_checks:
       [
