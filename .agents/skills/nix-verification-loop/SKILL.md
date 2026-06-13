@@ -36,6 +36,14 @@ packages, deploy wiring, secrets boundaries, or generated data in this repo.
   exit successfully with no output. Run tools already available in the current
   shell directly, use `nix fmt -- <files>` for formatter-backed checks when
   appropriate, or run ad-hoc tools explicitly with `nix run`.
+- When backgrounding a validation command, join every step on one logical line
+  with `&&`/`;` (or a single quoted `bash -c '...'`) — never rely on a literal
+  newline between top-level statements. A backgrounded multi-line command can
+  collapse onto one pipeline, e.g. turning `nix fmt FILE | tail -5` + a
+  following `git add` line into `tail -5 git add FILE && git commit`, which
+  hangs `tail` forever on an open pipe with empty output. Avoid piping
+  `nix develop -c <cmd>` through `tail`/`head` in the background for the same
+  reason; run such commands in the foreground or redirect to a file instead.
 
 ## Operational gotchas
 
