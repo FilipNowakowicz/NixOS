@@ -14,6 +14,7 @@ in
     ../../modules/nixos/profiles/base.nix
     ../../modules/nixos/profiles/machine-common.nix
     ../../modules/nixos/profiles/security.nix
+    ../../modules/nixos/profiles/server-common.nix
     ../../modules/nixos/profiles/sops-base.nix
     ../../modules/nixos/profiles/user.nix
   ];
@@ -36,8 +37,6 @@ in
   };
 
   boot = {
-    # No ZFS here; pin the 26.11 default explicitly to avoid the eval warning.
-    zfs.forceImportRoot = false;
     loader.timeout = 1;
     kernelParams = [
       "console=tty1"
@@ -71,28 +70,9 @@ in
         "kvm"
       ];
     };
-    gc = {
-      automatic = true;
-      dates = "weekly";
-      options = "--delete-older-than 7d";
-    };
   };
 
-  environment.systemPackages = [
-    # Keep common client terminal definitions available over SSH without pulling
-    # every terminfo package into the server closure.
-    pkgs.alacritty.terminfo
-    pkgs.foot.terminfo
-    pkgs.kitty.terminfo
-    pkgs.wezterm.terminfo
-  ];
-
   services = {
-    openssh = {
-      enable = true;
-      openFirewall = false;
-    };
-
     # Auto-join the tailnet on boot. SSH is tailnet-only, so the box MUST get
     # onto the tailnet without a login — otherwise it is unreachable after
     # install (you cannot `tailscale up` on a host you cannot log into, and it
