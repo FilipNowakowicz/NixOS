@@ -79,3 +79,9 @@ If the source item is still vague, use `issue-tdd` first.
 - For this git-backed flake, stage newly created files before Nix eval/build checks
   that need to see them.
 - Do not include `Co-Authored-By` trailers.
+- Goals/roadmap cleanup checklist (e.g. `docs/goals/roadmap.md`,
+  `docs/goals/*-goals.md`): remove shipped history, but first identify a
+  durable-doc home for anything worth keeping (architecture/operations docs)
+  before deleting it; keep only forward-looking items; `rg` for cross-references
+  to removed sections from other goals/roadmap docs and update or drop them;
+  then run `bash scripts/validate.sh docs`.
