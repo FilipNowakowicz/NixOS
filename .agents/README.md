@@ -143,6 +143,7 @@ cheap, deterministic guardrails:
 
 ```sh
 AGENT_INNER_TIMEOUT_SECONDS=900   # default; 0 disables the timeout
+AGENT_MAX_TURNS=100               # default; 0 disables the turn cap
 AGENT_HEARTBEAT_SECONDS=60        # default; 0 disables heartbeat lines
 AGENT_INNER_KILL_GRACE_SECONDS=15 # TERM grace period before KILL
 AGENT_REQUIRE_READY=1             # default; gate each issue on readiness first
@@ -153,6 +154,16 @@ elapsed seconds, the session-log byte count, and the current git branch and
 dirty-file count. If the timeout is exceeded, the runner terminates the inner
 process group, records a failure outcome with a timeout blocker, and moves on
 according to the normal issue-loop rules.
+
+`AGENT_INNER_TIMEOUT_SECONDS` only caps wall-clock time; `AGENT_MAX_TURNS`
+passes a hard turn ceiling to `claude -p --max-turns`, because session cost is
+dominated by cache-read tokens that grow super-linearly with turn count and a
+stuck session can burn many turns inside the time window. A session that hits
+the cap is recorded as a `failure` with a turn-cap blocker (not a silent stop);
+raise the cap or split the issue if work legitimately needs more turns. The
+dispatch prompt also tells the agent to keep heavy `nix` build/check output out
+of the conversation (validate to a file, read back exit status + tail), since
+the whole transcript is re-read on every turn.
 
 The runner gates each target issue on `agent-issue-readiness` **by default**:
 an under-specified issue is recorded as a `blocked` outcome without burning a
