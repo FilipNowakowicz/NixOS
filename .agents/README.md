@@ -70,6 +70,23 @@ remain available) and is read-only: it does not file issues, post comments,
 merge PRs, or estimate cost/token totals beyond fields already present in
 outcome records.
 
+For an at-a-glance trend view — a per-run table (issue, status, cost_usd,
+turns, duration, risk), aggregate totals, a cost/turns trend over time, and a
+breakdown of failure blockers — use `.agents/scripts/agent-outcome-dashboard`:
+
+```sh
+.agents/scripts/agent-outcome-dashboard               # Markdown report to stdout
+.agents/scripts/agent-outcome-dashboard --dir <path>  # scan a different outcome directory
+.agents/scripts/agent-outcome-dashboard --out <path>  # write the report to <path>
+```
+
+It reuses the same `agent-outcome/v1` validity check as `agent-outcome-index`,
+sorts records by `(started_at, id)` for byte-stable output, and tolerates
+records with no `.session` object (older or pre-dispatch runs). It is
+presentation-only: no live infrastructure, no new telemetry fields, and it
+never mutates the records. Generate it on demand rather than committing the
+report, which would churn as new runs land.
+
 ## Validation And CI Tiers
 
 Agent workflow changes use a fast inner loop and a slower integration gate.
