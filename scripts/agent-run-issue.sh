@@ -57,6 +57,15 @@
 #                   max seconds for one inner Claude issue session before it
 #                   is terminated and recorded as a timeout failure
 #                   (default: 900; 0 disables).
+#   AGENT_MAX_TURNS
+#                   hard turn ceiling passed to `claude -p --max-turns`.
+#                   AGENT_INNER_TIMEOUT_SECONDS only caps wall-clock time; a
+#                   stuck session can still burn many turns inside the window,
+#                   and cost is dominated by cache-read tokens that grow
+#                   super-linearly with turn count. A session that hits the cap
+#                   is recorded as a failure with a turn-cap blocker (not a
+#                   silent stop). Default 100 is a generous backstop above
+#                   observed legitimate sessions (~77 turns); 0 disables.
 #   AGENT_HEARTBEAT_SECONDS
 #                   seconds between cheap progress heartbeats while the inner
 #                   session is alive (default: 60; 0 disables).
@@ -77,6 +86,7 @@ AGENT_SESSION_DIR="${AGENT_SESSION_DIR:-.agents/state/sessions}"
 AGENT_REQUIRE_READY="${AGENT_REQUIRE_READY:-1}"
 AGENT_CLAUDE_CMD="${AGENT_CLAUDE_CMD:-claude}"
 AGENT_INNER_TIMEOUT_SECONDS="${AGENT_INNER_TIMEOUT_SECONDS:-900}"
+AGENT_MAX_TURNS="${AGENT_MAX_TURNS:-100}"
 AGENT_HEARTBEAT_SECONDS="${AGENT_HEARTBEAT_SECONDS:-60}"
 AGENT_INNER_KILL_GRACE_SECONDS="${AGENT_INNER_KILL_GRACE_SECONDS:-15}"
 AGENT_ISSUE_COMMENTS="${AGENT_ISSUE_COMMENTS:-1}"
@@ -134,6 +144,7 @@ validate_non_negative_integer() {
 
 validate_supervision_config() {
   validate_non_negative_integer AGENT_INNER_TIMEOUT_SECONDS "$AGENT_INNER_TIMEOUT_SECONDS"
+  validate_non_negative_integer AGENT_MAX_TURNS "$AGENT_MAX_TURNS"
   validate_non_negative_integer AGENT_HEARTBEAT_SECONDS "$AGENT_HEARTBEAT_SECONDS"
   validate_non_negative_integer AGENT_INNER_KILL_GRACE_SECONDS "$AGENT_INNER_KILL_GRACE_SECONDS"
 }
@@ -272,6 +283,14 @@ parse_session_result() {
     | (last // null)' "$log" 2>/dev/null || printf 'null\n'
 }
 
+# True (rc 0) when the parsed stream-json result event shows the session was
+# stopped by the --max-turns cap (subtype "error_max_turns") rather than
+# finishing on its own. Input: the JSON from parse_session_result.
+session_hit_turn_cap() {
+  local result="$1"
+  [[ $(jq -r '.subtype // empty' <<<"$result" 2>/dev/null || true) == error_max_turns ]]
+}
+
 linked_pr_count() {
   local issue="$1"
   local head_branch="$2"
@@ -378,7 +397,11 @@ to ${BASE_BRANCH} directly). When the relevant files are not already obvious, us
 repo-map-query skill to locate them instead of broad cat/grep/find sweeps, then open \
 only the top likely files. Implement the smallest durable fix, validate with the \
 nix-verification-loop skill (the smallest meaningful scripts/validate.sh command for \
-what you changed), then push the branch and open a pull request that links the issue \
+what you changed). When you run nix validation, redirect its output to a file and read \
+back only the exit status and the last ~20 lines on failure — do NOT paste full build \
+or flake-check logs into the conversation, because the whole transcript is re-read on \
+every turn and large logs dominate cost. Then push the branch and open a pull request \
+that links the issue \
 (use 'Closes #${issue}' only if the PR fully satisfies it, otherwise 'Refs #${issue}'). \
 Do NOT merge the PR, do NOT push to ${BASE_BRANCH}, and do NOT wait for long GitHub \
 Actions checks after the PR is open; treat CI as asynchronous unless a required check \
@@ -511,6 +534,22 @@ EOF
   [[ $prompt_without == "$(build_issue_prompt 999)" ]] ||
     die "self-test: omitted vs empty hints must build an identical prompt"
   rm -rf scripts .agents
+
+  # --- turn-cap detection + transcript-hygiene prompt (#282) ---
+  local cap_result ok_result base_prompt
+  cap_result='{"type":"result","subtype":"error_max_turns","is_error":true,"num_turns":100}'
+  ok_result='{"type":"result","subtype":"success","total_cost_usd":0.42,"num_turns":7}'
+  session_hit_turn_cap "$cap_result" ||
+    die "self-test: expected an error_max_turns result to classify as a turn-cap hit"
+  if session_hit_turn_cap "$ok_result"; then
+    die "self-test: a normal success result must not classify as a turn-cap hit"
+  fi
+  if session_hit_turn_cap "null"; then
+    die "self-test: a null/absent result must not classify as a turn-cap hit"
+  fi
+  base_prompt=$(build_issue_prompt 999)
+  [[ $base_prompt == *"do NOT paste full build"* ]] ||
+    die "self-test: dispatch prompt missing the transcript-hygiene instruction"
 
   AGENT_INNER_TIMEOUT_SECONDS=10
   AGENT_HEARTBEAT_SECONDS=1
@@ -864,11 +903,18 @@ run_one() {
   fi
   prompt=$(build_issue_prompt "$issue" "$path_hints")
 
+  # --max-turns is a hard backstop on the turn-count quadratic that the
+  # wall-clock timeout does not bound; 0 disables it.
+  local -a claude_args=(-p "$prompt" --output-format stream-json --verbose)
+  if [[ $AGENT_MAX_TURNS -gt 0 ]]; then
+    claude_args+=(--max-turns "$AGENT_MAX_TURNS")
+  fi
+
   status=success
   exit_code=0
   blocker=""
   if supervise_inner_session "$issue" "$session_log" \
-    "$AGENT_CLAUDE_CMD" -p "$prompt" --output-format stream-json --verbose; then
+    "$AGENT_CLAUDE_CMD" "${claude_args[@]}"; then
     echo "agent-run-issue: issue #$issue session finished" >&2
   else
     exit_code=$?
@@ -900,6 +946,16 @@ run_one() {
   session_duration_ms=$(jq -r '.duration_ms // empty' <<<"$session_result" 2>/dev/null || true)
   session_id=$(jq -r '.session_id // empty' <<<"$session_result" 2>/dev/null || true)
   echo "agent-run-issue: issue #$issue session telemetry: cost_usd=${session_cost:-unknown} turns=${session_turns:-unknown} log=$session_log" >&2
+
+  # Hitting the --max-turns cap is a distinct, recoverable blocker, not a
+  # silent stop: record it as a failure with a clear, actionable note. (A
+  # genuine wall-clock timeout after a clean PR is still handled above.)
+  if session_hit_turn_cap "$session_result"; then
+    status=failure
+    [[ $exit_code -ne 0 ]] || exit_code=1
+    blocker="claude session hit the AGENT_MAX_TURNS=${AGENT_MAX_TURNS} turn cap before completing; inspect $session_log and 'gh pr list' (raise AGENT_MAX_TURNS or split the issue if the work legitimately needs more turns)"
+    echo "agent-run-issue: issue #$issue hit the ${AGENT_MAX_TURNS}-turn cap; recording failure with turn-cap blocker" >&2
+  fi
 
   finished_at=$(utc_now)
   outcome_head_branch=$(git symbolic-ref --short HEAD 2>/dev/null || printf 'DETACHED')
