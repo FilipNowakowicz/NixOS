@@ -62,6 +62,7 @@ in
     ../../modules/nixos/profiles/base.nix
     ../../modules/nixos/profiles/machine-common.nix
     ../../modules/nixos/profiles/security.nix
+    ../../modules/nixos/profiles/server-common.nix
     ../../modules/nixos/profiles/sops-base.nix
     ../../modules/nixos/profiles/user.nix
   ];
@@ -80,22 +81,11 @@ in
       binaryCache.cacheNixosOrgPublicKey
       binaryCache.mainLocalPublicKey
     ];
-    gc = {
-      automatic = true;
-      dates = "weekly";
-      options = "--delete-older-than 7d";
-    };
   };
 
   environment.systemPackages = [
-    # Keep common client terminal definitions available over SSH without pulling
-    # every terminfo package into the server closure.
-    pkgs.alacritty.terminfo
-    pkgs.foot.terminfo
     pkgs.gawk
     pkgs.jq
-    pkgs.kitty.terminfo
-    pkgs.wezterm.terminfo
   ];
 
   environment.etc."host-drift-inventory.json".text = builtins.toJSON hostDriftInventory;
@@ -112,9 +102,6 @@ in
   };
 
   boot = {
-    # This host does not use ZFS. Set the new 26.11 default explicitly to avoid
-    # the evaluation warning and make the intent stable across upgrades.
-    zfs.forceImportRoot = false;
     loader.timeout = 1;
     kernelParams = [
       "console=tty1"
@@ -185,11 +172,6 @@ in
   };
 
   services = {
-    openssh = {
-      enable = true;
-      openFirewall = false;
-    };
-
     tailscale = {
       enable = true;
       openFirewall = true;

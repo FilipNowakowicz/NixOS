@@ -130,15 +130,9 @@ in
   # user so the daemon accepts those restricted options without warning.
   profiles.nix.extraTrustedUsers = [ "user" ];
 
-  nix = {
-    settings = {
-      extra-substituters = [ binaryCache.r2.substituter ];
-      extra-trusted-public-keys = [ binaryCache.r2.publicKey ];
-    };
-
-    # 128 GB SSD fills quickly with generations and closure churn. Override the
-    # fleet default (`base.nix`: --delete-older-than 7d) with a tighter window.
-    gc.options = lib.mkForce "--delete-older-than 7d";
+  nix.settings = {
+    extra-substituters = [ binaryCache.r2.substituter ];
+    extra-trusted-public-keys = [ binaryCache.r2.publicKey ];
   };
 
   programs.nix-index-database.comma.enable = true;
